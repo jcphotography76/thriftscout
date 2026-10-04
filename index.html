@@ -1,1 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thrift Scout | Smart Item Appraisal & Inventory Tracking</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent: #10b981;
+            --accent-hover: #059669;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
 
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .tagline {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            text-align: left;
+        }
+
+        .feature-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .feature-item h3 {
+            font-size: 0.95rem;
+            color: var(--accent);
+            margin-bottom: 0.35rem;
+        }
+
+        .feature-item p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--accent);
+            color: var(--bg-dark);
+            font-weight: 700;
+            font-size: 1rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .cta-button:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        footer {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="logo">Thrift<span>Scout</span></h1>
+        <p class="tagline">Next-generation item appraisal, vintage identification, and inventory portfolio tracking for professional flippers.</p>
+        
+        <div class="features">
+            <div class="feature-item">
+                <h3>AI Reconnaissance</h3>
+                <p>Instant multi-photo analysis, tag verification, and automated market valuations.</p>
+            </div>
+            <div class="feature-item">
+                <h3>Disposition Engine</h3>
+                <p>Traffic-light profit forecasting and direct marketplace comp routing.</p>
+            </div>
+            <div class="feature-item">
+                <h3>Vault Management</h3>
+                <p>Live portfolio valuation totals, acquisition cost logs, and sold history tracking.</p>
+            </div>
+        </div>
+
+        <a href="#" class="cta-button">Launch Dashboard</a>
+    </div>
+
+    <footer>
+        &copy; 2026 Thrift Scout. All rights reserved.
+    </footer>
+
+</body>
+</html>
