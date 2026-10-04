@@ -1,0 +1,2 @@
+# thriftscout
+Thrift Scout HTML
