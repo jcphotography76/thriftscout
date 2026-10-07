@@ -572,10 +572,87 @@
         let currentAppraisal = null;
         let vaultItems = [];
 
-        // Mode Selectors
-        document.getElementById('modeGeneralBtn').onclick = () => setMode('general');
-        document.getElementById('modeMtgBtn').onclick = () => setMode('mtg');
-        document.getElementById('modeCoinBtn').onclick = () => setMode('coin');
+        document.addEventListener("DOMContentLoaded", () => {
+            // Mode Selectors
+            document.getElementById('modeGeneralBtn').onclick = () => setMode('general');
+            document.getElementById('modeMtgBtn').onclick = () => setMode('mtg');
+            document.getElementById('modeCoinBtn').onclick = () => setMode('coin');
+
+            // Capture Mode Switcher
+            document.getElementById('capUploadBtn').onclick = () => switchCaptureMode('upload');
+            document.getElementById('capCameraBtn').onclick = () => switchCaptureMode('camera');
+
+            document.getElementById('camPowerBtn').onclick = () => {
+                if (isCameraActive) {
+                    stopCamera();
+                    document.getElementById('camera-feed').srcObject = null;
+                    document.getElementById('camPowerBtn').textContent = '🟢 Turn Camera On';
+                    document.getElementById('camPowerBtn').style.color = 'var(--accent)';
+                } else {
+                    startCamera();
+                }
+            };
+
+            document.getElementById('snapPhotoBtn').onclick = () => {
+                if (!isCameraActive) {
+                    alert('Camera is turned off. Click "Turn Camera On" first.');
+                    return;
+                }
+                const video = document.getElementById('camera-feed');
+                const canvas = document.getElementById('camera-canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                capturedImages.push(dataUrl);
+                generateThumbnail(dataUrl);
+                triggerAlert('Photo captured successfully!', false);
+            };
+
+            document.getElementById('item-photos').onchange = (e) => {
+                capturedImages = [];
+                if (e.target.files) {
+                    Array.from(e.target.files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            capturedImages.push(event.target.result);
+                            generateThumbnail(event.target.result);
+                        }
+                        reader.readAsDataURL(file);
+                    });
+                }
+            };
+
+            // Navigation & Tabs
+            document.getElementById('brandHomeBtn').onclick = () => switchTab('scout');
+            document.getElementById('dockScoutBtn').onclick = () => switchTab('scout');
+            document.getElementById('dockVaultBtn').onclick = () => switchTab('vault');
+
+            // Vault Sub-Category Toggles
+            document.getElementById('vaultSubGeneral').onclick = () => setVaultCategory('general');
+            document.getElementById('vaultSubCoins').onclick = () => setVaultCategory('coins');
+            document.getElementById('vaultSubMtg').onclick = () => setVaultCategory('mtg');
+
+            // Profile Modal
+            document.getElementById('openProfileBtn').onclick = () => {
+                document.getElementById('profileModal').classList.add('active');
+                document.getElementById('api-key').value = localStorage.getItem('thrift_api_key') || '';
+            };
+            document.getElementById('closeProfileBtn').onclick = () => {
+                document.getElementById('profileModal').classList.remove('active');
+            };
+            document.getElementById('saveProfileBtn').onclick = () => {
+                const key = document.getElementById('api-key').value.trim();
+                localStorage.setItem('thrift_api_key', key);
+                document.getElementById('profileModal').classList.remove('active');
+                triggerAlert('API credentials saved successfully.', false);
+            };
+
+            document.getElementById('analyzeBtn').onclick = runAnalysis;
+            document.getElementById('saveVaultBtn').onclick = saveToVault;
+        });
 
         function setMode(mode) {
             currentMode = mode;
@@ -589,10 +666,6 @@
             else if(mode === 'coin') label.innerText = 'Coin Capture (Obverse/Reverse)';
             else label.innerText = 'Item Capture';
         }
-
-        // Capture Mode Switcher
-        document.getElementById('capUploadBtn').onclick = () => switchCaptureMode('upload');
-        document.getElementById('capCameraBtn').onclick = () => switchCaptureMode('camera');
 
         function switchCaptureMode(mode) {
             document.getElementById('capUploadBtn').classList.remove('active');
@@ -632,49 +705,6 @@
             isCameraActive = false;
         }
 
-        document.getElementById('camPowerBtn').onclick = () => {
-            if (isCameraActive) {
-                stopCamera();
-                document.getElementById('camera-feed').srcObject = null;
-                document.getElementById('camPowerBtn').textContent = '🟢 Turn Camera On';
-                document.getElementById('camPowerBtn').style.color = 'var(--accent)';
-            } else {
-                startCamera();
-            }
-        };
-
-        document.getElementById('snapPhotoBtn').onclick = () => {
-            if (!isCameraActive) {
-                alert('Camera is turned off. Click "Turn Camera On" first.');
-                return;
-            }
-            const video = document.getElementById('camera-feed');
-            const canvas = document.getElementById('camera-canvas');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            capturedImages.push(dataUrl);
-            generateThumbnail(dataUrl);
-            triggerAlert('Photo captured successfully!', false);
-        };
-
-        document.getElementById('item-photos').onchange = (e) => {
-            capturedImages = [];
-            if (e.target.files) {
-                Array.from(e.target.files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        capturedImages.push(event.target.result);
-                        generateThumbnail(event.target.result);
-                    }
-                    reader.readAsDataURL(file);
-                });
-            }
-        };
-
         function generateThumbnail(dataUrl) {
             const img = new Image();
             img.onload = () => {
@@ -704,11 +734,6 @@
             }
         }
 
-        // Navigation & Tabs
-        document.getElementById('brandHomeBtn').onclick = () => switchTab('scout');
-        document.getElementById('dockScoutBtn').onclick = () => switchTab('scout');
-        document.getElementById('dockVaultBtn').onclick = () => switchTab('vault');
-
         function switchTab(tabName) {
             stopCamera();
             document.getElementById('dockScoutBtn').classList.remove('active');
@@ -727,11 +752,6 @@
             window.scrollTo(0,0);
         }
 
-        // Vault Sub-Category Toggles
-        document.getElementById('vaultSubGeneral').onclick = () => setVaultCategory('general');
-        document.getElementById('vaultSubCoins').onclick = () => setVaultCategory('coins');
-        document.getElementById('vaultSubMtg').onclick = () => setVaultCategory('mtg');
-
         function setVaultCategory(cat) {
             currentVaultCategory = cat;
             document.getElementById('vaultSubGeneral').classList.remove('active');
@@ -741,21 +761,6 @@
             document.getElementById('vaultCategoryLabel').textContent = cat.charAt(0).toUpperCase() + cat.slice(1) + ' Portfolio';
             renderVault();
         }
-
-        // Profile Modal
-        document.getElementById('openProfileBtn').onclick = () => {
-            document.getElementById('profileModal').classList.add('active');
-            document.getElementById('api-key').value = localStorage.getItem('thrift_api_key') || '';
-        };
-        document.getElementById('closeProfileBtn').onclick = () => {
-            document.getElementById('profileModal').classList.remove('active');
-        };
-        document.getElementById('saveProfileBtn').onclick = () => {
-            const key = document.getElementById('api-key').value.trim();
-            localStorage.setItem('thrift_api_key', key);
-            document.getElementById('profileModal').classList.remove('active');
-            triggerAlert('API credentials saved successfully.', false);
-        };
 
         function triggerAlert(msg, isErr = false) {
             const box = document.getElementById('statusAlert');
@@ -780,7 +785,7 @@
             }
         }
 
-        document.getElementById('analyzeBtn').onclick = async () => {
+        async function runAnalysis() {
             const apiKey = localStorage.getItem('thrift_api_key');
             const cost = parseFloat(document.getElementById('item-cost').value) || 0;
 
@@ -855,9 +860,9 @@
             } catch (err) {
                 triggerAlert('Analysis Error: ' + err.message, true);
             }
-        };
+        }
 
-        document.getElementById('saveVaultBtn').onclick = async () => {
+        async function saveToVault() {
             if (!currentAppraisal) return;
             try {
                 await addDoc(collection(db, 'vault_inventory'), currentAppraisal);
@@ -866,7 +871,7 @@
             } catch (err) {
                 triggerAlert('Vault sync failed: ' + err.message, true);
             }
-        };
+        }
 
         onSnapshot(query(collection(db, 'vault_inventory'), orderBy('createdAt', 'desc')), (snap) => {
             vaultItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
