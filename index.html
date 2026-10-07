@@ -85,7 +85,7 @@
             align-items: center;
             justify-content: center;
             font-size: 1rem;
-            transition: var(--transition);
+            transition: all 0.2s;
         }
         .profile-avatar-btn:hover { border-color: var(--primary); }
 
@@ -240,8 +240,8 @@
             margin-top: 10px;
         }
         .preview-thumb {
-            width: 60px;
-            height: 60px;
+            width: 65px;
+            height: 65px;
             object-fit: cover;
             border-radius: 8px;
             border: 2px solid var(--primary);
@@ -650,8 +650,7 @@
             
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             capturedImages.push(dataUrl);
-            compressedThumbData(dataUrl);
-            renderThumbnails();
+            generateThumbnail(dataUrl);
             triggerAlert('Photo captured successfully!', false);
         };
 
@@ -662,15 +661,14 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         capturedImages.push(e.target.result);
-                        compressedThumbData(e.target.result);
-                        renderThumbnails();
+                        generateThumbnail(e.target.result);
                     }
                     reader.readAsDataURL(file);
                 });
             }
         };
 
-        function compressedThumbData(dataUrl) {
+        function generateThumbnail(dataUrl) {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -678,6 +676,7 @@
                 canvas.height = Math.round((img.height * 120) / img.width);
                 canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
                 compressedThumbUrl = canvas.toDataURL('image/jpeg', 0.60);
+                renderThumbnails();
             };
             img.src = dataUrl;
         }
