@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyberpunk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Thrift Scout • Tactical AI Resale Intelligence</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --card-bg: #111827;
+            --surface: #1f2937;
+            --border: #374151;
+            --border-focus: #6366f1;
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
+            --primary: #6366f1;
+            --accent: #14b8a6;
+            --accent-glow: rgba(20, 184, 166, 0.2);
+            --amber: #f59e0b;
+            --amber-glow: rgba(245, 158, 11, 0.2);
+            --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-stack);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            text-align: center;
+        }
+        .hero-container {
+            max-width: 560px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .logo-badge {
+            font-size: 3.5rem;
+            margin-bottom: -10px;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+        h1 span { color: var(--accent); }
+        .tagline {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            text-align: left;
+            margin: 10px 0;
+        }
+        .feature-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .feature-item strong { display: block; color: var(--text); font-size: 0.85rem; margin-bottom: 2px; }
+        .cta-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--accent);
+            color: #090d16;
+            font-weight: 800;
+            font-size: 1rem;
+            padding: 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: opacity 0.2s;
+        }
+        .cta-button:active { opacity: 0.85; }
+        .footer-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-container">
+        <div class="logo-badge">🐕‍🦺</div>
+        <h1>THRIFT<span>SCOUT</span></h1>
+        <p class="tagline">
+            Professional-grade AI valuation, multi-shot inventory management, and tactical offline fallback designed for high-performance secondary market resellers.
+        </p>
+
+        <div class="feature-grid">
+            <div class="feature-item">
+                <strong>⚡ 8s Turbo Recon</strong>
+                Instant market comps & net profit margin factoring.
+            </div>
+            <div class="feature-item">
+                <strong>📦 Tri-Vault Sync</strong>
+                Real-time Firebase portfolio tracking & swipe actions.
+            </div>
+            <div class="feature-item">
+                <strong>🪙 Multi-Mode</strong>
+                Dedicated coin obverse/reverse and MTG Scryfall scans.
+            </div>
+            <div class="feature-item">
+                <strong>🇺🇸 Veteran Owned</strong>
+                Built with precision, reliability, and speed in mind.
+            </div>
+        </div>
+
+        <a href="app/index.html" class="cta-button">🚀 LAUNCH FIELD APP</a>
+        
+        <div class="footer-note">Secure Local API Storage • Cloud Firebase Backend</div>
+    </div>
+</body>
+</html>
