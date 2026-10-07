@@ -2,40 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thrift Scout | Professional AI Item Appraisal & Vault</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Thrift Scout • Tri-Vault & AI Recon</title>
     <style>
         :root {
-            --bg-base: #06090f;
-            --bg-surface: #0d1322;
-            --bg-card: rgba(17, 24, 39, 0.85);
-            --bg-input: #111827;
-            --primary: #f59e0b;
-            --primary-hover: #d97706;
-            --accent-glow: rgba(245, 158, 11, 0.15);
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
+            --bg: #06090f;
+            --card-bg: #111827;
+            --surface: #1f2937;
             --border: rgba(255, 255, 255, 0.08);
-            --border-focus: rgba(245, 158, 11, 0.5);
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-focus: #f59e0b;
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
+            --primary: #f59e0b;
+            --primary-glow: rgba(245, 158, 11, 0.25);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --amber: #f59e0b;
+            --amber-glow: rgba(245, 158, 11, 0.25);
+            --font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
         body {
-            background-color: var(--bg-base);
-            color: var(--text-main);
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-stack);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            padding-bottom: 80px;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
@@ -53,264 +49,146 @@
         }
 
         header {
-            background-color: rgba(6, 9, 15, 0.85);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(17, 24, 39, 0.85);
             backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
-            padding: 1rem 2.5rem;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
         }
 
-        .logo {
-            font-size: 1.25rem;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-weight: 800;
-            letter-spacing: -0.03em;
-            color: var(--text-main);
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+            color: var(--text);
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
+        .brand-accent { color: var(--primary); text-shadow: 0 0 15px var(--primary-glow); }
 
-        .logo span {
-            color: var(--primary);
-            text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
-        }
-
-        .nav-right {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        .btn-glass {
-            background: rgba(255, 255, 255, 0.03);
+        .profile-avatar-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--surface);
             border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
             cursor: pointer;
-            font-weight: 500;
-            font-size: 0.85rem;
-            transition: var(--transition);
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            justify-content: center;
+            font-size: 1rem;
+            transition: var(--transition);
         }
-
-        .btn-glass:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
+        .profile-avatar-btn:hover { border-color: var(--primary); }
 
         main {
             flex: 1;
             width: 100%;
-            max-width: 1000px;
+            max-width: 680px;
             margin: 0 auto;
-            padding: 2.5rem 1.5rem;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .view {
-            display: none;
-            animation: fadeIn 0.3s ease-out forwards;
-        }
+        .tab-view { display: none; flex-direction: column; gap: 14px; }
+        .tab-view.active { display: flex; }
 
-        .view.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .hero {
-            text-align: center;
-            padding: 5rem 1rem 3rem;
-            max-width: 700px;
-            margin: 0 auto;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            font-weight: 900;
-            letter-spacing: -0.035em;
-            line-height: 1.15;
-            margin-bottom: 1.25rem;
-            background: linear-gradient(135deg, #f9fafb 30%, #9ca3af 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero h1 span {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero p {
-            font-size: 1.1rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-            margin-bottom: 2rem;
-        }
-
-        .btn-primary {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: #06090f;
-            font-weight: 700;
-            font-size: 0.95rem;
-            padding: 0.75rem 1.75rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.25rem;
-            margin-top: 3.5rem;
-        }
-
-        .feature-card {
-            background: var(--bg-card);
+        .card {
+            background: var(--card-bg);
             border: 1px solid var(--border);
-            padding: 1.75rem;
-            border-radius: 12px;
-            transition: var(--transition);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
 
-        .feature-card:hover {
-            border-color: var(--border-focus);
-            transform: translateY(-3px);
-        }
-
-        .feature-card h3 {
-            font-size: 1.05rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text-main);
-        }
-
-        .feature-card p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        .workspace-header {
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1rem;
         }
 
-        .workspace-tabs {
-            display: flex;
-            gap: 0.35rem;
-            background: var(--bg-surface);
-            padding: 0.3rem;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .workspace-tab {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 0.5rem 1rem;
+        .badge-accent {
+            background: var(--amber-glow);
+            color: var(--amber);
+            border: 1px solid var(--amber);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
             border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-alert {
+            display: none;
+            padding: 12px 16px;
+            border-radius: 10px;
             font-size: 0.85rem;
-            transition: var(--transition);
-        }
-
-        .workspace-tab.active {
-            background: var(--bg-card);
-            color: var(--text-main);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-        }
-
-        .card h2 {
-            font-size: 1.1rem;
             font-weight: 600;
-            margin-bottom: 1.25rem;
-            color: var(--text-main);
+            border-left: 4px solid var(--primary);
+            background: var(--card-bg);
+            color: var(--text);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
         }
 
         .mode-selector {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            gap: 8px;
         }
 
         .mode-btn {
-            background: var(--bg-input);
+            background: var(--surface);
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 0.75rem;
+            padding: 0.7rem;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             cursor: pointer;
             text-align: center;
-            transition: var(--transition);
+            transition: all 0.2s;
         }
 
         .mode-btn.active {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border-color: var(--primary);
-            box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+            background: var(--amber-glow);
+            color: var(--amber);
+            border-color: var(--amber);
+            box-shadow: 0 0 12px var(--amber-glow);
         }
 
         .capture-tabs {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 8px;
         }
 
         .capture-tabs-group {
             display: flex;
-            gap: 0.5rem;
+            gap: 6px;
         }
 
         .capture-tab {
-            background: var(--bg-input);
+            background: var(--surface);
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 0.4rem 0.8rem;
+            padding: 0.35rem 0.75rem;
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
@@ -325,45 +203,27 @@
 
         .dropzone {
             border: 2px dashed var(--border);
-            background: var(--bg-input);
-            padding: 1.75rem;
+            background: var(--surface);
+            padding: 1.5rem;
             border-radius: 10px;
             text-align: center;
             cursor: pointer;
-            transition: var(--transition);
+            transition: all 0.2s;
             position: relative;
         }
-
-        .dropzone:hover {
-            border-color: var(--primary);
-            background: rgba(245, 158, 11, 0.03);
-        }
-
+        .dropzone:hover { border-color: var(--primary); }
         .dropzone input[type="file"] {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .dropzone-text {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .dropzone-text strong {
-            color: var(--primary);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
         }
 
         .camera-box {
             display: none;
-            background: var(--bg-input);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 1rem;
             text-align: center;
         }
-
         .camera-box video {
             width: 100%;
             max-height: 240px;
@@ -375,160 +235,171 @@
 
         .preview-container {
             display: flex;
-            gap: 0.5rem;
+            gap: 6px;
             flex-wrap: wrap;
-            margin-top: 0.75rem;
+            margin-top: 10px;
         }
-
         .preview-thumb {
-            width: 65px;
-            height: 65px;
+            width: 60px;
+            height: 60px;
             object-fit: cover;
-            border-radius: 6px;
+            border-radius: 8px;
             border: 2px solid var(--primary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         }
 
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.25rem;
-            margin-top: 1.25rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group.full {
-            grid-column: span 2;
-        }
-
-        label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            margin-bottom: 0.4rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        input {
+        .btn {
             width: 100%;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.75rem;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
             font-size: 0.9rem;
-            outline: none;
-            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
         }
+        .btn-primary { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #06090f; box-shadow: 0 4px 15px rgba(245,158,11,0.3); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,0.5); }
+        .btn-outline { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--text-muted); }
 
-        input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
-        }
-
-        .results {
-            margin-top: 1.5rem;
-            background: var(--bg-surface);
+        .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .metric-box {
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 10px;
-            padding: 1.5rem;
-            display: none;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
+        .metric-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        .metric-val { font-size: 1.2rem; font-weight: 800; color: var(--text); }
+        .metric-val.profit { color: var(--accent); }
 
-        .stats-grid {
+        .disposition-pill {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .disp-flip { background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent); }
+        .disp-monitor { background: var(--amber-glow); color: var(--amber); border: 1px solid var(--amber); }
+
+        .vault-subtoggle {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
+            gap: 4px;
+            background: var(--surface);
+            padding: 4px;
+            border-radius: 8px;
             border: 1px solid var(--border);
-            padding: 1.25rem;
-            border-radius: 10px;
+        }
+        .vault-subbtn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 8px 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
             text-align: center;
         }
+        .vault-subbtn.active { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
 
-        .stat-card h3 {
-            font-size: 0.7rem;
+        .vault-summary { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        .vault-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .vault-item {
+            display: flex;
+            gap: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 10px;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .vault-item:hover { border-color: var(--primary); }
+
+        .item-thumb { width: 70px; height: 70px; min-width: 70px; border-radius: 8px; object-fit: cover; background: #06090f; border: 1px solid var(--border); }
+        .item-content { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .item-title { font-weight: 700; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-meta { font-size: 0.75rem; color: var(--text-muted); }
+
+        .bottom-dock {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 65px;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+        .dock-btn {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
             color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-            letter-spacing: 0.05em;
-        }
-
-        .stat-card p {
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: var(--primary);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
+            cursor: pointer;
+            font-size: 0.72rem;
             font-weight: 700;
-            text-transform: uppercase;
         }
-        .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .badge-yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-        .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .dock-btn.active { color: var(--primary); }
 
         .modal-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(6, 9, 15, 0.85);
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(6px);
             display: none;
-            justify-content: center;
             align-items: center;
-            z-index: 1000;
+            justify-content: center;
+            padding: 16px;
+            z-index: 200;
         }
-
-        .modal {
-            background: var(--bg-surface);
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--card-bg);
             border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 440px;
             width: 100%;
-            max-width: 400px;
-            padding: 2rem;
-            border-radius: 12px;
-            position: relative;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .modal-close {
-            position: absolute;
-            top: 1rem; right: 1rem;
-            background: none; border: none;
-            color: var(--text-muted);
-            font-size: 1.1rem; cursor: pointer;
+        .input-field {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
         }
-
-        .spinner {
-            display: inline-block;
-            width: 1rem; height: 1rem;
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.5rem;
-            vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media(max-width: 768px) {
-            .form-grid, .stats-grid, .mode-selector { grid-template-columns: 1fr; }
-            .form-group.full { grid-column: span 1; }
-            .hero h1 { font-size: 2.25rem; }
-            header { padding: 1rem 1.25rem; }
-        }
+        .input-field:focus { border-color: var(--primary); }
     </style>
 </head>
 <body>
@@ -536,159 +407,176 @@
     <div class="ambient-glow"></div>
 
     <header>
-        <div class="logo" onclick="switchView('landing')">Thrift<span>Scout</span></div>
-        <div class="nav-right">
-            <button class="btn-glass" onclick="openProfileModal()">⚙️ Profile & API</button>
+        <div class="brand" onclick="switchTab('scout')">
+            <span>🐕‍🦺</span>
+            <span>THRIFT<span class="brand-accent">SCOUT</span></span>
         </div>
+        <div class="profile-avatar-btn" onclick="openProfileModal()" title="Profile & Settings">👤</div>
     </header>
 
     <main>
-        <!-- LANDING PAGE VIEW -->
-        <div id="view-landing" class="view active">
-            <section class="hero">
-                <h1>Professional AI Appraisal & <span>Vault Tracking</span></h1>
-                <p>The definitive intelligence platform for professional pickers and resellers. Get instant market comps, margin analytics, and traffic-light disposition modeling.</p>
-                <button class="btn-primary" onclick="launchApp()">Open Scout Workspace →</button>
-            </section>
+        <div id="statusAlert" class="status-alert"></div>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <h3>Multi-Asset Scanners</h3>
-                    <p>Dedicated computer vision engines tuned specifically for general vintage goods, trading cards, and rare currency.</p>
+        <!-- TAB 1: SCOUT / APPRAISER -->
+        <section id="tab-scout" class="tab-view active">
+            <div class="card">
+                <div class="card-title">
+                    <span>SELECT ASSET SCANNER</span>
+                    <span class="badge-accent">AI Vision</span>
                 </div>
-                <div class="feature-card">
-                    <h3>Disposition Modeling</h3>
-                    <p>Automated Green, Yellow, and Red risk scoring to evaluate capital allocation instantly in the field.</p>
+
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="mode-general" onclick="setMode('general')">📦 General Thrift</button>
+                    <button class="mode-btn" id="mode-mtg" onclick="setMode('mtg')">🃏 MTG Card</button>
+                    <button class="mode-btn" id="mode-coin" onclick="setMode('coin')">🪙 Rare Coin</button>
                 </div>
-                <div class="feature-card">
-                    <h3>Portfolio Vault</h3>
-                    <p>Manage your active inventory, cost basis, and projected net profits in a secure local vault.</p>
-                </div>
-            </div>
-        </div>
 
-        <!-- APP WORKSPACE VIEW -->
-        <div id="view-app" class="view">
-            <div class="workspace-header">
-                <div class="workspace-tabs">
-                    <button class="workspace-tab active" id="tab-appraiser" onclick="switchTab('appraiser')">Appraiser Workspace</button>
-                    <button class="workspace-tab" id="tab-vault" onclick="switchTab('vault')">Inventory Vault</button>
-                </div>
-                <button class="btn-glass" onclick="switchView('landing')">← Back to Home</button>
-            </div>
-
-            <!-- Appraiser Sub-View -->
-            <div id="sub-appraiser" class="app-subview">
-                <div class="card">
-                    <h2>Select Asset Scanner Mode</h2>
-                    <div class="mode-selector">
-                        <button class="mode-btn active" id="mode-general" onclick="setMode('general')">📦 General Thrift</button>
-                        <button class="mode-btn" id="mode-mtg" onclick="setMode('mtg')">🃏 MTG Card</button>
-                        <button class="mode-btn" id="mode-coin" onclick="setMode('coin')">🪙 Rare Coin</button>
-                    </div>
-
-                    <div class="form-group full">
-                        <div class="capture-tabs">
-                            <label id="photo-label" style="margin-bottom:0;">Item Capture</label>
-                            <div class="capture-tabs-group">
-                                <button class="capture-tab active" id="cap-upload" onclick="switchCaptureMode('upload')">📁 Upload</button>
-                                <button class="capture-tab" id="cap-camera" onclick="switchCaptureMode('camera')">📷 Live Camera</button>
-                            </div>
-                        </div>
-
-                        <!-- Upload Zone -->
-                        <div class="dropzone" id="upload-zone">
-                            <input type="file" id="item-photos" accept="image/*" multiple onchange="handleFilePreview(this)">
-                            <div class="dropzone-text">Drag & drop item photos here, or <strong>browse files</strong></div>
-                        </div>
-
-                        <!-- Live Camera Viewfinder -->
-                        <div class="camera-box" id="camera-box">
-                            <video id="camera-feed" autoplay playsinline></video>
-                            <div style="display:flex; gap:0.5rem; justify-content:center;">
-                                <button class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="captureSnapshot()">📸 Snap Photo</button>
-                                <button class="btn-glass" style="padding: 0.5rem 1rem; font-size: 0.8rem; color:var(--danger); border-color:rgba(239,68,68,0.3);" onclick="toggleCameraPower()" id="camPowerBtn">🔴 Turn Camera Off</button>
-                            </div>
-                            <canvas id="camera-canvas" style="display:none;"></canvas>
-                        </div>
-
-                        <!-- Visible Thumbnail Preview Tray -->
-                        <div class="preview-container" id="preview-container" style="display:none;"></div>
-                    </div>
-
-                    <div class="form-group" style="max-width: 300px; margin-top: 1rem;">
-                        <label>Cost Basis ($)</label>
-                        <input type="number" id="item-cost" placeholder="0.00" step="0.01">
-                    </div>
-
-                    <button class="btn-primary" style="width:100%; margin-top:1rem;" onclick="analyzeItem()">Run Specialized AI Valuation</button>
-
-                    <div id="results-box" class="results">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                            <h3 id="res-title" style="font-size:1.05rem; font-weight:600; color:var(--text-main);"></h3>
-                            <div id="res-badge"></div>
-                        </div>
-                        <p id="res-desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.25rem; line-height:1.6;"></p>
-                        
-                        <div id="res-financials" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.25rem; background:var(--bg-base); padding:1rem; border-radius:8px; border: 1px solid var(--border);"></div>
-                        
-                        <div style="display:flex; gap:0.75rem;">
-                            <a id="ebay-link" href="#" target="_blank" class="btn-glass" style="text-align:center; text-decoration:none; display:none; flex:1; justify-content:center;">Search Comps</a>
-                            <button class="btn-primary" style="flex:1;" onclick="saveToVault()">Save to Vault</button>
+                <div>
+                    <div class="capture-tabs">
+                        <label class="metric-label" id="photo-label" style="margin-bottom:0;">Item Capture</label>
+                        <div class="capture-tabs-group">
+                            <button class="capture-tab active" id="cap-upload" onclick="switchCaptureMode('upload')">📁 Upload</button>
+                            <button class="capture-tab" id="cap-camera" onclick="switchCaptureMode('camera')">📷 Live Camera</button>
                         </div>
                     </div>
+
+                    <!-- Upload Zone -->
+                    <div class="dropzone" id="upload-zone">
+                        <input type="file" id="item-photos" accept="image/*" multiple onchange="handleFilePreview(this)">
+                        <div class="dropzone-text">Drag & drop item photos here, or <strong>browse files</strong></div>
+                    </div>
+
+                    <!-- Live Camera Viewfinder -->
+                    <div class="camera-box" id="camera-box">
+                        <video id="camera-feed" autoplay playsinline muted></video>
+                        <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:8px;">
+                            <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto;" onclick="captureSnapshot()">📸 Snap Photo</button>
+                            <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto; color:var(--danger);" onclick="toggleCameraPower()" id="camPowerBtn">🔴 Turn Camera Off</button>
+                        </div>
+                        <canvas id="camera-canvas" style="display:none;"></canvas>
+                    </div>
+
+                    <!-- Visible Thumbnail Preview Tray -->
+                    <div class="preview-container" id="preview-container" style="display:none;"></div>
                 </div>
+
+                <div style="max-width: 240px;">
+                    <label class="metric-label">Cost Basis ($)</label>
+                    <input type="number" id="item-cost" class="input-field" placeholder="0.00" step="0.01" value="0.00">
+                </div>
+
+                <button class="btn btn-primary" onclick="analyzeItem()">Run Specialized AI Valuation</button>
             </div>
 
-            <!-- Vault Sub-View -->
-            <div id="sub-vault" class="app-subview" style="display:none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Total Portfolio Value</h3>
-                        <p id="vault-total">$0.00</p>
+            <!-- APPRAISAL RESULT CARD -->
+            <div class="card" id="appraisalCard" style="display:none;">
+                <div class="card-title">
+                    <span id="resItemTitle" style="font-size:1.05rem;">Identified Item</span>
+                    <span id="resDispPill" class="disposition-pill disp-flip">BUY (INSTANT FLIP)</span>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-box">
+                        <span class="metric-label">Estimated Resale</span>
+                        <span class="metric-val" id="resEstResale">$0.00</span>
                     </div>
-                    <div class="stat-card">
-                        <h3>Capital Invested</h3>
-                        <p id="vault-cost">$0.00</p>
+                    <div class="metric-box">
+                        <span class="metric-label">Net Profit (Est)</span>
+                        <span class="metric-val profit" id="resEstProfit">$0.00</span>
                     </div>
-                    <div class="stat-card">
-                        <h3>Projected Profit</h3>
-                        <p id="vault-profit">$0.00</p>
+                    <div class="metric-box">
+                        <span class="metric-label">Brand / Set</span>
+                        <span class="metric-val" id="resBrand" style="font-size:0.95rem;">--</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-label">Cost Basis</span>
+                        <span class="metric-val" id="resCostBasis" style="font-size:1rem; color:var(--primary);">$0.00</span>
                     </div>
                 </div>
-                <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-                        <h2>Active Inventory Vault</h2>
-                        <button class="btn-glass" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3);" onclick="clearVault()">Clear Vault</button>
-                    </div>
-                    <div id="vault-list" style="color:var(--text-muted); font-size:0.85rem;">No items stored in vault yet.</div>
+
+                <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;" id="resIntel"></div>
+
+                <div style="display:flex; gap:8px;">
+                    <a id="resEbayLink" target="_blank" class="btn btn-outline" style="flex:1; font-size:0.8rem; text-decoration:none;">VIEW COMPS</a>
+                    <button class="btn btn-primary" id="saveVaultBtn" style="flex:1; font-size:0.8rem;">SEND TO VAULT</button>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- TAB 2: TRI-VAULT -->
+        <section id="tab-vault" class="tab-view">
+            <div class="card">
+                <div class="vault-subtoggle">
+                    <button id="vaultSubGeneral" class="vault-subbtn active" onclick="setVaultCategory('general')">📦 General</button>
+                    <button id="vaultSubCoins" class="vault-subbtn" onclick="setVaultCategory('coins')">🪙 Coins</button>
+                    <button id="vaultSubMtg" class="vault-subbtn" onclick="setVaultCategory('mtg')">🃏 MTG</button>
+                </div>
+
+                <div class="vault-summary">
+                    <div>
+                        <div class="metric-label" id="vaultCategoryLabel">General Portfolio</div>
+                        <div class="metric-val profit" id="vaultTotal">$0.00</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="metric-label">Tracked Items</div>
+                        <div class="metric-val" id="vaultCount">0 items</div>
+                    </div>
+                </div>
+
+                <div class="vault-list" id="vaultItemList">
+                    <div style="text-align:center; color:var(--text-muted); padding:2rem 0; font-size:0.85rem;">Loading vault inventory...</div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- PROFILE MODAL -->
-    <div id="profile-modal" class="modal-overlay">
-        <div class="modal">
-            <button class="modal-close" onclick="closeProfileModal()">✕</button>
-            <h2 style="font-size:1.05rem; font-weight:600; margin-bottom:0.5rem;">User Profile & Credentials</h2>
-            <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:1.25rem; line-height:1.5;">Your Gemini API key is securely stored in your browser's local storage.</p>
-            <div class="form-group">
-                <label>Gemini API Key</label>
-                <input type="password" id="api-key" placeholder="Enter API Key">
+    <nav class="bottom-dock">
+        <button class="dock-btn active" onclick="switchTab('scout')">⚡ SCOUT</button>
+        <button class="dock-btn" onclick="switchTab('vault')">📦 VAULT</button>
+    </nav>
+
+    <!-- PROFILE / API SETTINGS MODAL -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-content">
+            <div class="card-title">
+                <span>User Profile & API Credentials</span>
+                <button style="background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer;" onclick="closeProfileModal()">✕</button>
             </div>
-            <button class="btn-primary" style="width:100%; text-align:center; margin-top:0.5rem;" onclick="closeProfileModal()">Save Credentials</button>
+            <div>
+                <label class="metric-label">Gemini API Key</label>
+                <input type="password" id="api-key" class="input-field" placeholder="AIzaSy..." style="margin-top:6px;">
+            </div>
+            <button class="btn btn-primary" onclick="saveProfileModal()" style="margin-top:4px;">Save Credentials</button>
         </div>
     </div>
 
-    <script>
-        let currentItemData = null;
+    <!-- FIREBASE & APP LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAtDQnJuWvJOp__hVHO5fdNhjiRjZZkskI",
+            authDomain: "thrift-scout-1b937.firebaseapp.com",
+            projectId: "thrift-scout-1b937",
+            storageBucket: "thrift-scout-1b937.firebasestorage.app",
+            messagingSenderId: "559782240794",
+            appId: "1:559782240794:web:5ace10f3f027b4cd82e7a3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         let currentMode = 'general';
+        let currentVaultCategory = 'general';
         let capturedImages = [];
+        let compressedThumbUrl = null;
         let cameraStream = null;
         let isCameraActive = false;
+        let currentAppraisal = null;
+        let vaultItems = [];
 
-        function setMode(mode) {
+        window.setMode = (mode) => {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('mode-' + mode).classList.add('active');
@@ -697,9 +585,9 @@
             if(mode === 'mtg') label.innerText = 'Card Capture (Front/Back)';
             else if(mode === 'coin') label.innerText = 'Coin Capture (Obverse/Reverse)';
             else label.innerText = 'Item Capture';
-        }
+        };
 
-        function switchCaptureMode(mode) {
+        window.switchCaptureMode = (mode) => {
             document.getElementById('cap-upload').classList.remove('active');
             document.getElementById('cap-camera').classList.remove('active');
             document.getElementById('upload-zone').style.display = 'none';
@@ -714,7 +602,7 @@
                 document.getElementById('camera-box').style.display = 'block';
                 startCamera();
             }
-        }
+        };
 
         async function startCamera() {
             try {
@@ -737,20 +625,20 @@
             isCameraActive = false;
         }
 
-        function toggleCameraPower() {
+        window.toggleCameraPower = () => {
             if (isCameraActive) {
                 stopCamera();
                 document.getElementById('camera-feed').srcObject = null;
                 document.getElementById('camPowerBtn').textContent = '🟢 Turn Camera On';
-                document.getElementById('camPowerBtn').style.color = 'var(--success)';
+                document.getElementById('camPowerBtn').style.color = 'var(--accent)';
             } else {
                 startCamera();
             }
-        }
+        };
 
-        function captureSnapshot() {
+        window.captureSnapshot = () => {
             if (!isCameraActive) {
-                alert('Camera is currently turned off. Click "Turn Camera On" first.');
+                alert('Camera is turned off. Click "Turn Camera On" first.');
                 return;
             }
             const video = document.getElementById('camera-feed');
@@ -760,24 +648,38 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            const dataUrl = canvas.toDataURL('image/jpeg');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             capturedImages.push(dataUrl);
-
+            compressedThumbData(dataUrl);
             renderThumbnails();
-        }
+            triggerAlert('Photo captured successfully!', false);
+        };
 
-        function handleFilePreview(input) {
+        window.handleFilePreview = (input) => {
             capturedImages = [];
             if (input.files) {
                 Array.from(input.files).forEach(file => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         capturedImages.push(e.target.result);
+                        compressedThumbData(e.target.result);
                         renderThumbnails();
                     }
                     reader.readAsDataURL(file);
                 });
             }
+        };
+
+        function compressedThumbData(dataUrl) {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 120;
+                canvas.height = Math.round((img.height * 120) / img.width);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                compressedThumbUrl = canvas.toDataURL('image/jpeg', 0.60);
+            };
+            img.src = dataUrl;
         }
 
         function renderThumbnails() {
@@ -796,47 +698,53 @@
             }
         }
 
-        function switchView(viewName) {
+        window.switchTab = (tabName) => {
             stopCamera();
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById('view-' + viewName).classList.add('active');
-            window.scrollTo(0,0);
-        }
-
-        function launchApp() { switchView('app'); }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.workspace-tab').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-' + tabName).classList.add('active');
+            document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
             
-            if(tabName === 'appraiser') {
-                document.getElementById('sub-appraiser').style.display = 'block';
-                document.getElementById('sub-vault').style.display = 'none';
-            } else {
-                stopCamera();
-                document.getElementById('sub-appraiser').style.display = 'none';
-                document.getElementById('sub-vault').style.display = 'block';
-                loadVault();
+            if (tabName === 'scout') {
+                document.querySelectorAll('.dock-btn')[0].classList.add('active');
+                document.getElementById('tab-scout').classList.add('active');
+            } else if (tabName === 'vault') {
+                document.querySelectorAll('.dock-btn')[1].classList.add('active');
+                document.getElementById('tab-vault').classList.add('active');
+                renderVault();
             }
+            window.scrollTo(0,0);
+        };
+
+        window.setVaultCategory = (cat) => {
+            currentVaultCategory = cat;
+            document.getElementById('vaultSubGeneral').classList.remove('active');
+            document.getElementById('vaultSubCoins').classList.remove('active');
+            document.getElementById('vaultSubMtg').classList.remove('active');
+            document.getElementById('vaultSub' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
+            document.getElementById('vaultCategoryLabel').textContent = cat.charAt(0).toUpperCase() + cat.slice(1) + ' Portfolio';
+            renderVault();
+        };
+
+        window.openProfileModal = () => {
+            document.getElementById('profileModal').classList.add('active');
+            document.getElementById('api-key').value = localStorage.getItem('thrift_api_key') || '';
+        };
+        window.closeProfileModal = () => {
+            document.getElementById('profileModal').classList.remove('active');
+        };
+        window.saveProfileModal = () => {
+            const key = document.getElementById('api-key').value.trim();
+            localStorage.setItem('thrift_api_key', key);
+            closeProfileModal();
+            triggerAlert('API credentials saved successfully.', false);
+        };
+
+        function triggerAlert(msg, isErr = false) {
+            const box = document.getElementById('statusAlert');
+            box.style.display = 'block';
+            box.style.borderLeftColor = isErr ? 'var(--danger)' : 'var(--primary)';
+            box.textContent = msg;
         }
 
-        function openProfileModal() {
-            document.getElementById('profile-modal').style.display = 'flex';
-            const savedKey = localStorage.getItem('thrift_api_key');
-            if(savedKey) document.getElementById('api-key').value = savedKey;
-        }
-
-        function closeProfileModal() {
-            const keyVal = document.getElementById('api-key').value.trim();
-            localStorage.setItem('thrift_api_key', keyVal);
-            document.getElementById('profile-modal').style.display = 'none';
-        }
-
-        document.getElementById('api-key').addEventListener('input', (e) => {
-            localStorage.setItem('thrift_api_key', e.target.value.trim());
-        });
-
-        // Robust API call with auto-retry for 503 Overload errors
         async function fetchWithRetry(url, options, retries = 3, delay = 1500) {
             for (let i = 0; i < retries; i++) {
                 try {
@@ -853,39 +761,30 @@
             }
         }
 
-        async function analyzeItem() {
+        window.analyzeItem = async () => {
             const apiKey = localStorage.getItem('thrift_api_key');
             const cost = parseFloat(document.getElementById('item-cost').value) || 0;
 
             if(!apiKey) { 
-                alert('Please configure your Gemini API Key in Profile & API settings.'); 
+                alert('Please configure your Gemini API Key in Profile settings.'); 
                 openProfileModal();
                 return; 
             }
             if(capturedImages.length === 0) { alert('Please capture or upload at least one photo first.'); return; }
 
-            const resultsBox = document.getElementById('results-box');
-            resultsBox.style.display = 'block';
-            document.getElementById('res-title').innerHTML = '<span class="spinner"></span>Analyzing item with AI...';
-            document.getElementById('res-desc').innerText = '';
-            document.getElementById('res-badge').innerHTML = '';
-            document.getElementById('res-financials').innerHTML = '';
-            document.getElementById('ebay-link').style.display = 'none';
+            triggerAlert('Analyzing item with AI...', false);
 
             try {
-                let promptText = "Analyze this thrift item for resale. Return ONLY valid JSON with exactly keys: name (string), description (string), estimated_market_value (number), disposition (Green, Yellow, or Red), reasoning (string). No markdown backticks.";
-                
+                let promptText = "Analyze this thrift item for resale. Return ONLY valid JSON with exactly keys: brand (string), item (string), resale (number), intel (string), query (string). No markdown backticks.";
                 if(currentMode === 'mtg') {
-                    promptText = "Analyze this Magic: The Gathering card. Identify card name, set, collector number, foil status, and estimated market value. Return ONLY valid JSON with keys: name (string), description (string), estimated_market_value (number), disposition (Green, Yellow, or Red), reasoning (string). No markdown backticks.";
+                    promptText = "Analyze this Magic: The Gathering card. Identify card name, set, and market value. Return ONLY valid JSON with keys: brand (string), item (string), resale (number), intel (string), query (string). No markdown backticks.";
                 } else if(currentMode === 'coin') {
-                    promptText = "Analyze this rare coin or currency numismatic item. Identify denomination, year, mint mark, estimated condition/grade, and market value. Return ONLY valid JSON with keys: name (string), description (string), estimated_market_value (number), disposition (Green, Yellow, or Red), reasoning (string). No markdown backticks.";
+                    promptText = "Analyze this rare coin. Identify issuing mint, year, and value. Return ONLY valid JSON with keys: brand (string), item (string), resale (number), intel (string), query (string). No markdown backticks.";
                 }
 
                 let parts = [{ text: promptText }];
-                
                 for (let dataUrl of capturedImages) {
-                    const base64Data = dataUrl.split(',')[1];
-                    parts.push({ inline_data: { mime_type: 'image/jpeg', data: base64Data } });
+                    parts.push({ inline_data: { mime_type: 'image/jpeg', data: dataUrl.split(',')[1] } });
                 }
 
                 const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
@@ -901,91 +800,100 @@
                 textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(textResponse);
 
-                currentItemData = parsed;
-                currentItemData.cost = cost;
+                const resaleVal = parseFloat(parsed.resale) || 25.00;
+                const profitVal = resaleVal - cost - (resaleVal * 0.1325);
 
-                document.getElementById('res-title').innerText = parsed.name;
-                
-                let badgeClass = parsed.disposition === 'Green' ? 'badge-green' : parsed.disposition === 'Yellow' ? 'badge-yellow' : 'badge-red';
-                document.getElementById('res-badge').innerHTML = `<span class="badge ${badgeClass}">${parsed.disposition} Disposition</span>`;
-                document.getElementById('res-desc').innerText = parsed.description + " — " + parsed.reasoning;
+                currentAppraisal = {
+                    brand: parsed.brand || 'Unbranded',
+                    item: parsed.item || 'Asset',
+                    name: (parsed.brand || 'Unbranded') + ' - ' + (parsed.item || 'Asset'),
+                    cost: cost,
+                    resale: resaleVal,
+                    profit: Number(profitVal.toFixed(2)),
+                    intel: parsed.intel || 'Secondary market asset.',
+                    query: parsed.query || (parsed.brand + " " + parsed.item),
+                    category: currentMode === 'mtg' ? 'mtg' : (currentMode === 'coin' ? 'coins' : 'general'),
+                    imageThumb: compressedThumbUrl || capturedImages[0],
+                    createdAt: Date.now()
+                };
 
-                const estValue = parsed.estimated_market_value || 0;
-                const profit = estValue - cost;
-                const margin = estValue > 0 ? ((profit / estValue) * 100).toFixed(1) : 0;
-
-                document.getElementById('res-financials').innerHTML = `
-                    <div><span style="font-size:0.65rem; color:var(--text-muted); display:block;">MARKET VALUE</span><strong style="font-size:1.05rem; color:var(--text-main);">$${estValue.toFixed(2)}</strong></div>
-                    <div><span style="font-size:0.65rem; color:var(--text-muted); display:block;">EST. PROFIT</span><strong style="font-size:1.05rem; color:${profit>=0?'#34d399':'var(--danger)'};">$${profit.toFixed(2)} (${margin}%)</strong></div>
-                    <div><span style="font-size:0.65rem; color:var(--text-muted); display:block;">COST BASIS</span><strong style="font-size:1.05rem; color:var(--text-main);">$${cost.toFixed(2)}</strong></div>
-                `;
+                document.getElementById('resItemTitle').textContent = currentAppraisal.name;
+                document.getElementById('resEstResale').textContent = '$' + resaleVal.toFixed(2);
+                document.getElementById('resEstProfit').textContent = '$' + profitVal.toFixed(2);
+                document.getElementById('resBrand').textContent = currentAppraisal.brand;
+                document.getElementById('resCostBasis').textContent = '$' + cost.toFixed(2);
+                document.getElementById('resIntel').textContent = currentAppraisal.intel;
 
                 const searchUrl = currentMode === 'mtg' 
-                    ? `https://scryfall.com/search?q=${encodeURIComponent(parsed.name)}`
-                    : `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(parsed.name)}&_sacat=0&LH_Sold=1&LH_Complete=1`;
-                
-                const ebayBtn = document.getElementById('ebay-link');
-                ebayBtn.innerText = currentMode === 'mtg' ? 'Search Scryfall' : 'Search Comps';
-                ebayBtn.href = searchUrl;
-                ebayBtn.style.display = 'flex';
+                    ? `https://scryfall.com/search?q=${encodeURIComponent(currentAppraisal.query)}`
+                    : `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(currentAppraisal.query)}&LH_Sold=1&LH_Complete=1`;
+                document.getElementById('resEbayLink').href = searchUrl;
+
+                document.getElementById('appraisalCard').style.display = 'flex';
+                document.getElementById('appraisalCard').scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('statusAlert').style.display = 'none';
 
             } catch (err) {
-                document.getElementById('res-title').innerText = 'Analysis Error';
-                document.getElementById('res-desc').innerText = err.message;
+                triggerAlert('Analysis Error: ' + err.message, true);
             }
-        }
+        };
 
-        function saveToVault() {
-            if(!currentItemData) return;
-            let vault = JSON.parse(localStorage.getItem('thrift_vault') || '[]');
-            vault.push({
-                name: currentItemData.name,
-                value: currentItemData.estimated_market_value,
-                cost: currentItemData.cost,
-                disposition: currentItemData.disposition,
-                date: new Date().toLocaleDateString()
-            });
-            localStorage.setItem('thrift_vault', JSON.stringify(vault));
-            alert('Item successfully logged to Vault portfolio!');
-            switchTab('vault');
-        }
+        document.getElementById('saveVaultBtn').onclick = async () => {
+            if (!currentAppraisal) return;
+            try {
+                await addDoc(collection(db, 'vault_inventory'), currentAppraisal);
+                triggerAlert('Asset successfully synced to Vault!', false);
+                switchTab('vault');
+            } catch (err) {
+                triggerAlert('Vault sync failed: ' + err.message, true);
+            }
+        };
 
-        function loadVault() {
-            let vault = JSON.parse(localStorage.getItem('thrift_vault') || '[]');
-            const totalVal = vault.reduce((acc, item) => acc + item.value, 0);
-            const totalCost = vault.reduce((acc, item) => acc + item.cost, 0);
-            const totalProfit = totalVal - totalCost;
+        onSnapshot(query(collection(db, 'vault_inventory'), orderBy('createdAt', 'desc')), (snap) => {
+            vaultItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            renderVault();
+        });
 
-            document.getElementById('vault-total').innerText = '$' + totalVal.toFixed(2);
-            document.getElementById('vault-cost').innerText = '$' + totalCost.toFixed(2);
-            document.getElementById('vault-profit').innerText = '$' + totalProfit.toFixed(2);
-
-            const listEl = document.getElementById('vault-list');
-            if(vault.length === 0) {
-                listEl.innerHTML = 'No items stored in vault yet.';
+        function renderVault() {
+            const container = document.getElementById('vaultItemList');
+            const filtered = vaultItems.filter(item => (item.category || 'general') === currentVaultCategory);
+            
+            container.innerHTML = '';
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:2rem 0; font-size:0.85rem;">No items stored in this vault yet.</div>';
+                document.getElementById('vaultTotal').textContent = '$0.00';
+                document.getElementById('vaultCount').textContent = '0 items';
                 return;
             }
 
-            listEl.innerHTML = vault.map(item => `
-                <div style="background:var(--bg-base); padding:0.85rem; border-radius:8px; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--border);">
-                    <div>
-                        <strong style="font-size:0.9rem; color:var(--text-main);">${item.name}</strong><br>
-                        <span style="font-size:0.75rem; color:var(--text-muted);">Logged: ${item.date} | Cost: $${item.cost.toFixed(2)}</span>
-                    </div>
-                    <div style="text-align:right;">
-                        <span style="color:var(--text-main); font-weight:600; display:block; font-size:0.9rem;">$${item.value.toFixed(2)}</span>
-                        <span class="badge ${item.disposition==='Green'?'badge-green':item.disposition==='Yellow'?'badge-yellow':'badge-red'}" style="font-size:0.6rem;">${item.disposition}</span>
-                    </div>
-                </div>
-            `).join('');
+            let totalVal = 0;
+            filtered.forEach(item => {
+                totalVal += Number(item.profit || 0);
+                const row = document.createElement('div');
+                row.className = 'vault-item';
+                row.innerHTML = 
+                    '<img class="item-thumb" src="' + (item.imageThumb || '') + '" alt="Thumb">' +
+                    '<div class="item-content">' +
+                        '<div class="item-title">' + item.name + '</div>' +
+                        '<div class="item-meta">Buy: $' + (item.cost \vert{}\vert{} 0).toFixed(2) + ' • Target: $' + (item.resale || 0).toFixed(2) + '</div>' +
+                    '</div>' +
+                    '<div style="text-align:right;">' +
+                        '<div style="color:var(--accent); font-weight:800; font-size:0.95rem;">+$' + (item.profit || 0).toFixed(2) + '</div>' +
+                        '<button style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; cursor:pointer; margin-top:2px;" onclick="deleteItem(\'' + item.id + '\')">Delete</button>' +
+                    '</div>';
+                container.appendChild(row);
+            });
+
+            document.getElementById('vaultTotal').textContent = '$' + totalVal.toFixed(2);
+            document.getElementById('vaultCount').textContent = filtered.length + ' items';
         }
 
-        function clearVault() {
-            if(confirm('Are you sure you want to clear all saved vault inventory?')) {
-                localStorage.removeItem('thrift_vault');
-                loadVault();
+        window.deleteItem = async (id) => {
+            if (confirm('Delete this asset from your vault?')) {
+                await deleteDoc(doc(db, 'vault_inventory', id));
+                triggerAlert('Asset deleted.', false);
             }
-        }
+        };
     </script>
 </body>
 </html>
