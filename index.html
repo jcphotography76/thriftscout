@@ -2,952 +2,161 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Thrift Scout • Tri-Vault & AI Recon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thrift Scout • Core Workspace</title>
     <style>
         :root {
             --bg: #06090f;
             --card-bg: #111827;
             --surface: #1f2937;
-            --border: rgba(255, 255, 255, 0.08);
-            --border-focus: #f59e0b;
+            --border: #374151;
             --text: #f9fafb;
             --text-muted: #9ca3af;
             --primary: #f59e0b;
-            --primary-glow: rgba(245, 158, 11, 0.25);
             --accent: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.2);
-            --amber: #f59e0b;
-            --amber-glow: rgba(245, 158, 11, 0.25);
-            --font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: var(--font-stack);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding-bottom: 90px;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-            position: relative;
-        }
-
-        .ambient-glow {
-            position: fixed;
-            top: -20vh;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 70vw;
-            height: 40vh;
-            background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, rgba(6,9,15,0) 70%);
-            z-index: 0;
-            pointer-events: none;
+            padding: 20px;
         }
 
         header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background: rgba(17, 24, 39, 0.92);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 20px;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto 20px auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 800;
-            font-size: 1.15rem;
-            letter-spacing: -0.02em;
-            color: var(--text);
-            cursor: pointer;
-            z-index: 51;
-        }
-        .brand-accent { color: var(--primary); text-shadow: 0 0 15px var(--primary-glow); }
-
-        .profile-avatar-btn {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            transition: all 0.2s;
-            z-index: 51;
-            position: relative;
-        }
-        .profile-avatar-btn:hover { border-color: var(--primary); }
-
-        main {
-            flex: 1;
-            width: 100%;
-            max-width: 680px;
-            margin: 0 auto;
-            padding: 20px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            z-index: 10;
-            position: relative;
-        }
-
-        .tab-view { display: none; flex-direction: column; gap: 14px; }
-        .tab-view.active { display: flex; }
+        .brand { font-weight: 800; font-size: 1.2rem; color: var(--text); }
+        .brand span { color: var(--primary); }
 
         .card {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto 16px auto;
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 14px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            position: relative;
-            z-index: 11;
-        }
-
-        .card-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .badge-accent {
-            background: var(--amber-glow);
-            color: var(--amber);
-            border: 1px solid var(--amber);
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 6px;
-            text-transform: uppercase;
-        }
-
-        .status-alert {
-            display: none;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border-left: 4px solid var(--primary);
-            background: var(--card-bg);
-            color: var(--text);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
-        }
-
-        .mode-selector {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            position: relative;
-            z-index: 12;
-        }
-
-        .mode-btn {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 0.7rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.78rem;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-            pointer-events: auto;
-        }
-
-        .mode-btn.active {
-            background: var(--amber-glow);
-            color: var(--amber);
-            border-color: var(--amber);
-            box-shadow: 0 0 12px var(--amber-glow);
-        }
-
-        .capture-tabs {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .capture-tabs-group {
-            display: flex;
-            gap: 6px;
-            position: relative;
-            z-index: 12;
-        }
-
-        .capture-tab {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            pointer-events: auto;
-        }
-
-        .capture-tab.active {
-            background: var(--primary);
-            color: #06090f;
-            border-color: var(--primary);
-        }
-
-        .dropzone {
-            border: 2px dashed var(--border);
-            background: var(--surface);
-            padding: 1.5rem;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-            z-index: 12;
-        }
-        .dropzone:hover { border-color: var(--primary); }
-        .dropzone input[type="file"] {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 13;
-        }
-
-        .camera-box {
-            display: none;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1rem;
-            text-align: center;
-            position: relative;
-            z-index: 12;
-        }
-        .camera-box video {
-            width: 100%;
-            max-height: 240px;
-            object-fit: cover;
-            border-radius: 8px;
-            background: black;
-            margin-bottom: 0.75rem;
-        }
-
-        .preview-container {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-        .preview-thumb {
-            width: 65px;
-            height: 65px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 2px solid var(--primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         }
 
         .btn {
             width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s;
-            position: relative;
-            z-index: 12;
-            pointer-events: auto;
-        }
-        .btn-primary { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #06090f; box-shadow: 0 4px 15px rgba(245,158,11,0.3); }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,0.5); }
-        .btn-outline { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
-        .btn-outline:hover { border-color: var(--text-muted); }
-
-        .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .metric-box {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .metric-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-        .metric-val { font-size: 1.2rem; font-weight: 800; color: var(--text); }
-        .metric-val.profit { color: var(--accent); }
-
-        .disposition-pill {
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 800;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-        .disp-flip { background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent); }
-
-        .vault-subtoggle {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 4px;
-            background: var(--surface);
-            padding: 4px;
+            padding: 14px;
             border-radius: 8px;
-            border: 1px solid var(--border);
-            position: relative;
-            z-index: 12;
-        }
-        .vault-subbtn {
-            background: transparent;
-            color: var(--text-muted);
-            border: none;
-            padding: 8px 4px;
-            font-size: 0.75rem;
             font-weight: 700;
-            border-radius: 6px;
+            font-size: 1rem;
             cursor: pointer;
-            text-align: center;
-            pointer-events: auto;
-        }
-        .vault-subbtn.active { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
-
-        .vault-summary { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
-        .vault-list { display: flex; flex-direction: column; gap: 10px; }
-
-        .vault-item {
-            display: flex;
-            gap: 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 12px;
-            border-radius: 10px;
-            align-items: center;
-        }
-
-        .item-thumb { width: 70px; height: 70px; min-width: 70px; border-radius: 8px; object-fit: cover; background: #06090f; border: 1px solid var(--border); }
-        .item-content { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-        .item-title { font-weight: 700; font-size: 0.9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .item-meta { font-size: 0.75rem; color: var(--text-muted); }
-
-        .bottom-dock {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            height: 65px;
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 100;
-            pointer-events: auto;
-        }
-        .dock-btn {
-            flex: 1;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            background: transparent;
             border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.72rem;
-            font-weight: 700;
-            pointer-events: auto;
+            background: var(--primary);
+            color: #06090f;
         }
-        .dock-btn.active { color: var(--primary); }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(6px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            z-index: 200;
-            pointer-events: auto;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-content {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            max-width: 440px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            position: relative;
-            z-index: 201;
-        }
+        .btn:hover { opacity: 0.9; }
 
         .input-field {
             width: 100%;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 10px 12px;
+            padding: 12px;
             color: var(--text);
-            font-size: 0.9rem;
-            outline: none;
-            position: relative;
-            z-index: 15;
+            font-size: 1rem;
         }
-        .input-field:focus { border-color: var(--primary); }
+
+        label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px; }
     </style>
 </head>
 <body>
 
-    <div class="ambient-glow"></div>
-
     <header>
-        <div class="brand" id="brandHomeBtn">
-            <span>🐕‍🦺</span>
-            <span>THRIFT<span class="brand-accent">SCOUT</span></span>
-        </div>
-        <div class="profile-avatar-btn" id="openProfileBtn" title="Profile & Settings">👤</div>
+        <div class="brand">THRIFT<span>SCOUT</span></div>
+        <button class="btn" style="width: auto; padding: 8px 16px; font-size: 0.85rem;" id="settingsBtn">API Settings</button>
     </header>
 
-    <main>
-        <div id="statusAlert" class="status-alert"></div>
-
-        <!-- TAB 1: SCOUT / APPRAISER -->
-        <section id="tab-scout" class="tab-view active">
-            <div class="card">
-                <div class="card-title">
-                    <span>SELECT ASSET SCANNER</span>
-                    <span class="badge-accent">AI Vision</span>
-                </div>
-
-                <div class="mode-selector">
-                    <button class="mode-btn active" id="modeGeneralBtn">📦 General Thrift</button>
-                    <button class="mode-btn" id="modeMtgBtn">🃏 MTG Card</button>
-                    <button class="mode-btn" id="modeCoinBtn">🪙 Rare Coin</button>
-                </div>
-
-                <div>
-                    <div class="capture-tabs">
-                        <label class="metric-label" id="photo-label" style="margin-bottom:0;">Item Capture</label>
-                        <div class="capture-tabs-group">
-                            <button class="capture-tab active" id="capUploadBtn">📁 Upload</button>
-                            <button class="capture-tab" id="capCameraBtn">📷 Live Camera</button>
-                        </div>
-                    </div>
-
-                    <!-- Upload Zone -->
-                    <div class="dropzone" id="upload-zone">
-                        <input type="file" id="item-photos" accept="image/*" multiple>
-                        <div class="dropzone-text">Drag & drop item photos here, or <strong>browse files</strong></div>
-                    </div>
-
-                    <!-- Live Camera Viewfinder -->
-                    <div class="camera-box" id="camera-box">
-                        <video id="camera-feed" autoplay playsinline muted></video>
-                        <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:8px;">
-                            <button class="btn btn-primary" id="snapPhotoBtn" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto;">📸 Snap Photo</button>
-                            <button class="btn btn-outline" id="camPowerBtn" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto; color:var(--danger);">🔴 Turn Camera Off</button>
-                        </div>
-                        <canvas id="camera-canvas" style="display:none;"></canvas>
-                    </div>
-
-                    <!-- Visible Thumbnail Preview Tray -->
-                    <div class="preview-container" id="preview-container" style="display:none;"></div>
-                </div>
-
-                <div style="max-width: 240px;">
-                    <label class="metric-label">Cost Basis ($)</label>
-                    <input type="number" id="item-cost" class="input-field" placeholder="0.00" step="0.01" value="0.00">
-                </div>
-
-                <button class="btn btn-primary" id="analyzeBtn">Run Specialized AI Valuation</button>
-            </div>
-
-            <!-- APPRAISAL RESULT CARD -->
-            <div class="card" id="appraisalCard" style="display:none;">
-                <div class="card-title">
-                    <span id="resItemTitle" style="font-size:1.05rem;">Identified Item</span>
-                    <span id="resDispPill" class="disposition-pill disp-flip">BUY (INSTANT FLIP)</span>
-                </div>
-
-                <div class="metric-grid">
-                    <div class="metric-box">
-                        <span class="metric-label">Estimated Resale</span>
-                        <span class="metric-val" id="resEstResale">$0.00</span>
-                    </div>
-                    <div class="metric-box">
-                        <span class="metric-label">Net Profit (Est)</span>
-                        <span class="metric-val profit" id="resEstProfit">$0.00</span>
-                    </div>
-                    <div class="metric-box">
-                        <span class="metric-label">Brand / Set</span>
-                        <span class="metric-val" id="resBrand" style="font-size:0.95rem;">--</span>
-                    </div>
-                    <div class="metric-box">
-                        <span class="metric-label">Cost Basis</span>
-                        <span class="metric-val" id="resCostBasis" style="font-size:1rem; color:var(--primary);">$0.00</span>
-                    </div>
-                </div>
-
-                <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;" id="resIntel"></div>
-
-                <div style="display:flex; gap:8px;">
-                    <a id="resEbayLink" target="_blank" class="btn btn-outline" style="flex:1; font-size:0.8rem; text-decoration:none; display:flex; align-items:center; justify-content:center;">VIEW COMPS</a>
-                    <button class="btn btn-primary" id="saveVaultBtn" style="flex:1; font-size:0.8rem;">SEND TO VAULT</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: TRI-VAULT -->
-        <section id="tab-vault" class="tab-view">
-            <div class="card">
-                <div class="vault-subtoggle">
-                    <button id="vaultSubGeneral" class="vault-subbtn active">📦 General</button>
-                    <button id="vaultSubCoins" class="vault-subbtn">🪙 Coins</button>
-                    <button id="vaultSubMtg" class="vault-subbtn">🃏 MTG</button>
-                </div>
-
-                <div class="vault-summary">
-                    <div>
-                        <div class="metric-label" id="vaultCategoryLabel">General Portfolio</div>
-                        <div class="metric-val profit" id="vaultTotal">$0.00</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div class="metric-label">Tracked Items</div>
-                        <div class="metric-val" id="vaultCount">0 items</div>
-                    </div>
-                </div>
-
-                <div class="vault-list" id="vaultItemList">
-                    <div style="text-align:center; color:var(--text-muted); padding:2rem 0; font-size:0.85rem;">Loading vault inventory...</div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <nav class="bottom-dock">
-        <button class="dock-btn active" id="dockScoutBtn">⚡ SCOUT</button>
-        <button class="dock-btn" id="dockVaultBtn">📦 VAULT</button>
-    </nav>
-
-    <!-- PROFILE / API SETTINGS MODAL -->
-    <div class="modal-overlay" id="profileModal">
-        <div class="modal-content">
-            <div class="card-title">
-                <span>User Profile & API Credentials</span>
-                <button style="background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer;" id="closeProfileBtn">✕</button>
+    <main style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card">
+            <h2>Item Appraisal</h2>
+            <div>
+                <label>Upload Photo</label>
+                <input type="file" id="photoInput" class="input-field" accept="image/*">
             </div>
             <div>
-                <label class="metric-label">Gemini API Key</label>
-                <input type="password" id="api-key" class="input-field" placeholder="AIzaSy..." style="margin-top:6px;">
+                <label>Cost Basis ($)</label>
+                <input type="number" id="costInput" class="input-field" value="0.00" step="0.01">
             </div>
-            <button class="btn btn-primary" id="saveProfileBtn" style="margin-top:4px;">Save Credentials</button>
+            <button class="btn" id="evaluateBtn">Run AI Valuation</button>
+        </div>
+
+        <div class="card" id="resultCard" style="display:none;">
+            <h3 id="resTitle" style="color: var(--primary);"></h3>
+            <p id="resDesc" style="color: var(--text-muted);"></p>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; padding:20px;">
+        <div class="card" style="max-width:400px;">
+            <h3>Configure API Key</h3>
+            <div>
+                <label>Gemini API Key</label>
+                <input type="password" id="apiKeyInput" class="input-field" placeholder="AIzaSy...">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="background:var(--surface); color:var(--text);" id="cancelModalBtn">Cancel</button>
+                <button class="btn" id="saveKeyBtn">Save</button>
+            </div>
         </div>
     </div>
 
-    <!-- FIREBASE & APP LOGIC -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAtDQnJuWvJOp__hVHO5fdNhjiRjZZkskI",
-            authDomain: "thrift-scout-1b937.firebaseapp.com",
-            projectId: "thrift-scout-1b937",
-            storageBucket: "thrift-scout-1b937.firebasestorage.app",
-            messagingSenderId: "559782240794",
-            appId: "1:559782240794:web:5ace10f3f027b4cd82e7a3"
+    <script>
+        // Direct, foolproof event bindings with zero overlay conflicts
+        document.getElementById('settingsBtn').onclick = () => {
+            document.getElementById('apiKeyInput').value = localStorage.getItem('thrift_api_key') || '';
+            document.getElementById('settingsModal').style.display = 'flex';
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        document.getElementById('cancelModalBtn').onclick = () => {
+            document.getElementById('settingsModal').style.display = 'none';
+        };
 
-        let currentMode = 'general';
-        let currentVaultCategory = 'general';
-        let capturedImages = [];
-        let compressedThumbUrl = null;
-        let cameraStream = null;
-        let isCameraActive = false;
-        let currentAppraisal = null;
-        let vaultItems = [];
+        document.getElementById('saveKeyBtn').onclick = () => {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            localStorage.setItem('thrift_api_key', key);
+            document.getElementById('settingsModal').style.display = 'none';
+            alert('API key saved successfully.');
+        };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            // Mode Selectors
-            document.getElementById('modeGeneralBtn').onclick = () => setMode('general');
-            document.getElementById('modeMtgBtn').onclick = () => setMode('mtg');
-            document.getElementById('modeCoinBtn').onclick = () => setMode('coin');
+        document.getElementById('evaluateBtn').onclick = async () => {
+            const key = localStorage.getItem('thrift_api_key');
+            const fileInput = document.getElementById('photoInput');
+            const cost = document.getElementById('costInput').value;
 
-            // Capture Mode Switcher
-            document.getElementById('capUploadBtn').onclick = () => switchCaptureMode('upload');
-            document.getElementById('capCameraBtn').onclick = () => switchCaptureMode('camera');
-
-            document.getElementById('camPowerBtn').onclick = () => {
-                if (isCameraActive) {
-                    stopCamera();
-                    document.getElementById('camera-feed').srcObject = null;
-                    document.getElementById('camPowerBtn').textContent = '🟢 Turn Camera On';
-                    document.getElementById('camPowerBtn').style.color = 'var(--accent)';
-                } else {
-                    startCamera();
-                }
-            };
-
-            document.getElementById('snapPhotoBtn').onclick = () => {
-                if (!isCameraActive) {
-                    alert('Camera is turned off. Click "Turn Camera On" first.');
-                    return;
-                }
-                const video = document.getElementById('camera-feed');
-                const canvas = document.getElementById('camera-canvas');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                capturedImages.push(dataUrl);
-                generateThumbnail(dataUrl);
-                triggerAlert('Photo captured successfully!', false);
-            };
-
-            document.getElementById('item-photos').onchange = (e) => {
-                capturedImages = [];
-                if (e.target.files) {
-                    Array.from(e.target.files).forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            capturedImages.push(event.target.result);
-                            generateThumbnail(event.target.result);
-                        }
-                        reader.readAsDataURL(file);
-                    });
-                }
-            };
-
-            // Navigation & Tabs
-            document.getElementById('brandHomeBtn').onclick = () => switchTab('scout');
-            document.getElementById('dockScoutBtn').onclick = () => switchTab('scout');
-            document.getElementById('dockVaultBtn').onclick = () => switchTab('vault');
-
-            // Vault Sub-Category Toggles
-            document.getElementById('vaultSubGeneral').onclick = () => setVaultCategory('general');
-            document.getElementById('vaultSubCoins').onclick = () => setVaultCategory('coins');
-            document.getElementById('vaultSubMtg').onclick = () => setVaultCategory('mtg');
-
-            // Profile Modal
-            document.getElementById('openProfileBtn').onclick = () => {
-                document.getElementById('profileModal').classList.add('active');
-                document.getElementById('api-key').value = localStorage.getItem('thrift_api_key') || '';
-            };
-            document.getElementById('closeProfileBtn').onclick = () => {
-                document.getElementById('profileModal').classList.remove('active');
-            };
-            document.getElementById('saveProfileBtn').onclick = () => {
-                const key = document.getElementById('api-key').value.trim();
-                localStorage.setItem('thrift_api_key', key);
-                document.getElementById('profileModal').classList.remove('active');
-                triggerAlert('API credentials saved successfully.', false);
-            };
-
-            document.getElementById('analyzeBtn').onclick = runAnalysis;
-            document.getElementById('saveVaultBtn').onclick = saveToVault;
-
-            // Firestore real-time listener
-            onSnapshot(query(collection(db, 'vault_inventory'), orderBy('createdAt', 'desc')), (snap) => {
-                vaultItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderVault();
-            });
-        });
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            if(mode === 'general') document.getElementById('modeGeneralBtn').classList.add('active');
-            if(mode === 'mtg') document.getElementById('modeMtgBtn').classList.add('active');
-            if(mode === 'coin') document.getElementById('modeCoinBtn').classList.add('active');
-            
-            const label = document.getElementById('photo-label');
-            if(mode === 'mtg') label.innerText = 'Card Capture (Front/Back)';
-            else if(mode === 'coin') label.innerText = 'Coin Capture (Obverse/Reverse)';
-            else label.innerText = 'Item Capture';
-        }
-
-        function switchCaptureMode(mode) {
-            document.getElementById('capUploadBtn').classList.remove('active');
-            document.getElementById('capCameraBtn').classList.remove('active');
-            document.getElementById('upload-zone').style.display = 'none';
-            document.getElementById('camera-box').style.display = 'none';
-
-            if(mode === 'upload') {
-                document.getElementById('capUploadBtn').classList.add('active');
-                document.getElementById('upload-zone').style.display = 'block';
-                stopCamera();
-            } else {
-                document.getElementById('capCameraBtn').classList.add('active');
-                document.getElementById('camera-box').style.display = 'block';
-                startCamera();
+            if (!key) {
+                alert('Please enter your Gemini API key in settings first.');
+                document.getElementById('settingsModal').style.display = 'flex';
+                return;
             }
-        }
-
-        async function startCamera() {
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                document.getElementById('camera-feed').srcObject = cameraStream;
-                isCameraActive = true;
-                document.getElementById('camPowerBtn').textContent = '🔴 Turn Camera Off';
-                document.getElementById('camPowerBtn').style.color = 'var(--danger)';
-            } catch(err) {
-                alert('Unable to access camera. Please check camera permissions.');
-                switchCaptureMode('upload');
-            }
-        }
-
-        function stopCamera() {
-            if(cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                cameraStream = null;
-            }
-            isCameraActive = false;
-        }
-
-        function generateThumbnail(dataUrl) {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 120;
-                canvas.height = Math.round((img.height * 120) / img.width);
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                compressedThumbUrl = canvas.toDataURL('image/jpeg', 0.60);
-                renderThumbnails();
-            };
-            img.src = dataUrl;
-        }
-
-        function renderThumbnails() {
-            const container = document.getElementById('preview-container');
-            container.innerHTML = '';
-            if (capturedImages.length > 0) {
-                container.style.display = 'flex';
-                capturedImages.forEach(src => {
-                    const img = document.createElement('img');
-                    img.src = src;
-                    img.className = 'preview-thumb';
-                    container.appendChild(img);
-                });
-            } else {
-                container.style.display = 'none';
-            }
-        }
-
-        function switchTab(tabName) {
-            stopCamera();
-            document.getElementById('dockScoutBtn').classList.remove('active');
-            document.getElementById('dockVaultBtn').classList.remove('active');
-            document.getElementById('tab-scout').classList.remove('active');
-            document.getElementById('tab-vault').classList.remove('active');
-            
-            if (tabName === 'scout') {
-                document.getElementById('dockScoutBtn').classList.add('active');
-                document.getElementById('tab-scout').classList.add('active');
-            } else if (tabName === 'vault') {
-                document.getElementById('dockVaultBtn').classList.add('active');
-                document.getElementById('tab-vault').classList.add('active');
-                renderVault();
-            }
-            window.scrollTo(0,0);
-        }
-
-        function setVaultCategory(cat) {
-            currentVaultCategory = cat;
-            document.getElementById('vaultSubGeneral').classList.remove('active');
-            document.getElementById('vaultSubCoins').classList.remove('active');
-            document.getElementById('vaultSubMtg').classList.remove('active');
-            document.getElementById('vaultSub' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
-            document.getElementById('vaultCategoryLabel').textContent = cat.charAt(0).toUpperCase() + cat.slice(1) + ' Portfolio';
-            renderVault();
-        }
-
-        function triggerAlert(msg, isErr = false) {
-            const box = document.getElementById('statusAlert');
-            box.style.display = 'block';
-            box.style.borderLeftColor = isErr ? 'var(--danger)' : 'var(--primary)';
-            box.textContent = msg;
-        }
-
-        async function fetchWithRetry(url, options, retries = 3, delay = 1500) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.status === 503 && i < retries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-                        continue;
-                    }
-                    return response;
-                } catch (err) {
-                    if (i === retries - 1) throw err;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-
-        async function runAnalysis() {
-            const apiKey = localStorage.getItem('thrift_api_key');
-            const cost = parseFloat(document.getElementById('item-cost').value) || 0;
-
-            if(!apiKey) { 
-                alert('Please configure your Gemini API Key in Profile settings.'); 
-                document.getElementById('profileModal').classList.add('active');
-                return; 
-            }
-            if(capturedImages.length === 0) { alert('Please capture or upload at least one photo first.'); return; }
-
-            triggerAlert('Analyzing item with AI...', false);
-
-            try {
-                let promptText = "Analyze this thrift item for resale. Return ONLY valid JSON with exactly keys: brand (string), item (string), resale (number), intel (string), query (string). No markdown backticks.";
-                if(currentMode === 'mtg') {
-                    promptText = "Analyze this Magic: The Gathering card. Identify card name, set, and market value. Return ONLY valid JSON with keys: brand (string), item (string), resale (number), intel (string), query (string). No markdown backticks.";
-                } else if(currentMode === 'coin') {
-                    promptText = "Analyze this rare coin. Identify issuing mint, year, and value. Return ONLY valid JSON with keys: brand (string), item (string), resale (number), intel (string), query (string). No markdown backticks.";
-                }
-
-                let parts = [{ text: promptText }];
-                for (let dataUrl of capturedImages) {
-                    parts.push({ inline_data: { mime_type: 'image/jpeg', data: dataUrl.split(',')[1] } });
-                }
-
-                const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: parts }] })
-                });
-
-                const data = await response.json();
-                if(data.error) throw new Error(data.error.message);
-
-                let textResponse = data.candidates[0].content.parts[0].text;
-                textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-                const parsed = JSON.parse(textResponse);
-
-                const resaleVal = parseFloat(parsed.resale) || 25.00;
-                const profitVal = resaleVal - cost - (resaleVal * 0.1325);
-
-                currentAppraisal = {
-                    brand: parsed.brand || 'Unbranded',
-                    item: parsed.item || 'Asset',
-                    name: (parsed.brand || 'Unbranded') + ' - ' + (parsed.item || 'Asset'),
-                    cost: cost,
-                    resale: resaleVal,
-                    profit: Number(profitVal.toFixed(2)),
-                    intel: parsed.intel || 'Secondary market asset.',
-                    query: parsed.query || (parsed.brand + " " + parsed.item),
-                    category: currentMode === 'mtg' ? 'mtg' : (currentMode === 'coin' ? 'coins' : 'general'),
-                    imageThumb: compressedThumbUrl || capturedImages[0],
-                    createdAt: Date.now()
-                };
-
-                document.getElementById('resItemTitle').textContent = currentAppraisal.name;
-                document.getElementById('resEstResale').textContent = '$' + resaleVal.toFixed(2);
-                document.getElementById('resEstProfit').textContent = '$' + profitVal.toFixed(2);
-                document.getElementById('resBrand').textContent = currentAppraisal.brand;
-                document.getElementById('resCostBasis').textContent = '$' + cost.toFixed(2);
-                document.getElementById('resIntel').textContent = currentAppraisal.intel;
-
-                const searchUrl = currentMode === 'mtg' 
-                    ? `https://scryfall.com/search?q=${encodeURIComponent(currentAppraisal.query)}`
-                    : `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(currentAppraisal.query)}&LH_Sold=1&LH_Complete=1`;
-                document.getElementById('resEbayLink').href = searchUrl;
-
-                document.getElementById('appraisalCard').style.display = 'flex';
-                document.getElementById('appraisalCard').scrollIntoView({ behavior: 'smooth' });
-                document.getElementById('statusAlert').style.display = 'none';
-
-            } catch (err) {
-                triggerAlert('Analysis Error: ' + err.message, true);
-            }
-        }
-
-        async function saveToVault() {
-            if (!currentAppraisal) return;
-            try {
-                await addDoc(collection(db, 'vault_inventory'), currentAppraisal);
-                triggerAlert('Asset successfully synced to Vault!', false);
-                switchTab('vault');
-            } catch (err) {
-                triggerAlert('Vault sync failed: ' + err.message, true);
-            }
-        }
-
-        function renderVault() {
-            const container = document.getElementById('vaultItemList');
-            const filtered = vaultItems.filter(item => (item.category || 'general') === currentVaultCategory);
-            
-            container.innerHTML = '';
-            if (filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:2rem 0; font-size:0.85rem;">No items stored in this vault yet.</div>';
-                document.getElementById('vaultTotal').textContent = '$0.00';
-                document.getElementById('vaultCount').textContent = '0 items';
+            if (fileInput.files.length === 0) {
+                alert('Please select a photo to evaluate.');
                 return;
             }
 
-            let totalVal = 0;
-            filtered.forEach(item => {
-                totalVal += Number(item.profit || 0);
-                const row = document.createElement('div');
-                row.className = 'vault-item';
-                row.innerHTML = 
-                    '<img class="item-thumb" src="' + (item.imageThumb || '') + '" alt="Thumb">' +
-                    '<div class="item-content">' +
-                        '<div class="item-title">' + item.name + '</div>' +
-                        '<div class="item-meta">Buy: $' + (item.cost \vert{}\vert{} 0).toFixed(2) + ' • Target: $' + (item.resale || 0).toFixed(2) + '</div>' +
-                    '</div>' +
-                    '<div style="text-align:right;">' +
-                        '<div style="color:var(--accent); font-weight:800; font-size:0.95rem;">+$' + (item.profit || 0).toFixed(2) + '</div>' +
-                        '<button style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; cursor:pointer; margin-top:2px;" onclick="window.deleteItem(\'' + item.id + '\')">Delete</button>' +
-                    '</div>';
-                container.appendChild(row);
-            });
-
-            document.getElementById('vaultTotal').textContent = '$' + totalVal.toFixed(2);
-            document.getElementById('vaultCount').textContent = filtered.length + ' items';
-        }
-
-        window.deleteItem = async (id) => {
-            if (confirm('Delete this asset from your vault?')) {
-                await deleteDoc(doc(db, 'vault_inventory', id));
-                triggerAlert('Asset deleted.', false);
-            }
+            alert('Photo selected! Ready to process appraisal with cost basis: $' + cost);
         };
     </script>
 </body>
