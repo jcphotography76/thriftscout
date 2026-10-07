@@ -8,11 +8,10 @@
         :root {
             --bg-base: #030712;
             --bg-surface: #0b0f19;
-            --bg-card: rgba(17, 24, 39, 0.7);
-            --bg-input: #111827;
+            --bg-card: #111827;
+            --bg-input: #0f172a;
             --primary: #3b82f6;
             --primary-hover: #2563eb;
-            --accent-glow: rgba(59, 130, 246, 0.15);
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -20,7 +19,7 @@
             --text-muted: #9ca3af;
             --border: rgba(255, 255, 255, 0.08);
             --border-focus: rgba(59, 130, 246, 0.5);
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -40,24 +39,24 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Ambient Glow Background */
         .ambient-glow {
             position: fixed;
             top: -20vh;
             left: 50%;
             transform: translateX(-50%);
-            width: 60vw;
+            width: 70vw;
             height: 40vh;
-            background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, rgba(3,7,18,0) 70%);
+            background: radial-gradient(circle, rgba(59,130,246,0.07) 0%, rgba(3,7,18,0) 70%);
             z-index: -1;
             pointer-events: none;
         }
 
+        /* Unified Header */
         header {
-            background-color: rgba(3, 7, 18, 0.8);
+            background-color: rgba(3, 7, 18, 0.85);
             backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
-            padding: 1.25rem 3rem;
+            padding: 1rem 2.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -67,7 +66,7 @@
         }
 
         .logo {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: 800;
             letter-spacing: -0.03em;
             color: var(--text-main);
@@ -79,12 +78,12 @@
 
         .logo span {
             color: var(--primary);
-            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
         }
 
-        .nav-actions {
+        .nav-right {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: center;
         }
 
@@ -92,12 +91,15 @@
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border);
             color: var(--text-main);
-            padding: 0.6rem 1.25rem;
+            padding: 0.5rem 1rem;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 500;
             font-size: 0.85rem;
             transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .btn-glass:hover {
@@ -108,14 +110,14 @@
         main {
             flex: 1;
             width: 100%;
-            max-width: 1050px;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 3rem 1.5rem;
+            padding: 2.5rem 1.5rem;
         }
 
         .view {
             display: none;
-            animation: fadeIn 0.35s ease-out forwards;
+            animation: fadeIn 0.3s ease-out forwards;
         }
 
         .view.active {
@@ -123,24 +125,24 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Landing Page Hero */
+        /* Landing Page */
         .hero {
             text-align: center;
-            padding: 6rem 1rem 4rem;
-            max-width: 750px;
+            padding: 5rem 1rem 3rem;
+            max-width: 700px;
             margin: 0 auto;
         }
 
         .hero h1 {
-            font-size: 3.25rem;
+            font-size: 3rem;
             font-weight: 900;
             letter-spacing: -0.035em;
             line-height: 1.15;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             background: linear-gradient(135deg, #f9fafb 30%, #9ca3af 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -153,10 +155,10 @@
         }
 
         .hero p {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             color: var(--text-muted);
-            line-height: 1.7;
-            margin-bottom: 2.5rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
         }
 
         .btn-primary {
@@ -166,125 +168,123 @@
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
             font-weight: 600;
-            font-size: 1rem;
-            padding: 0.85rem 2rem;
+            font-size: 0.95rem;
+            padding: 0.75rem 1.75rem;
             border-radius: 8px;
             border: none;
             cursor: pointer;
             text-decoration: none;
             transition: var(--transition);
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(59, 130, 246, 0.6);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 4rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+            margin-top: 3.5rem;
         }
 
         .feature-card {
             background: var(--bg-card);
-            backdrop-filter: blur(12px);
             border: 1px solid var(--border);
-            padding: 2rem;
+            padding: 1.75rem;
             border-radius: 12px;
             transition: var(--transition);
         }
 
         .feature-card:hover {
             border-color: var(--border-focus);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: translateY(-3px);
         }
 
         .feature-card h3 {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 600;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             color: var(--text-main);
         }
 
         .feature-card p {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--text-muted);
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
-        /* App Dashboard */
-        .dashboard-nav {
+        /* App Shell Workspace */
+        .workspace-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 1.25rem;
+            padding-bottom: 1rem;
         }
 
-        .tabs {
+        .workspace-tabs {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.35rem;
             background: var(--bg-surface);
-            padding: 0.35rem;
-            border-radius: 10px;
+            padding: 0.3rem;
+            border-radius: 8px;
             border: 1px solid var(--border);
         }
 
-        .tab-btn {
+        .workspace-tab {
             background: transparent;
             border: none;
             color: var(--text-muted);
-            padding: 0.6rem 1.25rem;
-            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
             font-size: 0.85rem;
             transition: var(--transition);
         }
 
-        .tab-btn.active {
-            background: var(--bg-input);
+        .workspace-tab.active {
+            background: var(--bg-card);
             color: var(--text-main);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
 
         .card {
             background: var(--bg-card);
-            backdrop-filter: blur(12px);
             border: 1px solid var(--border);
             border-radius: 14px;
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
 
         .card h2 {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             color: var(--text-main);
         }
 
+        /* Mode Selector */
         .mode-selector {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
         }
 
         .mode-btn {
             background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 0.85rem;
-            border-radius: 10px;
+            padding: 0.75rem;
+            border-radius: 8px;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             cursor: pointer;
             text-align: center;
             transition: var(--transition);
@@ -294,17 +294,66 @@
             background: rgba(59, 130, 246, 0.15);
             color: #60a5fa;
             border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Custom File Dropzone */
+        .dropzone {
+            border: 2px dashed var(--border);
+            background: var(--bg-input);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .dropzone:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.03);
+        }
+
+        .dropzone input[type="file"] {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .dropzone-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .dropzone-text strong {
+            color: var(--primary);
+        }
+
+        .preview-container {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .preview-thumb {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border);
         }
 
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
+            gap: 1.25rem;
+            margin-top: 1.25rem;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .form-group.full {
@@ -316,19 +365,19 @@
             font-size: 0.75rem;
             font-weight: 700;
             color: var(--text-muted);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        input, select {
+        input {
             width: 100%;
             background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text-main);
-            padding: 0.85rem 1rem;
+            padding: 0.75rem;
             border-radius: 8px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             outline: none;
             transition: var(--transition);
         }
@@ -340,26 +389,25 @@
 
         /* Results Panel */
         .results {
-            margin-top: 2rem;
+            margin-top: 1.5rem;
             background: var(--bg-surface);
             border: 1px solid var(--border);
             border-radius: 10px;
-            padding: 2rem;
+            padding: 1.5rem;
             display: none;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1.25rem;
-            margin-bottom: 2rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .stat-card {
             background: var(--bg-card);
-            backdrop-filter: blur(12px);
             border: 1px solid var(--border);
-            padding: 1.5rem;
+            padding: 1.25rem;
             border-radius: 10px;
             text-align: center;
         }
@@ -368,35 +416,34 @@
             font-size: 0.7rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.25rem;
             letter-spacing: 0.05em;
         }
 
         .stat-card p {
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             font-weight: 800;
             color: var(--primary);
         }
 
         .badge {
             display: inline-block;
-            padding: 0.3rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
         .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
         .badge-yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
         .badge-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 
-        /* Modal Drawer */
+        /* Profile Modal Drawer */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(3, 7, 18, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(3, 7, 18, 0.8);
+            backdrop-filter: blur(6px);
             display: none;
             justify-content: center;
             align-items: center;
@@ -407,27 +454,24 @@
             background: var(--bg-surface);
             border: 1px solid var(--border);
             width: 100%;
-            max-width: 440px;
-            padding: 2.5rem;
-            border-radius: 14px;
+            max-width: 400px;
+            padding: 2rem;
+            border-radius: 12px;
             position: relative;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
         }
 
         .modal-close {
             position: absolute;
-            top: 1.25rem; right: 1.25rem;
+            top: 1rem; right: 1rem;
             background: none; border: none;
             color: var(--text-muted);
-            font-size: 1.2rem; cursor: pointer;
-            transition: var(--transition);
+            font-size: 1.1rem; cursor: pointer;
         }
-
-        .modal-close:hover { color: var(--text-main); }
 
         .spinner {
             display: inline-block;
-            width: 1.1rem; height: 1.1rem;
+            width: 1rem; height: 1rem;
             border: 2px solid rgba(255,255,255,0.2);
             border-radius: 50%;
             border-top-color: var(--primary);
@@ -449,11 +493,11 @@
 
     <div class="ambient-glow"></div>
 
+    <!-- UNIFIED HEADER -->
     <header>
         <div class="logo" onclick="switchView('landing')">Thrift<span>Scout</span></div>
-        <div class="nav-actions">
-            <button class="btn-glass" onclick="openProfileModal()">👤 User Profile</button>
-            <button class="btn-primary" style="padding: 0.5rem 1.25rem; font-size: 0.85rem;" onclick="launchApp()">Launch App</button>
+        <div class="nav-right">
+            <button class="btn-glass" onclick="openProfileModal()">⚙️ Profile & API</button>
         </div>
     </header>
 
@@ -462,14 +506,14 @@
         <div id="view-landing" class="view active">
             <section class="hero">
                 <h1>Professional AI Appraisal & <span>Vault Tracking</span></h1>
-                <p>The definitive intelligence platform for professional pickers and resellers. Get instant market comps, margin analytics, and traffic-light disposition modeling for general goods, MTG cards, and numismatic coins.</p>
+                <p>The definitive intelligence platform for professional pickers and resellers. Get instant market comps, margin analytics, and traffic-light disposition modeling.</p>
                 <button class="btn-primary" onclick="launchApp()">Open Scout Workspace →</button>
             </section>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <h3>Multi-Asset Scanners</h3>
-                    <p>Dedicated computer vision engines tuned specifically for general vintage items, trading cards, and rare currency.</p>
+                    <p>Dedicated computer vision engines tuned specifically for general vintage goods, trading cards, and rare currency.</p>
                 </div>
                 <div class="feature-card">
                     <h3>Disposition Modeling</h3>
@@ -482,14 +526,14 @@
             </div>
         </div>
 
-        <!-- APP DASHBOARD VIEW -->
+        <!-- APP WORKSPACE VIEW -->
         <div id="view-app" class="view">
-            <div class="dashboard-nav">
-                <div class="tabs">
-                    <button class="tab-btn active" id="tab-appraiser" onclick="switchTab('appraiser')">Appraiser</button>
-                    <button class="tab-btn" id="tab-vault" onclick="switchTab('vault')">Inventory Vault</button>
+            <div class="workspace-header">
+                <div class="workspace-tabs">
+                    <button class="workspace-tab active" id="tab-appraiser" onclick="switchTab('appraiser')">Appraiser Workspace</button>
+                    <button class="workspace-tab" id="tab-vault" onclick="switchTab('vault')">Inventory Vault</button>
                 </div>
-                <button class="btn-glass" onclick="openProfileModal()">⚙️ API Settings</button>
+                <button class="btn-glass" onclick="switchView('landing')">← Back to Home</button>
             </div>
 
             <!-- Appraiser Sub-View -->
@@ -502,29 +546,33 @@
                         <button class="mode-btn" id="mode-coin" onclick="setMode('coin')">🪙 Rare Coin</button>
                     </div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label id="photo-label">Item Photos</label>
-                            <input type="file" id="item-photos" accept="image/*" multiple>
-                        </div>
-                        <div class="form-group">
-                            <label>Cost Basis ($)</label>
-                            <input type="number" id="item-cost" placeholder="0.00" step="0.01">
+                    <div class="form-group full">
+                        <label id="photo-label">Item Photos</label>
+                        <div class="dropzone">
+                            <input type="file" id="item-photos" accept="image/*" multiple onchange="handleFilePreview(this)">
+                            <div class="dropzone-text">Drag & drop item photos here, or <strong>browse files</strong></div>
+                            <div class="preview-container" id="preview-container"></div>
                         </div>
                     </div>
-                    <button class="btn-primary" style="width:100%; text-align:center;" onclick="analyzeItem()">Run Specialized AI Valuation</button>
+
+                    <div class="form-group" style="max-width: 300px;">
+                        <label>Cost Basis ($)</label>
+                        <input type="number" id="item-cost" placeholder="0.00" step="0.01">
+                    </div>
+
+                    <button class="btn-primary" style="width:100%; margin-top:1rem;" onclick="analyzeItem()">Run Specialized AI Valuation</button>
 
                     <div id="results-box" class="results">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                            <h3 id="res-title" style="font-size:1.1rem; font-weight:600; color:var(--text-main);"></h3>
+                            <h3 id="res-title" style="font-size:1.05rem; font-weight:600; color:var(--text-main);"></h3>
                             <div id="res-badge"></div>
                         </div>
-                        <p id="res-desc" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:1.25rem; line-height:1.6;"></p>
+                        <p id="res-desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.25rem; line-height:1.6;"></p>
                         
-                        <div id="res-financials" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.25rem; background:var(--bg-base); padding:1.25rem; border-radius:10px; border: 1px solid var(--border);"></div>
+                        <div id="res-financials" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.25rem; background:var(--bg-base); padding:1rem; border-radius:8px; border: 1px solid var(--border);"></div>
                         
-                        <div style="display:flex; gap:1rem;">
-                            <a id="ebay-link" href="#" target="_blank" class="btn-glass" style="text-align:center; text-decoration:none; display:none; flex:1; background:var(--bg-input);">Search Comps</a>
+                        <div style="display:flex; gap:0.75rem;">
+                            <a id="ebay-link" href="#" target="_blank" class="btn-glass" style="text-align:center; text-decoration:none; display:none; flex:1; justify-content:center;">Search Comps</a>
                             <button class="btn-primary" style="flex:1;" onclick="saveToVault()">Save to Vault</button>
                         </div>
                     </div>
@@ -548,11 +596,11 @@
                     </div>
                 </div>
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
                         <h2>Active Inventory Vault</h2>
                         <button class="btn-glass" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3);" onclick="clearVault()">Clear Vault</button>
                     </div>
-                    <div id="vault-list" style="color:var(--text-muted); font-size:0.9rem;">No items stored in vault yet.</div>
+                    <div id="vault-list" style="color:var(--text-muted); font-size:0.85rem;">No items stored in vault yet.</div>
                 </div>
             </div>
         </div>
@@ -562,13 +610,13 @@
     <div id="profile-modal" class="modal-overlay">
         <div class="modal">
             <button class="modal-close" onclick="closeProfileModal()">✕</button>
-            <h2 style="font-size:1.1rem; font-weight:600; margin-bottom:0.5rem;">User Profile & Credentials</h2>
-            <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem; line-height:1.5;">Your Gemini API key is securely stored in your browser's local storage and never exposed.</p>
+            <h2 style="font-size:1.05rem; font-weight:600; margin-bottom:0.5rem;">User Profile & Credentials</h2>
+            <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:1.25rem; line-height:1.5;">Your Gemini API key is securely stored in your browser's local storage.</p>
             <div class="form-group">
                 <label>Gemini API Key</label>
                 <input type="password" id="api-key" placeholder="Enter API Key">
             </div>
-            <button class="btn-primary" style="width:100%; text-align:center;" onclick="closeProfileModal()">Save Credentials</button>
+            <button class="btn-primary" style="width:100%; text-align:center; margin-top:0.5rem;" onclick="closeProfileModal()">Save Credentials</button>
         </div>
     </div>
 
@@ -587,6 +635,23 @@
             else label.innerText = 'Item Photos';
         }
 
+        function handleFilePreview(input) {
+            const container = document.getElementById('preview-container');
+            container.innerHTML = '';
+            if (input.files) {
+                Array.from(input.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'preview-thumb';
+                        container.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
         function switchView(viewName) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById('view-' + viewName).classList.add('active');
@@ -596,7 +661,7 @@
         function launchApp() { switchView('app'); }
 
         function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.workspace-tab').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
             
             if(tabName === 'appraiser') {
@@ -631,7 +696,7 @@
             const cost = parseFloat(document.getElementById('item-cost').value) || 0;
 
             if(!apiKey) { 
-                alert('Please configure your Gemini API Key in User Profile settings.'); 
+                alert('Please configure your Gemini API Key in Profile & API settings.'); 
                 openProfileModal();
                 return; 
             }
@@ -688,9 +753,9 @@
                 const margin = estValue > 0 ? ((profit / estValue) * 100).toFixed(1) : 0;
 
                 document.getElementById('res-financials').innerHTML = `
-                    <div><span style="font-size:0.7rem; color:var(--text-muted); display:block;">MARKET VALUE</span><strong style="font-size:1.15rem; color:var(--text-main);">$${estValue.toFixed(2)}</strong></div>
-                    <div><span style="font-size:0.7rem; color:var(--text-muted); display:block;">EST. PROFIT</span><strong style="font-size:1.15rem; color:${profit>=0?'#34d399':'var(--danger)'};">$${profit.toFixed(2)} (${margin}%)</strong></div>
-                    <div><span style="font-size:0.7rem; color:var(--text-muted); display:block;">COST BASIS</span><strong style="font-size:1.15rem; color:var(--text-main);">$${cost.toFixed(2)}</strong></div>
+                    <div><span style="font-size:0.65rem; color:var(--text-muted); display:block;">MARKET VALUE</span><strong style="font-size:1.05rem; color:var(--text-main);">$${estValue.toFixed(2)}</strong></div>
+                    <div><span style="font-size:0.65rem; color:var(--text-muted); display:block;">EST. PROFIT</span><strong style="font-size:1.05rem; color:${profit>=0?'#34d399':'var(--danger)'};">$${profit.toFixed(2)} (${margin}%)</strong></div>
+                    <div><span style="font-size:0.65rem; color:var(--text-muted); display:block;">COST BASIS</span><strong style="font-size:1.05rem; color:var(--text-main);">$${cost.toFixed(2)}</strong></div>
                 `;
 
                 const searchUrl = currentMode === 'mtg' 
@@ -700,7 +765,7 @@
                 const ebayBtn = document.getElementById('ebay-link');
                 ebayBtn.innerText = currentMode === 'mtg' ? 'Search Scryfall' : 'Search Comps';
                 ebayBtn.href = searchUrl;
-                ebayBtn.style.display = 'block';
+                ebayBtn.style.display = 'flex';
 
             } catch (err) {
                 document.getElementById('res-title').innerText = 'Analysis Error';
@@ -749,14 +814,14 @@
             }
 
             listEl.innerHTML = vault.map(item => `
-                <div style="background:var(--bg-base); padding:1rem; border-radius:8px; margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--border);">
+                <div style="background:var(--bg-base); padding:0.85rem; border-radius:8px; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--border);">
                     <div>
-                        <strong style="font-size:0.95rem; color:var(--text-main);">${item.name}</strong><br>
+                        <strong style="font-size:0.9rem; color:var(--text-main);">${item.name}</strong><br>
                         <span style="font-size:0.75rem; color:var(--text-muted);">Logged: ${item.date} | Cost: $${item.cost.toFixed(2)}</span>
                     </div>
                     <div style="text-align:right;">
-                        <span style="color:var(--text-main); font-weight:600; display:block; font-size:0.95rem;">$${item.value.toFixed(2)}</span>
-                        <span class="badge ${item.disposition==='Green'?'badge-green':item.disposition==='Yellow'?'badge-yellow':'badge-red'}" style="font-size:0.65rem;">${item.disposition}</span>
+                        <span style="color:var(--text-main); font-weight:600; display:block; font-size:0.9rem;">$${item.value.toFixed(2)}</span>
+                        <span class="badge ${item.disposition==='Green'?'badge-green':item.disposition==='Yellow'?'badge-yellow':'badge-red'}" style="font-size:0.6rem;">${item.disposition}</span>
                     </div>
                 </div>
             `).join('');
