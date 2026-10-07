@@ -407,11 +407,11 @@
     <div class="ambient-glow"></div>
 
     <header>
-        <div class="brand" onclick="switchTab('scout')">
+        <div class="brand" id="brandHomeBtn">
             <span>🐕‍🦺</span>
             <span>THRIFT<span class="brand-accent">SCOUT</span></span>
         </div>
-        <div class="profile-avatar-btn" onclick="openProfileModal()" title="Profile & Settings">👤</div>
+        <div class="profile-avatar-btn" id="openProfileBtn" title="Profile & Settings">👤</div>
     </header>
 
     <main>
@@ -426,23 +426,23 @@
                 </div>
 
                 <div class="mode-selector">
-                    <button class="mode-btn active" id="mode-general" onclick="setMode('general')">📦 General Thrift</button>
-                    <button class="mode-btn" id="mode-mtg" onclick="setMode('mtg')">🃏 MTG Card</button>
-                    <button class="mode-btn" id="mode-coin" onclick="setMode('coin')">🪙 Rare Coin</button>
+                    <button class="mode-btn active" id="modeGeneralBtn">📦 General Thrift</button>
+                    <button class="mode-btn" id="modeMtgBtn">🃏 MTG Card</button>
+                    <button class="mode-btn" id="modeCoinBtn">🪙 Rare Coin</button>
                 </div>
 
                 <div>
                     <div class="capture-tabs">
                         <label class="metric-label" id="photo-label" style="margin-bottom:0;">Item Capture</label>
                         <div class="capture-tabs-group">
-                            <button class="capture-tab active" id="cap-upload" onclick="switchCaptureMode('upload')">📁 Upload</button>
-                            <button class="capture-tab" id="cap-camera" onclick="switchCaptureMode('camera')">📷 Live Camera</button>
+                            <button class="capture-tab active" id="capUploadBtn">📁 Upload</button>
+                            <button class="capture-tab" id="capCameraBtn">📷 Live Camera</button>
                         </div>
                     </div>
 
                     <!-- Upload Zone -->
                     <div class="dropzone" id="upload-zone">
-                        <input type="file" id="item-photos" accept="image/*" multiple onchange="handleFilePreview(this)">
+                        <input type="file" id="item-photos" accept="image/*" multiple>
                         <div class="dropzone-text">Drag & drop item photos here, or <strong>browse files</strong></div>
                     </div>
 
@@ -450,8 +450,8 @@
                     <div class="camera-box" id="camera-box">
                         <video id="camera-feed" autoplay playsinline muted></video>
                         <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:8px;">
-                            <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto;" onclick="captureSnapshot()">📸 Snap Photo</button>
-                            <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto; color:var(--danger);" onclick="toggleCameraPower()" id="camPowerBtn">🔴 Turn Camera Off</button>
+                            <button class="btn btn-primary" id="snapPhotoBtn" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto;">📸 Snap Photo</button>
+                            <button class="btn btn-outline" id="camPowerBtn" style="padding: 0.5rem 1rem; font-size: 0.8rem; width:auto; color:var(--danger);">🔴 Turn Camera Off</button>
                         </div>
                         <canvas id="camera-canvas" style="display:none;"></canvas>
                     </div>
@@ -465,7 +465,7 @@
                     <input type="number" id="item-cost" class="input-field" placeholder="0.00" step="0.01" value="0.00">
                 </div>
 
-                <button class="btn btn-primary" onclick="analyzeItem()">Run Specialized AI Valuation</button>
+                <button class="btn btn-primary" id="analyzeBtn">Run Specialized AI Valuation</button>
             </div>
 
             <!-- APPRAISAL RESULT CARD -->
@@ -497,7 +497,7 @@
                 <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;" id="resIntel"></div>
 
                 <div style="display:flex; gap:8px;">
-                    <a id="resEbayLink" target="_blank" class="btn btn-outline" style="flex:1; font-size:0.8rem; text-decoration:none;">VIEW COMPS</a>
+                    <a id="resEbayLink" target="_blank" class="btn btn-outline" style="flex:1; font-size:0.8rem; text-decoration:none; display:flex; align-items:center; justify-content:center;">VIEW COMPS</a>
                     <button class="btn btn-primary" id="saveVaultBtn" style="flex:1; font-size:0.8rem;">SEND TO VAULT</button>
                 </div>
             </div>
@@ -507,9 +507,9 @@
         <section id="tab-vault" class="tab-view">
             <div class="card">
                 <div class="vault-subtoggle">
-                    <button id="vaultSubGeneral" class="vault-subbtn active" onclick="setVaultCategory('general')">📦 General</button>
-                    <button id="vaultSubCoins" class="vault-subbtn" onclick="setVaultCategory('coins')">🪙 Coins</button>
-                    <button id="vaultSubMtg" class="vault-subbtn" onclick="setVaultCategory('mtg')">🃏 MTG</button>
+                    <button id="vaultSubGeneral" class="vault-subbtn active">📦 General</button>
+                    <button id="vaultSubCoins" class="vault-subbtn">🪙 Coins</button>
+                    <button id="vaultSubMtg" class="vault-subbtn">🃏 MTG</button>
                 </div>
 
                 <div class="vault-summary">
@@ -531,8 +531,8 @@
     </main>
 
     <nav class="bottom-dock">
-        <button class="dock-btn active" onclick="switchTab('scout')">⚡ SCOUT</button>
-        <button class="dock-btn" onclick="switchTab('vault')">📦 VAULT</button>
+        <button class="dock-btn active" id="dockScoutBtn">⚡ SCOUT</button>
+        <button class="dock-btn" id="dockVaultBtn">📦 VAULT</button>
     </nav>
 
     <!-- PROFILE / API SETTINGS MODAL -->
@@ -540,13 +540,13 @@
         <div class="modal-content">
             <div class="card-title">
                 <span>User Profile & API Credentials</span>
-                <button style="background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer;" onclick="closeProfileModal()">✕</button>
+                <button style="background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer;" id="closeProfileBtn">✕</button>
             </div>
             <div>
                 <label class="metric-label">Gemini API Key</label>
                 <input type="password" id="api-key" class="input-field" placeholder="AIzaSy..." style="margin-top:6px;">
             </div>
-            <button class="btn btn-primary" onclick="saveProfileModal()" style="margin-top:4px;">Save Credentials</button>
+            <button class="btn btn-primary" id="saveProfileBtn" style="margin-top:4px;">Save Credentials</button>
         </div>
     </div>
 
@@ -576,33 +576,44 @@
         let currentAppraisal = null;
         let vaultItems = [];
 
-        window.setMode = (mode) => {
+        // Mode Selectors
+        document.getElementById('modeGeneralBtn').onclick = () => setMode('general');
+        document.getElementById('modeMtgBtn').onclick = () => setMode('mtg');
+        document.getElementById('modeCoinBtn').onclick = () => setMode('coin');
+
+        function setMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('mode-' + mode).classList.add('active');
+            if(mode === 'general') document.getElementById('modeGeneralBtn').classList.add('active');
+            if(mode === 'mtg') document.getElementById('modeMtgBtn').classList.add('active');
+            if(mode === 'coin') document.getElementById('modeCoinBtn').classList.add('active');
             
             const label = document.getElementById('photo-label');
             if(mode === 'mtg') label.innerText = 'Card Capture (Front/Back)';
             else if(mode === 'coin') label.innerText = 'Coin Capture (Obverse/Reverse)';
             else label.innerText = 'Item Capture';
-        };
+        }
 
-        window.switchCaptureMode = (mode) => {
-            document.getElementById('cap-upload').classList.remove('active');
-            document.getElementById('cap-camera').classList.remove('active');
+        // Capture Mode Switcher
+        document.getElementById('capUploadBtn').onclick = () => switchCaptureMode('upload');
+        document.getElementById('capCameraBtn').onclick = () => switchCaptureMode('camera');
+
+        function switchCaptureMode(mode) {
+            document.getElementById('capUploadBtn').classList.remove('active');
+            document.getElementById('capCameraBtn').classList.remove('active');
             document.getElementById('upload-zone').style.display = 'none';
             document.getElementById('camera-box').style.display = 'none';
 
             if(mode === 'upload') {
-                document.getElementById('cap-upload').classList.add('active');
+                document.getElementById('capUploadBtn').classList.add('active');
                 document.getElementById('upload-zone').style.display = 'block';
                 stopCamera();
             } else {
-                document.getElementById('cap-camera').classList.add('active');
+                document.getElementById('capCameraBtn').classList.add('active');
                 document.getElementById('camera-box').style.display = 'block';
                 startCamera();
             }
-        };
+        }
 
         async function startCamera() {
             try {
@@ -625,7 +636,7 @@
             isCameraActive = false;
         }
 
-        window.toggleCameraPower = () => {
+        document.getElementById('camPowerBtn').onclick = () => {
             if (isCameraActive) {
                 stopCamera();
                 document.getElementById('camera-feed').srcObject = null;
@@ -636,7 +647,7 @@
             }
         };
 
-        window.captureSnapshot = () => {
+        document.getElementById('snapPhotoBtn').onclick = () => {
             if (!isCameraActive) {
                 alert('Camera is turned off. Click "Turn Camera On" first.');
                 return;
@@ -654,14 +665,14 @@
             triggerAlert('Photo captured successfully!', false);
         };
 
-        window.handleFilePreview = (input) => {
+        document.getElementById('item-photos').onchange = (e) => {
             capturedImages = [];
-            if (input.files) {
-                Array.from(input.files).forEach(file => {
+            if (e.target.files) {
+                Array.from(e.target.files).forEach(file => {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        capturedImages.push(e.target.result);
-                        generateThumbnail(e.target.result);
+                    reader.onload = (event) => {
+                        capturedImages.push(event.target.result);
+                        generateThumbnail(event.target.result);
                     }
                     reader.readAsDataURL(file);
                 });
@@ -697,23 +708,35 @@
             }
         }
 
-        window.switchTab = (tabName) => {
+        // Navigation & Tabs
+        document.getElementById('brandHomeBtn').onclick = () => switchTab('scout');
+        document.getElementById('dockScoutBtn').onclick = () => switchTab('scout');
+        document.getElementById('dockVaultBtn').onclick = () => switchTab('vault');
+
+        function switchTab(tabName) {
             stopCamera();
-            document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
+            document.getElementById('dockScoutBtn').classList.remove('active');
+            document.getElementById('dockVaultBtn').classList.remove('active');
+            document.getElementById('tab-scout').classList.remove('active');
+            document.getElementById('tab-vault').classList.remove('active');
             
             if (tabName === 'scout') {
-                document.querySelectorAll('.dock-btn')[0].classList.add('active');
+                document.getElementById('dockScoutBtn').classList.add('active');
                 document.getElementById('tab-scout').classList.add('active');
             } else if (tabName === 'vault') {
-                document.querySelectorAll('.dock-btn')[1].classList.add('active');
+                document.getElementById('dockVaultBtn').classList.add('active');
                 document.getElementById('tab-vault').classList.add('active');
                 renderVault();
             }
             window.scrollTo(0,0);
-        };
+        }
 
-        window.setVaultCategory = (cat) => {
+        // Vault Sub-Category Toggles
+        document.getElementById('vaultSubGeneral').onclick = () => setVaultCategory('general');
+        document.getElementById('vaultSubCoins').onclick = () => setVaultCategory('coins');
+        document.getElementById('vaultSubMtg').onclick = () => setVaultCategory('mtg');
+
+        function setVaultCategory(cat) {
             currentVaultCategory = cat;
             document.getElementById('vaultSubGeneral').classList.remove('active');
             document.getElementById('vaultSubCoins').classList.remove('active');
@@ -721,19 +744,20 @@
             document.getElementById('vaultSub' + cat.charAt(0).toUpperCase() + cat.slice(1)).classList.add('active');
             document.getElementById('vaultCategoryLabel').textContent = cat.charAt(0).toUpperCase() + cat.slice(1) + ' Portfolio';
             renderVault();
-        };
+        }
 
-        window.openProfileModal = () => {
+        // Profile Modal
+        document.getElementById('openProfileBtn').onclick = () => {
             document.getElementById('profileModal').classList.add('active');
             document.getElementById('api-key').value = localStorage.getItem('thrift_api_key') || '';
         };
-        window.closeProfileModal = () => {
+        document.getElementById('closeProfileBtn').onclick = () => {
             document.getElementById('profileModal').classList.remove('active');
         };
-        window.saveProfileModal = () => {
+        document.getElementById('saveProfileBtn').onclick = () => {
             const key = document.getElementById('api-key').value.trim();
             localStorage.setItem('thrift_api_key', key);
-            closeProfileModal();
+            document.getElementById('profileModal').classList.remove('active');
             triggerAlert('API credentials saved successfully.', false);
         };
 
@@ -760,13 +784,13 @@
             }
         }
 
-        window.analyzeItem = async () => {
+        document.getElementById('analyzeBtn').onclick = async () => {
             const apiKey = localStorage.getItem('thrift_api_key');
             const cost = parseFloat(document.getElementById('item-cost').value) || 0;
 
             if(!apiKey) { 
                 alert('Please configure your Gemini API Key in Profile settings.'); 
-                openProfileModal();
+                document.getElementById('profileModal').classList.add('active');
                 return; 
             }
             if(capturedImages.length === 0) { alert('Please capture or upload at least one photo first.'); return; }
@@ -878,7 +902,7 @@
                     '</div>' +
                     '<div style="text-align:right;">' +
                         '<div style="color:var(--accent); font-weight:800; font-size:0.95rem;">+$' + (item.profit || 0).toFixed(2) + '</div>' +
-                        '<button style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; cursor:pointer; margin-top:2px;" onclick="deleteItem(\'' + item.id + '\')">Delete</button>' +
+                        '<button style="background:none; border:none; color:var(--text-muted); font-size:0.7rem; cursor:pointer; margin-top:2px;" onclick="window.deleteItem(\'' + item.id + '\')">Delete</button>' +
                     '</div>';
                 container.appendChild(row);
             });
