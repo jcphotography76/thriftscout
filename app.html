@@ -1642,37 +1642,37 @@
 
       let promptText = "";
       if (isMtgMode) {
-        promptText = "Identify this Magic: The Gathering card (exact card name, expansion set name/code, collector number, foil status, condition). Return estimated TCGPlayer market value in USD. If comps or card pricing are unavailable or unknown, set resale to 0.00. Return ONLY raw JSON without Markdown:\n" +
+        promptText = "Identify this Magic: The Gathering card (exact card name, expansion set name/code, collector number, foil status, condition, release year). Return estimated TCGPlayer market value in USD. If comps or card pricing are unavailable, set resale to 0.00. Return ONLY raw JSON without Markdown:\n" +
           "{\n" +
           '  "brand": "Wizards of the Coast (MTG)",\n' +
           '  "item": "Card Name & Set",\n' +
           '  "resale": 25.00,\n' +
           '  "platform": "TCGPlayer",\n' +
           '  "shipping": "Standard Envelope",\n' +
-          '  "intel": "Identified MTG card, set edition, and market price valuation.",\n' +
+          '  "intel": "Identified MTG card, set release year, edition, and market valuation.",\n' +
           '  "query": "exact card name set"\n' +
           "}";
       } else if (isCoinMode) {
-        promptText = "Examine both sides (obverse and reverse) of this coin/currency. Identify issuing country, year, mint mark, silver/gold melt vs copper-nickel, grade, and numismatic value in USD. If comps/pricing are unavailable, set resale to 0.00. Return ONLY raw JSON without Markdown:\n" +
+        promptText = "Examine both sides (obverse and reverse) of this coin/currency. Identify issuing country, year of mint mark, silver/gold melt vs copper-nickel, grade, and numismatic value in USD. If comps/pricing are unavailable, set resale to 0.00. Return ONLY raw JSON without Markdown:\n" +
           "{\n" +
           '  "brand": "Issuing Mint / Country",\n' +
           '  "item": "Denomination & Year",\n' +
           '  "resale": 35.00,\n' +
           '  "platform": "Numismatic",\n' +
           '  "shipping": "Insured Mail",\n' +
-          '  "intel": "Mint mark verification, silver melt status, grade notes",\n' +
+          '  "intel": "Mint mark verification, exact year/era, grade notes",\n' +
           '  "query": "coin ebay sold comps"\n' +
           "}";
       } else {
-        promptText = "Identify item & secondhand resale value. If comps are unavailable, set resale to 0.00. Return ONLY raw JSON without Markdown:\n" +
+        promptText = "Identify this thrift item, manufacturer, vintage, exact date or era of manufacture (e.g., Pyrex production years like 1940-1950 based on bottom stamps/hallmarks), and secondhand resale value. If comps are unavailable, set resale to 0.00. Return ONLY raw JSON without Markdown:\n" +
           "{\n" +
           '  "brand": "Manufacturer",\n' +
-          '  "item": "Model descriptor",\n' +
+          '  "item": "Model descriptor & Vintage Era",\n' +
           '  "resale": 15.00,\n' +
           '  "platform": "eBay",\n' +
           '  "shipping": "USPS Ground Advantage",\n' +
-          '  "intel": "Tag or hallmark reality check",\n' +
-          '  "query": "ebay sold keywords"\n' +
+          '  "intel": "Hallmark breakdown, exact manufacture date/era range, and authenticity details",\n' +
+          '  "query": "vintage pyrex cinderella bowl 1950s"\n' +
           "}";
       }
 
@@ -1830,8 +1830,8 @@
       }
 
       const hasComps = item.resale > 0;
-      const ebayUrl = "[https://www.ebay.com/sch/i.html?_nkw=](https://www.ebay.com/sch/i.html?_nkw=)" + encodeURIComponent(item.query) + "&LH_Sold=1&LH_Complete=1";
-      const scryfallUrl = "[https://scryfall.com/search?q=](https://scryfall.com/search?q=)" + encodeURIComponent(item.query);
+      const ebayUrl = "[https://www.ebay.com/sch/i.html?_nkw=](https://www.ebay.com/sch/i.html?_nkw=)" + encodeURIComponent(item.query || (item.brand + " " + item.item)) + "&LH_Sold=1&LH_Complete=1";
+      const scryfallUrl = "[https://scryfall.com/search?q=](https://scryfall.com/search?q=)" + encodeURIComponent(item.query || item.item);
 
       const ebayBtn = document.getElementById('resEbayLink');
       const scryfallBtn = document.getElementById('resVelocityLink');
@@ -2093,7 +2093,7 @@
       const hasComps = resaleVal > 0;
       const detailEbayLink = document.getElementById('vDetailEbayLink');
       if (hasComps) {
-        detailEbayLink.href = item.category === 'mtg' ? ("[https://scryfall.com/search?q=](https://scryfall.com/search?q=)" + encodeURIComponent(item.query)) : ("[https://www.ebay.com/sch/i.html?_nkw=](https://www.ebay.com/sch/i.html?_nkw=)" + encodeURIComponent(item.query || (item.brand + " " + item.item)) + "&LH_Sold=1&LH_Complete=1");
+        detailEbayLink.href = item.category === 'mtg' ? ("[https://scryfall.com/search?q=](https://scryfall.com/search?q=)" + encodeURIComponent(item.query || item.item)) : ("[https://www.ebay.com/sch/i.html?_nkw=](https://www.ebay.com/sch/i.html?_nkw=)" + encodeURIComponent(item.query || (item.brand + " " + item.item)) + "&LH_Sold=1&LH_Complete=1");
         detailEbayLink.classList.remove('disabled');
         detailEbayLink.textContent = 'VIEW COMPS';
       } else {
