@@ -72,6 +72,16 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:6
 .setup li{margin-bottom:8px}
 .setup .os{font-family:var(--head);letter-spacing:.1em;color:var(--gold);font-size:.85rem;text-transform:uppercase;margin-top:14px}
 .setup .btn{margin-top:16px;width:100%}
+.newhere{max-width:760px;margin:34px auto 0;background:rgba(26,31,18,.85);border:1px solid var(--gold);border-radius:14px;padding:18px 20px;text-align:left}
+.newhere .nh-t{font-family:var(--head);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-size:.9rem;text-align:center;margin-bottom:12px}
+.nh-steps{display:grid;gap:10px;grid-template-columns:repeat(3,1fr)}
+.nh-steps a{display:flex;gap:10px;align-items:center;text-decoration:none;color:var(--text);background:rgba(17,20,12,.7);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:.92rem;line-height:1.3}
+.nh-steps a:hover{border-color:var(--gold)}
+.nh-steps b{flex:0 0 30px;height:30px;border-radius:50%;background:var(--gold);color:var(--ink);font-family:var(--head);display:flex;align-items:center;justify-content:center}
+.scrollcue{margin-top:22px;color:var(--muted);font-size:.82rem;letter-spacing:.12em;text-transform:uppercase}
+.scrollcue span{display:block;font-size:1.3rem;color:var(--gold);animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@media(max-width:760px){.nh-steps{grid-template-columns:1fr}}
 details{background:rgba(26,31,18,.82);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
 summary{cursor:pointer;padding:18px 54px 18px 20px;font-weight:600;font-size:1.04rem;list-style:none;position:relative}
 summary::-webkit-details-marker{display:none}
@@ -87,13 +97,14 @@ details p{padding:0 20px 20px;color:#cfd5bb}
 .final p{max-width:560px;margin:0 auto 26px;color:#dfe3cd}
 footer{border-top:1px solid var(--line);padding:34px 0 50px;text-align:center;color:var(--muted);font-size:.9rem}
 footer p{max-width:640px;margin:8px auto}
+@media(max-width:760px){.hero{padding:26px 0 30px}.hero .paw{width:60px;height:60px;padding:13px;margin-bottom:10px}.hero p.lead{font-size:1rem;margin-bottom:18px}.cta-row .btn{padding:13px 22px;font-size:1rem}.cta-row .btn.ghost{display:none}.badges{margin-top:16px;gap:6px}.badge{padding:4px 10px;font-size:.7rem}.newhere{margin-top:20px;padding:14px}.nh-steps a{padding:10px}}
 @media(max-width:760px){.mission{grid-template-columns:1fr}.navlinks a.hide{display:none}section{padding:48px 0}.hero{padding:48px 0 40px}}
 </style>
 </head>
 <body>
 <nav><div class="wrap">
   <a class="logo" href="#top"><svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="14" cy="28" rx="6" ry="8"/><ellipse cx="26" cy="17" rx="6" ry="8"/><ellipse cx="38" cy="17" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></svg><span>THRIFT<b>SCOUT</b></span></a>
-  <div class="navlinks"><a class="hide" href="#mission">Mission</a><a class="hide" href="#how">How it works</a><a class="hide" href="#faq">FAQ</a><a class="btn small" href="app.html">Launch App</a></div>
+  <div class="navlinks"><a class="hide" href="#mission">Mission</a><a class="hide" href="#how">How it works</a><a class="hide" href="#setup">Get set up</a><a class="hide" href="#faq">FAQ</a><a class="btn small" href="app.html">Launch App</a></div>
 </div></nav>
 
 <header class="hero" id="top"><div class="wrap">
@@ -103,6 +114,16 @@ footer p{max-width:640px;margin:8px auto}
   <p class="lead">Snap a photo of any secondhand find and know in seconds whether the price is right. Built for resellers, families and everyone who loves the hunt.</p>
   <div class="cta-row"><a class="btn" href="app.html">Launch App</a><a class="btn ghost" href="#how">See how it works</a></div>
   <div class="badges"><span class="badge">Veteran Owned</span><span class="badge">Works on Your Phone</span><span class="badge">All Ages Welcome</span></div>
+  <div class="newhere">
+    <div class="nh-t">New here? Three quick steps</div>
+    <div class="nh-steps">
+      <a href="app.html"><b>1</b><span>Tap <u>Launch App</u> and create a free account</span></a>
+      <a href="#setup"><b>2</b><span>Add Thrift Scout to your phone's home screen</span></a>
+      <a href="#key"><b>3</b><span>Get your free Gemini key (it powers the scans)</span></a>
+    </div>
+  </div>
+  <div class="scrollcue">Scroll for our mission, FAQ and guides<span>&#8595;</span></div>
+
 </div></header>
 
 <section id="mission"><div class="wrap">
