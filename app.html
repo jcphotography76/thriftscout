@@ -54,6 +54,18 @@
     .fs-row { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
     .fs-btn { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px 0; font-weight:800; cursor:pointer; touch-action:manipulation; }
     .fs-btn.active { background:var(--accent); color:var(--on-accent,#090d16); border-color:var(--accent); }
+    /* ===== SIGN IN / SIGN UP ===== */
+    #authOverlay { position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-start; justify-content:center; overflow-y:auto; padding:24px 16px 60px; background:var(--bg); }
+    #authOverlay::before { content:''; position:fixed; inset:0; z-index:-1; background-image:linear-gradient(color-mix(in srgb, var(--bg) 55%, transparent), color-mix(in srgb, var(--bg) 55%, transparent)), var(--wall, none); background-size:auto, 320px 320px; }
+    #authOverlay.hidden { display:none; }
+    .auth-card { width:100%; max-width:440px; margin-top:4vh; background:color-mix(in srgb, var(--card-bg) 94%, transparent); border:1px solid var(--border); border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:12px; }
+    .auth-tabs { display:grid; grid-template-columns:1fr 1fr; gap:4px; background:var(--surface); padding:4px; border-radius:10px; border:1px solid var(--border); }
+    .auth-tab { background:transparent; border:none; color:var(--text-muted); font-weight:800; padding:10px; border-radius:8px; cursor:pointer; font-size:.95rem; }
+    .auth-tab.active { background:var(--accent); color:var(--on-accent,#090d16); }
+    .auth-check { display:flex; gap:10px; align-items:flex-start; font-size:.85rem; color:var(--text); line-height:1.4; }
+    .auth-check input { width:22px; height:22px; flex:0 0 22px; margin-top:1px; accent-color:var(--accent); }
+    .auth-err { display:none; background:var(--coral-glow); border:1px solid var(--coral); color:var(--text); border-radius:8px; padding:10px 12px; font-size:.88rem; }
+    .auth-link { background:none; border:none; color:var(--accent); font-size:.85rem; text-decoration:underline; cursor:pointer; padding:4px; }
     @keyframes screenFlash { 0% { background-color:var(--accent); } 100% { background-color:var(--bg); } }
     body.flash-active { animation:screenFlash .35s ease-out; }
 
@@ -373,6 +385,15 @@
 
     <!-- TAB 4: SETTINGS -->
     <section id="tab-me" class="tab-view">
+      <div class="card">
+        <div class="settings-section-title">Account</div>
+        <div style="font-size:.95rem;">Signed in as <b id="meEmail">...</b></div>
+        <button class="btn btn-outline" id="signOutBtn">Sign out</button>
+        <div style="border-top:1px solid var(--border); padding-top:10px;">
+          <div style="font-size:.8rem; color:var(--text-muted); margin-bottom:8px;">Owner only: copy the items saved before accounts existed into this account. Do this once, before the security rules are turned on.</div>
+          <button class="btn btn-outline" id="claimBtn" style="font-size:.85rem;">Move my existing items into this account</button>
+        </div>
+      </div>
       <div class="card" id="meRankCard">
         <div class="settings-section-title">Your Rank</div>
         <div style="display:flex; align-items:center; gap:12px;" id="meRankRow"></div>
@@ -434,6 +455,54 @@
     <button class="dock-btn" data-target="tab-collection"><span class="dock-ico">🔒</span>COLLECTION</button>
     <button class="dock-btn" data-target="tab-me"><span class="dock-ico">⚙️</span>SETTINGS</button>
   </nav>
+
+  <!-- SIGN IN / SIGN UP -->
+  <div id="authOverlay">
+    <div class="auth-card">
+      <div style="text-align:center;">
+        <div style="font-weight:900; font-size:1.7rem; letter-spacing:-.02em;">THRIFT <span style="color:var(--accent);">SCOUT</span></div>
+        <div id="authSub" style="color:var(--text-muted); font-size:.85rem; margin-top:2px;">Loading...</div>
+      </div>
+      <div id="authForm" style="display:none; flex-direction:column; gap:12px;">
+        <div class="auth-tabs"><button class="auth-tab active" id="authTabIn">Sign in</button><button class="auth-tab" id="authTabUp">Create account</button></div>
+        <div><label class="metric-label">Email</label><input type="email" id="authEmail" class="input-field" autocomplete="email" inputmode="email" style="margin-top:4px;"></div>
+        <div><label class="metric-label">Password</label><input type="password" id="authPass" class="input-field" autocomplete="current-password" style="margin-top:4px;"></div>
+        <div id="authSignupOnly" style="display:none; flex-direction:column; gap:12px;">
+          <div><label class="metric-label">Confirm password (8 or more characters)</label><input type="password" id="authPass2" class="input-field" autocomplete="new-password" style="margin-top:4px;"></div>
+          <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
+          <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
+          <label class="auth-check"><input type="checkbox" id="authNews"><span>(Optional) Email me Thrift Scout updates.</span></label>
+        </div>
+        <div class="auth-err" id="authErr"></div>
+        <button class="btn btn-accent" id="authSubmit">Sign in</button>
+        <div style="text-align:center;"><button class="auth-link" id="authForgot">Forgot password?</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="termsModal" style="z-index:1100;">
+    <div class="modal-content">
+      <div class="card-title"><span>Terms of Use</span><button class="settings-btn" id="closeTermsBtn">X</button></div>
+      <div style="white-space:pre-wrap; font-size:.85rem; line-height:1.5; color:var(--text);">Thrift Scout Terms of Use (early testing version)
+
+1. Estimates only. Thrift Scout uses AI to estimate what secondhand items may be worth. Values are estimates for guidance, not appraisals, quotes or guarantees. Prices change with demand, condition and season. You are responsible for every buying and selling decision you make.
+
+2. Your own Gemini key. Thrift Scout asks you to supply your own Google Gemini API key. The key is stored only on your own device. You are responsible for keeping it private and for any limits, charges or terms that Google applies to your key.
+
+3. Your account and your items. You sign in with an email address and password. Your saved items, photos and notes are stored in our cloud database under your account. Keep your password private. Do not store sensitive personal information in item notes.
+
+4. Shared scan library. To help recognize items that were scanned before, the photo thumbnail, item name and estimated value from a scan may be saved in a shared library without your name or email, and may be used for matching other scans.
+
+5. Early testing. Thrift Scout is a new product and may contain errors, change, be interrupted or be removed at any time. It is provided as is, with no warranty of any kind. To the fullest extent the law allows, Thrift Scout and its owner are not liable for losses arising from your use of it.
+
+6. Age. If you are under 18, use Thrift Scout together with a parent or guardian.
+
+7. Not affiliated. Thrift Scout is independent. It is not affiliated with Google, any thrift store or retailer, or any branch of the U.S. military.
+
+8. Updates. We may update these terms. Continuing to use Thrift Scout means you accept the current version.
+
+This is a plain-language starting document, not legal advice.</div>
+    </div>
+  </div>
 
   <!-- WELCOME / MISSION BRIEFING -->
   <div class="modal-overlay active" id="welcomeModal">
@@ -624,6 +693,9 @@
     import {
       getFirestore, collection, doc, setDoc, addDoc, getDocs, deleteDoc, updateDoc, onSnapshot, query, orderBy, limit
     } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+    import {
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAtDQnJuWvJOp__hVHO5fdNhjiRjZZkskI",
@@ -636,6 +708,11 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+    let CURRENT_UID = null, CURRENT_EMAIL = '';
+    // every person's vault lives under their own account
+    const vDoc = (id) => doc(db, 'users', CURRENT_UID, 'vault_inventory', id);
+    const vCol = () => collection(db, 'users', CURRENT_UID, 'vault_inventory');
 
     // ================= AI SETTINGS (change models ONLY here) =================
     // One fast model only. (Full Flash has a tiny free daily cap, so it is not used.)
@@ -1612,7 +1689,7 @@
       if (isNaN(newCost)) return;
       const newProfit = calcProfit(Number(currentlyOpenedVaultItem.resale || 35.00), newCost);
       try {
-        await updateDoc(doc(db, 'vault_inventory', currentlyOpenedVaultItem.id), { cost: newCost, profit: newProfit });
+        await updateDoc(vDoc(currentlyOpenedVaultItem.id), { cost: newCost, profit: newProfit });
         currentlyOpenedVaultItem.cost = newCost;
         currentlyOpenedVaultItem.profit = newProfit;
         openVaultDetail(currentlyOpenedVaultItem);
@@ -1628,7 +1705,7 @@
     window.moveItem = async (id, strategy) => {
       const it = STATE.vaultItems.find(i => i.id === id); if (!it) return;
       try {
-        await updateDoc(doc(db, 'vault_inventory', id), { strategy });
+        await updateDoc(vDoc(id), { strategy });
         it.strategy = strategy;
         if (currentlyOpenedVaultItem && currentlyOpenedVaultItem.id === id) { currentlyOpenedVaultItem.strategy = strategy; syncStrategyUi(it); }
         renderVault();
@@ -1736,7 +1813,7 @@
           const finalResale = isNaN(newResale) ? item.resale : newResale;
           const finalProfit = calcProfit(finalResale, item.cost || 0);
 
-          await updateDoc(doc(db, 'vault_inventory', item.id), {
+          await updateDoc(vDoc(item.id), {
             brand: newBrand, item: newItem, resale: finalResale, profit: finalProfit,
             intel: parsed.intel || item.intel, query: parsed.query || item.query, verified: true
           });
@@ -2199,7 +2276,7 @@
       playAudioFeedback('BUY', currentAppraisal.profit >= 50, false);
       currentAppraisal.strategy = document.getElementById('assetStrategySelect').value || 'selling';
       try {
-        await setDoc(doc(db, 'vault_inventory', currentAppraisal.id), currentAppraisal);
+        await setDoc(vDoc(currentAppraisal.id), currentAppraisal);
         triggerAlert(`Securely logged to ${currentAppraisal.category.toUpperCase()} Vault.`, false, false);
         setTimeout(() => { isSavingToVault = false; }, 800);
       } catch (err) {
@@ -2208,10 +2285,105 @@
       }
     };
 
-    onSnapshot(query(collection(db, 'vault_inventory'), orderBy('createdAt', 'desc')), (snap) => {
-      STATE.vaultItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderVault();
-    }, (err) => triggerAlert('Vault could not load: ' + err.message, true, false));
+    // ================= ACCOUNTS =================
+    const TERMS_VERSION = '2026-10-14';
+    let authMode = 'in';
+    const $a = (id) => document.getElementById(id);
+    function authError(msg) { const e = $a('authErr'); e.textContent = msg; e.style.display = msg ? 'block' : 'none'; }
+    function friendlyAuthError(err) {
+      const c = (err && err.code) || '';
+      if (c === 'auth/invalid-email') return 'That email address does not look right.';
+      if (c === 'auth/missing-password') return 'Enter your password.';
+      if (c === 'auth/email-already-in-use') return 'There is already an account with that email. Try signing in.';
+      if (c === 'auth/weak-password') return 'Pick a stronger password (8 or more characters).';
+      if (c === 'auth/user-not-found' || c === 'auth/wrong-password' || c === 'auth/invalid-credential') return 'Email or password is not right.';
+      if (c === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes and try again.';
+      if (c === 'auth/network-request-failed') return 'No connection. Check your signal and try again.';
+      if (c === 'auth/operation-not-allowed') return 'Sign-in is not switched on yet in Firebase (Authentication, Sign-in method, Email/Password).';
+      if (c === 'auth/unauthorized-domain') return 'This website address is not on the allowed list in Firebase yet (Authentication, Settings, Authorized domains).';
+      return 'Something went wrong: ' + (err && err.message ? err.message : 'unknown error');
+    }
+    function setAuthMode(m) {
+      authMode = m; authError('');
+      $a('authTabIn').classList.toggle('active', m === 'in'); $a('authTabUp').classList.toggle('active', m === 'up');
+      $a('authSignupOnly').style.display = m === 'up' ? 'flex' : 'none';
+      $a('authSubmit').textContent = m === 'up' ? 'Create account' : 'Sign in';
+      $a('authForgot').style.display = m === 'in' ? 'inline' : 'none';
+      $a('authPass').autocomplete = m === 'up' ? 'new-password' : 'current-password';
+    }
+    $a('authTabIn').onclick = () => setAuthMode('in');
+    $a('authTabUp').onclick = () => setAuthMode('up');
+    $a('openTermsBtn').onclick = () => $a('termsModal').classList.add('active');
+    $a('closeTermsBtn').onclick = () => $a('termsModal').classList.remove('active');
+    $a('authForgot').onclick = async () => {
+      const email = $a('authEmail').value.trim();
+      if (!email) { authError('Type your email above first, then tap Forgot password.'); return; }
+      try { await sendPasswordResetEmail(auth, email); authError(''); alert('If an account exists for that email, a reset link is on its way. Check your spam folder too.'); }
+      catch (e) { authError(friendlyAuthError(e)); }
+    };
+    $a('authSubmit').onclick = async () => {
+      authError('');
+      const email = $a('authEmail').value.trim(), pass = $a('authPass').value;
+      if (!email || !pass) { authError('Enter your email and password.'); return; }
+      const btn = $a('authSubmit'); btn.classList.add('disabled');
+      try {
+        if (authMode === 'up') {
+          if (pass.length < 8) throw { code: 'auth/weak-password' };
+          if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
+          if (!$a('authTerms').checked || !$a('authCert').checked) { authError('Please check both required boxes to create an account.'); return; }
+          const cred = await createUserWithEmailAndPassword(auth, email, pass);
+          try {
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, newsletter: !!$a('authNews').checked, createdAt: Date.now() });
+          } catch (e) { console.warn('Profile save failed', e); }
+        } else {
+          await signInWithEmailAndPassword(auth, email, pass);
+        }
+      } catch (e) { authError(friendlyAuthError(e)); }
+      finally { btn.classList.remove('disabled'); }
+    };
+    ['authEmail', 'authPass', 'authPass2'].forEach(id => $a(id).addEventListener('keydown', e => { if (e.key === 'Enter') $a('authSubmit').click(); }));
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || '';
+        $a('authOverlay').classList.add('hidden');
+        $a('meEmail').textContent = CURRENT_EMAIL;
+        startVaultListener();
+      } else {
+        CURRENT_UID = null; CURRENT_EMAIL = '';
+        if (unsubVault) { unsubVault(); unsubVault = null; }
+        STATE.vaultItems = []; renderVault();
+        $a('authOverlay').classList.remove('hidden');
+        $a('authForm').style.display = 'flex';
+        $a('authSub').textContent = 'Sign in or create a free account';
+        setAuthMode('in');
+      }
+    });
+    $a('signOutBtn').onclick = async () => { try { await signOut(auth); } catch (e) {} goTab('tab-scout'); };
+
+    // one-time copy of the old shared vault into this person's own vault
+    $a('claimBtn').onclick = () => armBtn($a('claimBtn'), 'YES, MOVE THEM', async () => {
+      try {
+        const snap = await getDocs(collection(db, 'vault_inventory'));
+        let n = 0;
+        for (const d of snap.docs) {
+          if (STATE.vaultItems.find(i => i.id === d.id)) continue;
+          await setDoc(vDoc(d.id), d.data()); n++;
+        }
+        triggerAlert(n ? `Moved ${n} item${n === 1 ? '' : 's'} into your account.` : 'Nothing new to move. Your items are already here.', false, true);
+      } catch (e) {
+        triggerAlert('Could not move items: ' + e.message + ' (This only works before the security rules are turned on.)', true, true);
+      }
+    });
+
+    let unsubVault = null;
+    function startVaultListener() {
+      if (unsubVault) { unsubVault(); unsubVault = null; }
+      unsubVault = onSnapshot(query(vCol(), orderBy('createdAt', 'desc')), (snap) => {
+        STATE.vaultItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderVault();
+      }, (err) => triggerAlert('Vault could not load: ' + err.message, true, false));
+    }
 
     function vaultRowHTML(item, inCollection) {
       const resale = Number(item.resale || 0), cost = Number(item.cost || 0);
@@ -2312,7 +2484,7 @@
       const finalPrice = parseFloat(soldInput) || (target.resale || 35.00);
       const realized = calcProfit(finalPrice, target.cost || 0);
       try {
-        await updateDoc(doc(db, 'vault_inventory', id), { status: 'sold', finalSoldPrice: finalPrice, profit: realized });
+        await updateDoc(vDoc(id), { status: 'sold', finalSoldPrice: finalPrice, profit: realized });
         playAudioFeedback('BUY', realized >= 50, false);
         triggerAlert('Asset marked as sold. Profit locked in.', false, false);
       } catch (err) { alert('Action failed: ' + err.message); }
@@ -2320,7 +2492,7 @@
 
     window.deleteVaultItem = async (id) => {
       try {
-        await deleteDoc(doc(db, 'vault_inventory', id));
+        await deleteDoc(vDoc(id));
         playAudioFeedback('PASS', false, false);
         triggerAlert('Asset purged from vault.', false, false);
       } catch (err) { alert('Delete failed: ' + err.message); }
