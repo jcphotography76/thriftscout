@@ -66,6 +66,12 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:6
 .ranks span{display:flex;flex-direction:column;line-height:1.25}
 .ranks b{font-weight:600;font-size:.97rem}
 .ranks i{font-style:normal;color:var(--muted);font-size:.82rem}
+.setup{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:24px}
+.setup .card h3{font-size:1.25rem}
+.setup ol{margin:12px 0 0 18px;color:#dfe3cd;font-size:.97rem}
+.setup li{margin-bottom:8px}
+.setup .os{font-family:var(--head);letter-spacing:.1em;color:var(--gold);font-size:.85rem;text-transform:uppercase;margin-top:14px}
+.setup .btn{margin-top:16px;width:100%}
 details{background:rgba(26,31,18,.82);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
 summary{cursor:pointer;padding:18px 54px 18px 20px;font-weight:600;font-size:1.04rem;list-style:none;position:relative}
 summary::-webkit-details-marker{display:none}
@@ -126,6 +132,27 @@ footer p{max-width:640px;margin:8px auto}
     <div class="step"><h3>Scan</h3><p>The AI estimates what it is worth and returns a verdict: flip it, watch it, or pass.</p></div>
     <div class="step"><h3>Decide</h3><p>Check the comparison links, run a careful re-check if you want a second opinion, then buy or walk away.</p></div>
     <div class="step"><h3>Save</h3><p>Send it to your Sell Vault or your Collection, and share it with a friend if it is perfect for them.</p></div>
+  </div>
+</div></section>
+
+<section id="setup"><div class="wrap">
+  <div class="kicker">Get Set Up</div>
+  <h2>Two quick steps before your first scan</h2>
+  <div class="setup">
+    <div class="card">
+      <h3>1. Put it on your home screen</h3>
+      <p>So Thrift Scout opens like a real app, one tap from your phone's home screen.</p>
+      <div class="os">iPhone</div>
+      <ol><li>Open thriftscout.shop in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (the square with an arrow pointing up).</li><li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>
+      <div class="os">Android</div>
+      <ol><li>Open thriftscout.shop in <b>Chrome</b>.</li><li>Tap the <b>three dots</b> in the top corner.</li><li>Tap <b>Add to Home screen</b> (or <b>Install app</b>), then confirm.</li></ol>
+    </div>
+    <div class="card">
+      <h3>2. Get your free Gemini key</h3>
+      <p>The key lets the AI read your photos. It is free from Google, takes about two minutes, and you only do it once. Most people have never made one, so we wrote it out step by step.</p>
+      <a class="btn" href="#key">Show me how</a>
+      <p style="margin-top:14px;font-size:.9rem;color:var(--muted)">Already have a key? Open the app, tap <b>Settings</b>, then <b>Gemini API Key</b>, and paste it in.</p>
+    </div>
   </div>
 </div></section>
 
