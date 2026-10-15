@@ -186,7 +186,7 @@
 
   <header>
     <div class="brand">
-      <span title="Coda the Scout • Veteran Owned" style="display:inline-flex; width:22px; height:22px; color:var(--accent);"><svg viewBox="0 0 64 64" width="22" height="22" fill="currentColor"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="14" cy="28" rx="6" ry="8"/><ellipse cx="26" cy="17" rx="6" ry="8"/><ellipse cx="38" cy="17" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></svg></span>
+      <span title="Koda the Scout • Veteran Owned" style="display:inline-flex; width:22px; height:22px; color:var(--accent);"><svg viewBox="0 0 64 64" width="22" height="22" fill="currentColor"><ellipse cx="32" cy="42" rx="14" ry="11"/><ellipse cx="14" cy="28" rx="6" ry="8"/><ellipse cx="26" cy="17" rx="6" ry="8"/><ellipse cx="38" cy="17" rx="6" ry="8"/><ellipse cx="50" cy="28" rx="6" ry="8"/></svg></span>
       <span>THRIFT</span><span class="brand-accent">SCOUT</span>
     </div>
     <div class="header-pills">
@@ -310,7 +310,7 @@
         <div style="display:flex; align-items:center; gap:12px; min-width:0;">
           <div id="intelCodaWrap" style="width:48px; height:48px; border-radius:50%; overflow:hidden; border:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; flex:0 0 auto;"></div>
           <div style="min-width:0;">
-            <div style="font-weight:800; font-size:.95rem; color:var(--text);">CODA THE SCOUT</div>
+            <div style="font-weight:800; font-size:.95rem; color:var(--text);">KODA THE SCOUT</div>
             <div style="font-size:.75rem; color:var(--text-muted);">Tactical Recon. Sniff Out the Profit.</div>
           </div>
         </div>
@@ -433,7 +433,7 @@
           <input type="text" id="profileRankInput" class="input-field" value="" placeholder="Leave blank to skip" style="margin-top:4px;">
         </div>
         <div>
-          <label class="metric-label">Coda's Photo (shows on the welcome screen)</label>
+          <label class="metric-label">Koda's Photo (shows on the welcome screen)</label>
           <input type="file" id="codaPhotoInput" accept="image/*" class="input-field" style="margin-top:4px;">
           <button class="btn btn-outline" id="codaPhotoClearBtn" style="font-size:.8rem; padding:8px; margin-top:6px; display:none;">Remove photo</button>
         </div>
@@ -511,7 +511,7 @@ This is a plain-language starting document, not legal advice.</div>
       <div style="font-size:1.35rem; font-weight:900; color:var(--text); letter-spacing:.02em;">THRIFT SCOUT</div>
       <div style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
         <span style="background:var(--accent-glow); border:1px solid var(--accent); color:var(--accent); font-size:.68rem; font-weight:800; padding:4px 10px; border-radius:6px; text-transform:uppercase; letter-spacing:.05em;">🇺🇸 Veteran Owned</span>
-        <span style="background:var(--surface); border:1px solid var(--border); color:var(--text-muted); font-size:.68rem; font-weight:800; padding:4px 10px; border-radius:6px; text-transform:uppercase; letter-spacing:.05em;">Coda the Scout</span>
+        <span style="background:var(--surface); border:1px solid var(--border); color:var(--text-muted); font-size:.68rem; font-weight:800; padding:4px 10px; border-radius:6px; text-transform:uppercase; letter-spacing:.05em;">Koda the Scout</span>
       </div>
       <div style="font-size:.75rem; color:var(--text-muted);">Tactical Recon. Sniff Out the Profit.</div>
       <div id="welcomeGreeting" style="font-size:1rem; font-weight:800; color:var(--text); margin-top:2px;">Welcome back</div>
@@ -1559,7 +1559,7 @@ This is a plain-language starting document, not legal advice.</div>
       el.innerHTML = '';
       if (STATE.codaPhoto) {
         const img = document.createElement('img');
-        img.src = STATE.codaPhoto; img.alt = 'Coda';
+        img.src = STATE.codaPhoto; img.alt = 'Koda';
         img.style.cssText = 'width:100%; height:100%; object-fit:cover;';
         el.appendChild(img);
       } else el.innerHTML = PAW_SVG;
