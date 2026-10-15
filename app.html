@@ -286,7 +286,7 @@
           <button id="resDirectCompsBtn" class="btn btn-outline" style="flex:1; font-size:.85rem; border-color:var(--amber); color:var(--amber);">📊 VIEW SOLD COMPS</button>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary" id="shareEvaluationBtn" style="flex:1; font-size:.8rem; background:#3b82f6;">SHARE EVAL</button>
+          <button id="shareEvaluationBtn" class="btn btn-outline" style="flex:1; font-size:.8rem;">📤 SHARE REPORT</button>
           <button class="btn btn-accent" id="saveVaultBtn" style="flex:1; font-size:.8rem;">SEND TO VAULT</button>
         </div>
         <button class="btn btn-outline" id="clearEvalBtn" style="font-size:.75rem; color:var(--text-muted); border-style:dashed; margin-top:4px;">🗑️ CLEAR EVALUATION & SCAN NEXT</button>
@@ -2546,31 +2546,104 @@ This is a plain-language starting document, not legal advice.</div>
     };
 
 
-    // ================= SHARE =================
+    // ================= SHARE (Scout Report card) =================
+    function ts_loadImg(src) {
+      return new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+    }
+    function ts_wrap(ctx, text, maxW, maxLines) {
+      const words = String(text || '').split(/\s+/); const lines = []; let cur = '';
+      for (const w of words) {
+        const t = cur ? cur + ' ' + w : w;
+        if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t;
+        if (lines.length >= maxLines) break;
+      }
+      if (cur && lines.length < maxLines) lines.push(cur);
+      if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, '') + '…';
+      return lines;
+    }
+    function ts_rr(ctx, x, y, w, h, r) {
+      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    }
+    async function buildScoutReport(ap) {
+      const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+      const F = 'Arial, Helvetica, sans-serif';
+      ctx.fillStyle = '#1a1f12'; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#c6b878'; ctx.lineWidth = 8; ts_rr(ctx, 24, 24, W - 48, H - 48, 36); ctx.stroke();
+      ctx.textAlign = 'left';
+      // header: Koda + title
+      const km = KODA_IMG.match(/src="([^"]+)"/);
+      const kimg = km ? await ts_loadImg(km[1]) : null;
+      if (kimg) ctx.drawImage(kimg, 70, 70, 130, 130);
+      ctx.fillStyle = '#c6b878'; ctx.font = `bold 78px ${F}`; ctx.fillText('SCOUT REPORT', 230, 140);
+      ctx.fillStyle = '#a9a070'; ctx.font = `bold 32px ${F}`; ctx.fillText('THRIFT SCOUT  •  AI ESTIMATE', 232, 188);
+      // photo
+      const px = 90, py = 250, pw = W - 180, ph = 760;
+      ctx.save(); ts_rr(ctx, px, py, pw, ph, 28); ctx.clip();
+      ctx.fillStyle = '#0f130a'; ctx.fillRect(px, py, pw, ph);
+      let photoSrc = null;
+      try { if (selectedImagesBase64 && selectedImagesBase64[0]) photoSrc = 'data:image/jpeg;base64,' + selectedImagesBase64[0]; } catch (e) {}
+      if (!photoSrc && ap.imageThumb && /^data:image\/(jpeg|png)/.test(ap.imageThumb)) photoSrc = ap.imageThumb;
+      const pimg = photoSrc ? await ts_loadImg(photoSrc) : null;
+      if (pimg) {
+        const sc = Math.max(pw / pimg.width, ph / pimg.height), dw = pimg.width * sc, dh = pimg.height * sc;
+        ctx.drawImage(pimg, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh);
+      } else if (kimg) { ctx.globalAlpha = .35; ctx.drawImage(kimg, px + pw / 2 - 150, py + ph / 2 - 150, 300, 300); ctx.globalAlpha = 1; }
+      ctx.restore();
+      ctx.strokeStyle = '#5f6a3a'; ctx.lineWidth = 4; ts_rr(ctx, px, py, pw, ph, 28); ctx.stroke();
+      // name
+      let y = py + ph + 80;
+      ctx.fillStyle = '#eee8c8'; ctx.font = `bold 58px ${F}`;
+      const nameLines = ts_wrap(ctx, ap.item || ap.name, W - 180, 2);
+      nameLines.forEach((ln) => { ctx.fillText(ln, 90, y); y += 68; });
+      if (ap.brand) { ctx.fillStyle = '#a9a070'; ctx.font = `34px ${F}`; ctx.fillText(String(ap.brand).slice(0, 44), 90, y - 8); y += 50; }
+      // numbers
+      y += 30;
+      ctx.fillStyle = '#a9a070'; ctx.font = `bold 30px ${F}`; ctx.fillText('ESTIMATED RESALE', 90, y);
+      ctx.fillStyle = '#c6b878'; ctx.font = `bold 130px ${F}`; ctx.fillText('$' + Number(ap.resale || 0).toFixed(2), 90, y + 125);
+      const hasCost = Number(ap.cost) > 0;
+      if (hasCost) {
+        ctx.fillStyle = '#a9a070'; ctx.font = `bold 30px ${F}`; ctx.fillText('ASKING', 640, y); ctx.fillText('EST. PROFIT', 640, y + 76);
+        ctx.fillStyle = '#eee8c8'; ctx.font = `bold 44px ${F}`; ctx.fillText('$' + Number(ap.cost).toFixed(2), 840, y + 2);
+        ctx.fillStyle = (Number(ap.profit) >= 0 ? '#9ccf6a' : '#e0836a'); ctx.fillText((Number(ap.profit) >= 0 ? '$' : '-$') + Math.abs(Number(ap.profit)).toFixed(2), 840, y + 78);
+      }
+      y += 225;
+      // verdict pill
+      const d = String(ap.disposition || '');
+      const pillCol = d.includes('BUY') ? '#7aa83e' : (d.includes('MONITOR') ? '#d1a23c' : '#9a5a4a');
+      ctx.font = `bold 44px ${F}`; const tw = ctx.measureText(d).width + 70;
+      ctx.fillStyle = pillCol; ts_rr(ctx, 90, y - 52, tw, 80, 40); ctx.fill();
+      ctx.fillStyle = '#10140a'; ctx.fillText(d, 125, y + 5);
+      y += 85;
+      // intel
+      if (ap.intel) {
+        ctx.fillStyle = '#d8d2b0'; ctx.font = `34px ${F}`;
+        ts_wrap(ctx, ap.intel.replace(/^📚[^.]*\.\s*/, ''), W - 180, 3).forEach((ln) => { ctx.fillText(ln, 90, y); y += 46; });
+      }
+      // footer
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#c6b878'; ctx.font = `bold 46px ${F}`; ctx.fillText('thriftscout.shop', W / 2, H - 100);
+      ctx.fillStyle = '#7f7a5c'; ctx.font = `26px ${F}`; ctx.fillText('AI estimate for guidance only. Not a guarantee of resale price.', W / 2, H - 56);
+      return c;
+    }
     document.getElementById('shareEvaluationBtn').onclick = async () => {
       if (!currentAppraisal) return;
-      const canvas = document.createElement('canvas');
-      canvas.width = 600; canvas.height = 360;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, 600, 360);
-      ctx.strokeStyle = '#14b8a6'; ctx.lineWidth = 4; ctx.strokeRect(10, 10, 580, 340);
-      ctx.fillStyle = '#14b8a6'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('THRIFT SCOUT • RECON', 30, 45);
-      ctx.fillStyle = '#f9fafb'; ctx.font = 'bold 20px sans-serif'; ctx.fillText(currentAppraisal.name.slice(0, 48), 30, 80);
-      ctx.fillStyle = '#9ca3af'; ctx.font = '14px sans-serif'; ctx.fillText('Target Resale: $' + currentAppraisal.resale.toFixed(2), 30, 130);
-      ctx.fillStyle = '#14b8a6'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('Est. Net Profit: $' + currentAppraisal.profit.toFixed(2), 30, 170);
-      ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('VERDICT: ' + currentAppraisal.disposition, 30, 220);
-
-      canvas.toBlob(async (blob) => {
-        try {
-          const file = new File([blob], 'thrift-scout.jpg', { type: 'image/jpeg' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ title: currentAppraisal.name, files: [file] });
-          } else {
-            await navigator.clipboard.writeText(`${currentAppraisal.name} | Resale: $${currentAppraisal.resale} | Profit: $${currentAppraisal.profit}`);
-            alert('Evaluation copied to clipboard!');
-          }
-        } catch (e) { /* user cancelled share */ }
-      }, 'image/jpeg', 0.90);
+      const btn = document.getElementById('shareEvaluationBtn'); const old = btn.textContent; btn.textContent = 'MAKING CARD...';
+      try {
+        const canvas = await buildScoutReport(currentAppraisal);
+        const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+        const file = new File([blob], 'scout-report.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], title: 'Scout Report' }); }
+          catch (e) { /* cancelled */ }
+        } else {
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scout-report.png';
+          document.body.appendChild(a); a.click(); a.remove();
+          triggerAlert('Scout Report image saved.', false, true);
+        }
+      } catch (e) { triggerAlert('Could not make the share card: ' + (e && e.message || e), true, true); }
+      btn.textContent = old;
     };
 
   </script>
