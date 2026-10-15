@@ -292,16 +292,17 @@
         <button class="btn btn-outline" id="clearEvalBtn" style="font-size:.75rem; color:var(--text-muted); border-style:dashed; margin-top:4px;">🗑️ CLEAR EVALUATION & SCAN NEXT</button>
       </div>
 
-      <div class="card" id="scoutMissionCard">
+      <div class="card" id="scoutMissionCard" style="background:rgba(0,0,0,.35); border:1.5px dashed var(--border); box-shadow:none;">
         <div class="card-title">
-          <span>🎯 TODAY'S MISSION</span>
-          <span class="badge-accent">Daily Target</span>
+          <span style="color:var(--text-muted);">🎯 BONUS MISSION</span>
+          <span class="badge-accent" style="background:transparent; border:1px solid var(--border); color:var(--text-muted);">Optional</span>
         </div>
         <div style="font-weight:800; font-size:1.05rem; color:var(--text);" id="scoutMissionName"></div>
         <p style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="scoutMissionDesc"></p>
+        <p style="font-size:.72rem; color:var(--text-muted); margin:0; opacity:.8;">Just for fun. You can scan anything you like with Snap Photo above.</p>
         <div style="display:flex; gap:8px; margin-top:2px;">
           <button id="scoutMissionCompsBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📊 View Target Comps</button>
-          <button id="scoutMissionScanBtn" class="btn btn-accent" style="font-size:.78rem; padding:10px 12px; flex:1;">📸 Scan It</button>
+          <button id="scoutMissionScanBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📸 Hunt For This</button>
         </div>
       </div>
     </section>
@@ -387,6 +388,15 @@
 
     <!-- TAB 4: SETTINGS -->
     <section id="tab-me" class="tab-view">
+      <div class="card">
+        <div class="settings-section-title">Scan log</div>
+        <div style="font-size:.8rem; color:var(--text-muted);">The last scans on this phone: how long they took and whether they failed. Handy if scans are slow.</div>
+        <pre id="scanLogBox" style="font-size:.68rem; white-space:pre-wrap; max-height:180px; overflow:auto; background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px; padding:8px; margin:6px 0;"></pre>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" id="scanLogCopyBtn" style="font-size:.8rem; padding:10px; flex:1;">Copy log</button>
+          <button class="btn btn-outline" id="scanLogClearBtn" style="font-size:.8rem; padding:10px; flex:1;">Clear</button>
+        </div>
+      </div>
       <div class="card">
         <div class="settings-section-title">Account</div>
         <div style="font-size:.95rem;">Signed in as <b id="meEmail">...</b></div>
@@ -723,6 +733,7 @@ This is a plain-language starting document, not legal advice.</div>
     const SCAN_MAX_TOKENS = 1024;    // thinking tokens count toward this cap, so keep headroom
     const VERIFY_MAX_TOKENS = 1536;
     const REQUEST_TIMEOUT_MS = 25000;
+    const RETRY_TIMEOUT_MS = 35000;  // the automatic second try gets a little longer
     const VERIFY_TIMEOUT_MS = 60000; // careful re-check sends more photos, so it gets more time
     const SCAN_IMAGE_MAX = 768;   // size sent to the AI (readable hallmarks)
     const SCAN_IMAGE_QUALITY = 0.6;
@@ -1301,6 +1312,15 @@ This is a plain-language starting document, not legal advice.</div>
       document.getElementById('evalProgressBarFill').style.width = pct + '%';
     }
 
+    // Small on-phone log of the last scan attempts, so slow or failed scans can be diagnosed.
+    function logScan(rec) {
+      try {
+        const a = JSON.parse(localStorage.getItem('ts_scanlog') || '[]');
+        a.push(Object.assign({ t: new Date().toISOString() }, rec));
+        localStorage.setItem('ts_scanlog', JSON.stringify(a.slice(-40)));
+      } catch (e) {}
+    }
+
     async function callGemini(parts, opts) {
       const maxTokens = (opts && opts.maxTokens) || SCAN_MAX_TOKENS;
       const timeoutMs = (opts && opts.timeoutMs) || REQUEST_TIMEOUT_MS;
@@ -1322,16 +1342,24 @@ This is a plain-language starting document, not legal advice.</div>
 
       let lastError = 'Unknown error';
       let busyTries = 0;
+      let slowTries = 0;
       const refund = () => { STATE.dailyScans += 1; updatePills(); };
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       for (let mi = 0; mi < MODELS.length; mi++) {
         const model = MODELS[mi];
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const thisTimeout = slowTries > 0 ? Math.max(timeoutMs, RETRY_TIMEOUT_MS) : timeoutMs;
+        const timeoutId = setTimeout(() => controller.abort(), thisTimeout);
         STATE.dailyScans = Math.max(0, STATE.dailyScans - 1); // count every real call
         updatePills();
-        setProgress(`Asking ${model}...`, 55);
         const startedAt = performance.now();
+        const bodyKb = Math.round(body.length / 1024);
+        const label = slowTries > 0 ? 'Still working, trying again' : 'Asking ' + model;
+        setProgress(`${label}...`, 55);
+        const tick = setInterval(() => {
+          const el = document.getElementById('evalProgressText');
+          if (el) el.textContent = `${label}... ${Math.round((performance.now() - startedAt) / 1000)}s`;
+        }, 1000);
 
         try {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
@@ -1340,7 +1368,7 @@ This is a plain-language starting document, not legal advice.</div>
             body,
             signal: controller.signal
           });
-          clearTimeout(timeoutId);
+          clearTimeout(timeoutId); clearInterval(tick);
 
           if (res.ok) {
             const data = await res.json();
@@ -1350,12 +1378,14 @@ This is a plain-language starting document, not legal advice.</div>
             if (!text) {
               return { ok: false, error: `${model} returned an empty answer (reason: ${cand?.finishReason || data.promptFeedback?.blockReason || 'unknown'}).` };
             }
+            logScan({ ok: true, secs: +secs, kb: bodyKb, imgs: parts.length - 1, model, tries: slowTries + 1 });
             return { ok: true, text, model, secs };
           }
 
           const errJson = await res.json().catch(() => ({}));
           const msg = errJson.error?.message || `HTTP ${res.status}`;
           lastError = `${model}: ${msg}`;
+          logScan({ ok: false, err: 'HTTP ' + res.status + ': ' + String(msg).slice(0, 120), secs: +((performance.now() - startedAt) / 1000).toFixed(1), kb: bodyKb, imgs: parts.length - 1, model });
 
           // Thinking setting rejected: turn it off for good and redo this same model once.
           if (res.status === 400 && thinkingOk && /think/i.test(msg)) {
@@ -1382,8 +1412,14 @@ This is a plain-language starting document, not legal advice.</div>
           if (res.status === 429) return { ok: false, error: `Google says you're over the limit (429). ${msg}` };
           return { ok: false, error: lastError };
         } catch (err) {
-          clearTimeout(timeoutId);
-          if (err.name === 'AbortError') return { ok: false, error: `Timed out after ${timeoutMs / 1000}s. Check your signal and tap Retry.` };
+          clearTimeout(timeoutId); clearInterval(tick);
+          if (err.name === 'AbortError') {
+            logScan({ ok: false, err: 'timeout', secs: Math.round(thisTimeout / 1000), kb: bodyKb, imgs: parts.length - 1, model, tries: slowTries + 1 });
+            refund(); // a call that never answered is not counted
+            if (slowTries < 1) { slowTries++; mi--; continue; }
+            return { ok: false, error: `No answer from Google after two tries (${Math.round(thisTimeout / 1000)}s each). No scan was counted. Tap Retry. If it keeps happening, copy the Scan log in Settings and send it to Claude.` };
+          }
+          logScan({ ok: false, err: 'network: ' + err.message, kb: bodyKb, imgs: parts.length - 1, model });
           refund();
           return { ok: false, error: `Network problem: ${err.message}. No scan was counted.` };
         }
@@ -2362,6 +2398,14 @@ This is a plain-language starting document, not legal advice.</div>
         setAuthMode('in');
       }
     });
+    function renderScanLog() {
+      let a = []; try { a = JSON.parse(localStorage.getItem('ts_scanlog') || '[]'); } catch (e) {}
+      document.getElementById('scanLogBox').textContent = a.length ? a.slice(-15).reverse().map(r => `${(r.t || '').slice(5, 16).replace('T', ' ')}  ${r.ok ? 'OK ' + r.secs + 's' : 'FAIL ' + (r.err || '')}  ${r.kb || '?'}KB  ${r.imgs || 1} img${r.tries > 1 ? '  (2nd try)' : ''}`).join('\n') : 'No scans yet.';
+    }
+    document.getElementById('scanLogCopyBtn').onclick = async () => { try { await navigator.clipboard.writeText(localStorage.getItem('ts_scanlog') || '[]'); document.getElementById('scanLogCopyBtn').textContent = 'Copied'; setTimeout(() => document.getElementById('scanLogCopyBtn').textContent = 'Copy log', 1500); } catch (e) {} };
+    document.getElementById('scanLogClearBtn').onclick = () => { try { localStorage.removeItem('ts_scanlog'); } catch (e) {} renderScanLog(); };
+    renderScanLog();
+    document.querySelectorAll('[data-target="tab-me"]').forEach(b => b.addEventListener('click', renderScanLog));
     $a('signOutBtn').onclick = async () => { try { await signOut(auth); } catch (e) {} goTab('tab-scout'); };
 
     // one-time copy of the old shared vault into this person's own vault
