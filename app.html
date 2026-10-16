@@ -164,6 +164,9 @@
     .dock-btn.active .dock-ico { transform:scale(1.12); }
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; padding:16px; z-index:200; pointer-events:auto; touch-action:manipulation; }
     .modal-overlay.active { display:flex; }
+    .gw-row { display:flex; gap:8px; margin-top:4px; }
+    .gw-row .btn { padding:9px 4px; font-size:.85rem; }
+    .gw-row .btn.sel { background:var(--accent); color:#111; border-color:var(--accent); }
     .modal-content { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:18px; max-width:480px; width:100%; max-height:85vh; overflow-y:auto; display:flex; flex-direction:column; gap:12px; z-index:201; pointer-events:auto; cursor:default; }
     #webcamVideo { width:100%; height:280px; background:#000; border-radius:8px; border:1px solid var(--border); object-fit:cover; }
     .input-field { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:.9rem; font-family:inherit; outline:none; }
@@ -402,6 +405,7 @@
       <div class="card">
         <div class="settings-section-title">Account</div>
         <div style="font-size:.95rem;">Signed in as <b id="meEmail">...</b></div>
+        <div id="guestInfo" style="display:none; font-size:.85rem; color:var(--text-muted);"></div>
         <button class="btn btn-outline" id="signOutBtn">Sign out</button>
         <div style="border-top:1px solid var(--border); padding-top:10px;">
           <div style="font-size:.8rem; color:var(--text-muted); margin-bottom:8px;">Owner only: copy the items saved before accounts existed into this account. Do this once, before the security rules are turned on.</div>
@@ -489,8 +493,30 @@
         </div>
         <div class="auth-err" id="authErr"></div>
         <button class="btn btn-accent" id="authSubmit">Sign in</button>
+        <button class="btn btn-outline" id="guestStartBtn" style="display:none;">Try 10 free scans (no sign-up)</button>
+        <div id="guestTermsNote" style="display:none; text-align:center; font-size:.72rem; color:var(--text-muted);">Trying it means you agree to the <button type="button" class="auth-link" id="guestTermsBtn" style="padding:0; font-size:.72rem;">Terms of Use</button>. Values are estimates only.</div>
+        <div style="text-align:center;"><button class="auth-link" id="authBackBtn" style="display:none;">Back to the app</button></div>
         <div style="text-align:center;"><button class="auth-link" id="authForgot">Forgot password?</button></div>
       </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="guestWall" style="z-index:1050;">
+    <div class="modal-content">
+      <div class="card-title"><span id="gwTitle">Free scans used up</span></div>
+      <div style="font-size:.9rem; color:var(--text-muted);">Thanks for testing Thrift Scout. Two quick taps would really help me make it better (optional).</div>
+      <div>
+        <label class="metric-label">Were the values close?</label>
+        <div class="gw-row" data-q="acc"><button class="btn btn-outline" data-v="spot on">Spot on</button><button class="btn btn-outline" data-v="close">Close</button><button class="btn btn-outline" data-v="off">Off</button></div>
+      </div>
+      <div>
+        <label class="metric-label">Would you pay a few dollars a month for unlimited scans?</label>
+        <div class="gw-row" data-q="pay"><button class="btn btn-outline" data-v="yes">Yes</button><button class="btn btn-outline" data-v="maybe">Maybe</button><button class="btn btn-outline" data-v="no">No</button></div>
+      </div>
+      <input type="text" id="gwNote" class="input-field" placeholder="Anything I should fix or add? (optional)" maxlength="300">
+      <input type="email" id="gwEmail" class="input-field" placeholder="Email, if you want updates (optional)" maxlength="120">
+      <button class="btn btn-accent" id="gwCreateBtn">Create free account (keep scanning)</button>
+      <button class="btn btn-outline" id="gwKeyBtn">Use my own free Google key</button>
+      <button class="auth-link" id="gwLaterBtn" style="align-self:center;">Maybe later</button>
     </div>
   </div>
   <div class="modal-overlay" id="termsModal" style="z-index:1100;">
@@ -708,7 +734,7 @@ This is a plain-language starting document, not legal advice.</div>
       getFirestore, collection, doc, setDoc, addDoc, getDocs, deleteDoc, updateDoc, onSnapshot, query, orderBy, limit
     } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
     import {
-      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, EmailAuthProvider, linkWithCredential
     } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -1180,6 +1206,18 @@ This is a plain-language starting document, not legal advice.</div>
       fontScale: String(parseFloat(localStorage.getItem('ts_font_scale') || '1') || 1)
     };
 
+    // ================= GUEST MODE =================
+    // Guests get a few free scans on the shared Thrift Scout key (set GUEST_KEY below; empty = guest mode off).
+    // The key is locked in Google so it only works from thriftscout.shop.
+    const GUEST_KEY = '';
+    const GUEST_LIMIT = 10;
+    let IS_GUEST = false;
+    function guestUsed() { try { return parseInt(localStorage.getItem('ts_guest_used') || '0', 10) || 0; } catch (e) { return 0; } }
+    function guestLeft() { return Math.max(0, GUEST_LIMIT - guestUsed()); }
+    function usingGuestKey() { return !STATE.geminiKey && IS_GUEST && !!GUEST_KEY && guestLeft() > 0; }
+    function hasKey() { return !!STATE.geminiKey || usingGuestKey(); }
+    function activeKey() { return STATE.geminiKey || (usingGuestKey() ? GUEST_KEY : ''); }
+
     let currentAppraisal = null;
     let selectedImagesBase64 = [];
     let compressedThumbDataUrl = null;
@@ -1204,7 +1242,7 @@ This is a plain-language starting document, not legal advice.</div>
       localStorage.setItem('ts_scans_left', STATE.dailyScans);
       localStorage.setItem('ts_xp', STATE.xp);
       const pill = document.getElementById('quotaPill');
-      if (pill) pill.textContent = Math.max(0, STATE.dailyScans) + ' left';
+      if (pill) pill.textContent = ((IS_GUEST && GUEST_KEY && !STATE.geminiKey) ? guestLeft() : Math.max(0, STATE.dailyScans)) + ' left';
       applyWallpaper();
     }
     updatePills();
@@ -1326,8 +1364,13 @@ This is a plain-language starting document, not legal advice.</div>
     async function callGemini(parts, opts) {
       const maxTokens = (opts && opts.maxTokens) || SCAN_MAX_TOKENS;
       const timeoutMs = (opts && opts.timeoutMs) || REQUEST_TIMEOUT_MS;
-      if (!STATE.geminiKey) return { ok: false, error: 'No API key saved. Open your profile and tap Config API Key.' };
-      if (STATE.dailyScans <= 0) return { ok: false, error: 'Your on-screen scan counter is at 0. Reset it in Config if Google still allows calls.' };
+      if (!hasKey()) {
+        if (IS_GUEST && GUEST_KEY) { showGuestWall(); return { ok: false, error: 'Your free scans are used up. Create a free account or add your own Google key to keep going.' }; }
+        return { ok: false, error: 'No API key saved. Open your profile and tap Config API Key.' };
+      }
+      const guestCall = usingGuestKey();
+      const keyNow = activeKey();
+      if (!guestCall && STATE.dailyScans <= 0) return { ok: false, error: 'Your on-screen scan counter is at 0. Reset it in Config if Google still allows calls.' };
 
       // Ask for minimal "thinking" so answers come back faster. If Google rejects that
       // setting (400), we remember it and retry once without it.
@@ -1345,14 +1388,14 @@ This is a plain-language starting document, not legal advice.</div>
       let lastError = 'Unknown error';
       let busyTries = 0;
       let slowTries = 0;
-      const refund = () => { STATE.dailyScans += 1; updatePills(); };
+      const refund = () => { if (guestCall) return; STATE.dailyScans += 1; updatePills(); };
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       for (let mi = 0; mi < MODELS.length; mi++) {
         const model = MODELS[mi];
         const controller = new AbortController();
         const thisTimeout = slowTries > 0 ? Math.max(timeoutMs, RETRY_TIMEOUT_MS) : timeoutMs;
         const timeoutId = setTimeout(() => controller.abort(), thisTimeout);
-        STATE.dailyScans = Math.max(0, STATE.dailyScans - 1); // count every real call
+        if (!guestCall) { STATE.dailyScans = Math.max(0, STATE.dailyScans - 1); } // count every real call
         updatePills();
         const startedAt = performance.now();
         const bodyKb = Math.round(body.length / 1024);
@@ -1366,7 +1409,7 @@ This is a plain-language starting document, not legal advice.</div>
         try {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': STATE.geminiKey },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': keyNow },
             body,
             signal: controller.signal
           });
@@ -1381,6 +1424,7 @@ This is a plain-language starting document, not legal advice.</div>
               return { ok: false, error: `${model} returned an empty answer (reason: ${cand?.finishReason || data.promptFeedback?.blockReason || 'unknown'}).` };
             }
             logScan({ ok: true, secs: +secs, kb: bodyKb, imgs: parts.length - 1, model, tries: slowTries + 1 });
+            if (guestCall) countGuestScan();
             return { ok: true, text, model, secs };
           }
 
@@ -1778,7 +1822,7 @@ This is a plain-language starting document, not legal advice.</div>
     }
     document.getElementById('vDetailVerifyBtn').onclick = () => {
       if (!currentlyOpenedVaultItem || isBusy) return;
-      if (!STATE.geminiKey) { alert('Set your Gemini API key in Config first.'); return; }
+      if (!hasKey()) { if (IS_GUEST && GUEST_KEY) { showGuestWall(); return; } alert('Set your Gemini API key in Config first.'); return; }
       playAudioFeedback('BUY', false, false);
       if (hasPendingVerify()) { runVerify(pendingVerifyShots.slice()); return; } // reuse saved photos
       openCamera('verify'); // snap up to 3 close-ups, then RUN VERIFY calls runVerify()
@@ -2175,7 +2219,8 @@ This is a plain-language starting document, not legal advice.</div>
     async function runScanWorkflow() {
       if (isBusy) return; // stops double-taps from burning extra scans
       if (!selectedImagesBase64 || selectedImagesBase64.length === 0) return;
-      if (!STATE.geminiKey) {
+      if (!hasKey()) {
+        if (IS_GUEST && GUEST_KEY) { showGuestWall(); return; }
         alert('Set your Gemini API key in Config first.');
         configModal.classList.add('active');
         return;
@@ -2375,10 +2420,13 @@ This is a plain-language starting document, not legal advice.</div>
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
           if (!$a('authTerms').checked || !$a('authCert').checked) { authError('Please check both required boxes to create an account.'); return; }
-          const cred = await createUserWithEmailAndPassword(auth, email, pass);
+          let cred;
+          if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
+          else cred = await createUserWithEmailAndPassword(auth, email, pass);
           try {
-            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, newsletter: !!$a('authNews').checked, createdAt: Date.now() });
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
+          if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
         } else {
           await signInWithEmailAndPassword(auth, email, pass);
         }
@@ -2390,11 +2438,15 @@ This is a plain-language starting document, not legal advice.</div>
     onAuthStateChanged(auth, (user) => {
       if (user) {
         CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || '';
+        IS_GUEST = !!user.isAnonymous;
         $a('authOverlay').classList.add('hidden');
-        $a('meEmail').textContent = CURRENT_EMAIL;
+        $a('meEmail').textContent = IS_GUEST ? 'Guest' : CURRENT_EMAIL;
+        updateGuestUI(); updatePills();
         startVaultListener();
       } else {
-        CURRENT_UID = null; CURRENT_EMAIL = '';
+        CURRENT_UID = null; CURRENT_EMAIL = ''; IS_GUEST = false;
+        updateGuestUI();
+        $a('guestStartBtn').style.display = GUEST_KEY ? 'block' : 'none'; $a('guestTermsNote').style.display = GUEST_KEY ? 'block' : 'none'; $a('authBackBtn').style.display = 'none';
         if (unsubVault) { unsubVault(); unsubVault = null; }
         STATE.vaultItems = []; renderVault();
         $a('authOverlay').classList.remove('hidden');
@@ -2411,7 +2463,62 @@ This is a plain-language starting document, not legal advice.</div>
     document.getElementById('scanLogClearBtn').onclick = () => { try { localStorage.removeItem('ts_scanlog'); } catch (e) {} renderScanLog(); };
     renderScanLog();
     document.querySelectorAll('[data-target="tab-me"]').forEach(b => b.addEventListener('click', renderScanLog));
-    $a('signOutBtn').onclick = async () => { try { await signOut(auth); } catch (e) {} goTab('tab-scout'); };
+    $a('signOutBtn').onclick = async () => {
+      if (IS_GUEST) { openGuestSignup(); return; }
+      try { await signOut(auth); } catch (e) {} goTab('tab-scout');
+    };
+
+    // ---- guest helpers ----
+    function updateGuestUI() {
+      const gi = $a('guestInfo'), sb = $a('signOutBtn');
+      if (IS_GUEST) {
+        gi.style.display = 'block';
+        gi.textContent = GUEST_KEY && !STATE.geminiKey ? `Guest mode: ${guestLeft()} of ${GUEST_LIMIT} free scans left. Create a free account to keep scanning and keep your items.` : 'Guest mode. Create a free account to keep your items.';
+        sb.textContent = 'Create account or sign in';
+      } else { gi.style.display = 'none'; sb.textContent = 'Sign out'; }
+    }
+    function openGuestSignup() {
+      $a('guestWall').classList.remove('active');
+      $a('authOverlay').classList.remove('hidden');
+      $a('authForm').style.display = 'flex';
+      $a('authSub').textContent = 'Create a free account to keep going';
+      $a('guestStartBtn').style.display = 'none'; $a('guestTermsNote').style.display = 'none';
+      $a('authBackBtn').style.display = 'inline';
+      setAuthMode('up');
+    }
+    $a('authBackBtn').onclick = () => { $a('authOverlay').classList.add('hidden'); };
+    $a('guestTermsBtn').onclick = () => $a('termsModal').classList.add('active');
+    $a('guestStartBtn').onclick = async () => {
+      const b = $a('guestStartBtn'); b.classList.add('disabled'); authError('');
+      try { await signInAnonymously(auth); }
+      catch (e) { authError((e && e.code === 'auth/operation-not-allowed') ? 'Guest mode is not switched on in Firebase yet (Authentication, Sign-in method, Anonymous).' : friendlyAuthError(e)); }
+      finally { b.classList.remove('disabled'); }
+    };
+    let gwAnswers = {};
+    document.querySelectorAll('#guestWall .gw-row').forEach(row => row.querySelectorAll('button').forEach(btn => btn.onclick = () => {
+      row.querySelectorAll('button').forEach(x => x.classList.remove('sel')); btn.classList.add('sel'); gwAnswers[row.dataset.q] = btn.dataset.v;
+    }));
+    async function saveGuestFeedback() {
+      const note = $a('gwNote').value.trim(), email = $a('gwEmail').value.trim();
+      if (!gwAnswers.acc && !gwAnswers.pay && !note && !email) return;
+      if (!CURRENT_UID) return;
+      try { await setDoc(doc(db, 'users', CURRENT_UID), { guestFeedback: { accuracy: gwAnswers.acc || '', wouldPay: gwAnswers.pay || '', note, email, at: Date.now() } }, { merge: true }); } catch (e) { console.warn('Feedback save failed', e); }
+      if (email && !$a('authEmail').value) $a('authEmail').value = email;
+    }
+    function showGuestWall() {
+      $a('gwTitle').textContent = guestUsed() >= GUEST_LIMIT ? `Your ${GUEST_LIMIT} free scans are used up` : 'Free scans';
+      $a('guestWall').classList.add('active');
+    }
+    function countGuestScan() {
+      const n = guestUsed() + 1;
+      try { localStorage.setItem('ts_guest_used', String(n)); } catch (e) {}
+      updatePills(); updateGuestUI();
+      if (CURRENT_UID) setDoc(doc(db, 'users', CURRENT_UID), { isGuest: true, guestUsed: n, lastGuestScan: Date.now() }, { merge: true }).catch(() => {});
+      if (n >= GUEST_LIMIT) setTimeout(() => { if (IS_GUEST && !STATE.geminiKey) showGuestWall(); }, 6000);
+    }
+    $a('gwCreateBtn').onclick = async () => { await saveGuestFeedback(); openGuestSignup(); };
+    $a('gwKeyBtn').onclick = async () => { await saveGuestFeedback(); $a('guestWall').classList.remove('active'); document.getElementById('geminiApiKey').value = STATE.geminiKey; configModal.classList.add('active'); };
+    $a('gwLaterBtn').onclick = async () => { await saveGuestFeedback(); $a('guestWall').classList.remove('active'); };
 
     // one-time copy of the old shared vault into this person's own vault
     $a('claimBtn').onclick = () => armBtn($a('claimBtn'), 'YES, MOVE THEM', async () => {
