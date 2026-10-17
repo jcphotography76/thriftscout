@@ -417,6 +417,7 @@
         <div style="font-size:.8rem; color:var(--text-muted);">Your rank ladder and rank colors follow this. Your XP stays the same if you switch.</div>
         <select id="branchSelect" class="input-field"><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
         <select id="trackSelect" class="input-field" style="display:none;"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select>
+        <select id="svcSelect" class="input-field" style="display:none;"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select>
       </div>
 <div class="card">
         <div class="settings-section-title">Account</div>
@@ -508,6 +509,7 @@
             <select id="authBranch" class="input-field" style="margin-top:4px;"><option value="">Select your branch...</option><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select></div>
           <div id="authTrackRow" style="display:none;"><label class="metric-label">Ranks</label>
             <select id="authTrack" class="input-field" style="margin-top:4px;"><option value="enl">Enlisted</option><option value="off">Officer</option></select></div>
+          <div id="authSvcRow" style="display:none;"><select id="authSvc" class="input-field"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select></div>
           <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
           <label class="auth-check"><input type="checkbox" id="authAge"><span>I am 18 years of age or older.</span></label>
@@ -541,7 +543,7 @@
       <div class="card-title"><span>Pick your branch</span></div>
       <div style="font-size:.9rem; color:var(--text-muted);">This sets your rank ladder and colors. Choose Civilian if you did not serve. You can change it anytime in Settings.</div>
       <select id="bgBranch" class="input-field"><option value="">Select your branch...</option><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
-      <div id="bgTrackRow" style="display:none;"><select id="bgTrack" class="input-field"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select></div>
+      <div id="bgTrackRow" style="display:none;"><select id="bgTrack" class="input-field"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select><select id="bgSvc" class="input-field" style="margin-top:8px;"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select></div>
       <div class="auth-err" id="bgErr" style="display:none;"></div>
       <button class="btn btn-accent" id="bgSaveBtn">Save</button>
     </div>
@@ -1124,8 +1126,8 @@ This is a plain-language starting document, not legal advice.</div>
       if (branch === 'army' || !ENL_ROWS[branch]) return ARMY_ENL;
       return ENL_ROWS[branch].map((r, i) => ({ name: r[0], grade: r[1], minXp: XP_STEPS[i], desc: ENL_DESCS[i] }));
     }
-    let BRANCH = 'army', TRACK = 'enl';
-    try { const b = localStorage.getItem('ts_branch'), tr = localStorage.getItem('ts_track'); if (BRANCH_KEYS.includes(b)) BRANCH = b; if (tr === 'off' && BRANCH !== 'civ') TRACK = 'off'; } catch (e) {}
+    let BRANCH = 'army', TRACK = 'enl', SERVICE = '';
+    try { const b = localStorage.getItem('ts_branch'), tr = localStorage.getItem('ts_track'); if (BRANCH_KEYS.includes(b)) BRANCH = b; if (tr === 'off' && BRANCH !== 'civ') TRACK = 'off'; const sv = localStorage.getItem('ts_service'); if (BRANCH !== 'civ' && (sv === 'active' || sv === 'vet')) SERVICE = sv; } catch (e) {}
     let TIERS = tierSetFor(BRANCH, TRACK);
     function gradeText(t) { return BRANCH === 'civ' ? 'Level ' + (TIERS.indexOf(t) + 1) : 'Pay grade ' + t.grade; }
     function topRankText() { return BRANCH === 'civ' ? 'Top rank achieved.' : (TRACK === 'off' ? 'Top officer rank achieved.' : 'Top enlisted rank achieved.'); }
@@ -2559,15 +2561,16 @@ This is a plain-language starting document, not legal advice.</div>
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
           if (!$a('authBranch').value) { authError('Please pick your branch (or Civilian). It sets your rank ladder.'); return; }
+          if ($a('authBranch').value !== 'civ' && !$a('authSvc').value) { authError('Please pick Active duty or Veteran.'); return; }
           if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all four required boxes to create an account.'); return; }
           if (ageBlocked()) { showAgeLock(); return; }
           setAgeOk();
-          setBranch($a('authBranch').value, $a('authTrack').value);
+          setBranch($a('authBranch').value, $a('authTrack').value, $a('authSvc').value); grantServiceBonus();
           let cred;
           if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
           else cred = await createUserWithEmailAndPassword(auth, email, pass);
           try {
-            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, branch: BRANCH, track: TRACK, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, branch: BRANCH, track: TRACK, service: SERVICE, svcBonus: SERVICE ? true : false, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
           if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
         } else {
@@ -2633,10 +2636,11 @@ This is a plain-language starting document, not legal advice.</div>
       }, () => { msg.textContent = 'Location was not shared, so nothing was saved. Allow location for this site if you want to report.'; }, { timeout: 10000, maximumAge: 60000 });
     });
     // ---- branch / rank ladder ----
-    function setBranch(b, tr) {
+    function setBranch(b, tr, sv) {
       if (!BRANCH_KEYS.includes(b)) b = 'army';
       BRANCH = b; TRACK = (b !== 'civ' && tr === 'off') ? 'off' : 'enl';
-      try { localStorage.setItem('ts_branch', BRANCH); localStorage.setItem('ts_track', TRACK); } catch (e) {}
+      SERVICE = (BRANCH !== 'civ' && (sv === 'active' || sv === 'vet')) ? sv : '';
+      try { localStorage.setItem('ts_branch', BRANCH); localStorage.setItem('ts_track', TRACK); localStorage.setItem('ts_service', SERVICE); } catch (e) {}
       TIERS = tierSetFor(BRANCH, TRACK);
       THEMES = buildThemes();
       STATE.currentTheme = 'rank' + getCurrentTier(STATE.xp).index;
@@ -2647,32 +2651,46 @@ This is a plain-language starting document, not legal advice.</div>
     function syncBranchSelects() {
       const bs = $a('branchSelect'), ts = $a('trackSelect'); if (!bs) return;
       bs.value = BRANCH; ts.value = TRACK; ts.style.display = BRANCH === 'civ' ? 'none' : 'block';
+      const sv = $a('svcSelect'); sv.value = SERVICE; sv.style.display = BRANCH === 'civ' ? 'none' : 'block';
     }
     async function saveBranchRemote() {
       if (!CURRENT_UID) return;
-      try { await setDoc(doc(db, 'users', CURRENT_UID), { branch: BRANCH, track: TRACK }, { merge: true }); } catch (e) {}
+      try { await setDoc(doc(db, 'users', CURRENT_UID), { branch: BRANCH, track: TRACK, service: SERVICE, svcBonus: svcBonusDone() }, { merge: true }); } catch (e) {}
     }
-    function branchKnown() { try { return BRANCH_KEYS.includes(localStorage.getItem('ts_branch')); } catch (e) { return false; } }
+    function branchKnown() { try { const b = localStorage.getItem('ts_branch'); return BRANCH_KEYS.includes(b) && (b === 'civ' || ['active', 'vet'].includes(localStorage.getItem('ts_service'))); } catch (e) { return false; } }
+    // one-time thank-you bonus for service members (bypasses the daily XP cap)
+    const SVC_BONUS_XP = 300;
+    function svcBonusDone() { try { return localStorage.getItem('ts_svc_bonus') === '1'; } catch (e) { return false; } }
+    function grantServiceBonus() {
+      if (!SERVICE || BRANCH === 'civ' || svcBonusDone()) return;
+      try { localStorage.setItem('ts_svc_bonus', '1'); } catch (e) {}
+      const prev = STATE.xp; STATE.xp += SVC_BONUS_XP; updatePills(); renderRankSummary(); try { renderMeRank(); } catch (e) {}
+      announceUnlocks(prev, STATE.xp);
+      setTimeout(() => { triggerAlert('🎖️ Thank you for your service! +' + SVC_BONUS_XP + ' bonus XP.', false, true); }, 800);
+      saveBranchRemote();
+    }
     async function syncBranch() {
       if (branchKnown()) { return; }
       if (CURRENT_UID) {
         try {
           const d = await getDoc(doc(db, 'users', CURRENT_UID));
           const v = d && d.exists && d.exists() ? d.data() : null;
-          if (v && BRANCH_KEYS.includes(v.branch)) { setBranch(v.branch, v.track); return; }
+          if (v && BRANCH_KEYS.includes(v.branch) && (v.branch === 'civ' || v.service)) { if (v.svcBonus) { try { localStorage.setItem('ts_svc_bonus', '1'); } catch (e) {} } setBranch(v.branch, v.track, v.service); return; }
         } catch (e) {}
       }
       $a('branchGate').classList.add('active');
     }
-    $a('authBranch').onchange = () => { $a('authTrackRow').style.display = ($a('authBranch').value && $a('authBranch').value !== 'civ') ? 'block' : 'none'; };
+    $a('authBranch').onchange = () => { const m = $a('authBranch').value && $a('authBranch').value !== 'civ'; $a('authTrackRow').style.display = m ? 'block' : 'none'; $a('authSvcRow').style.display = m ? 'block' : 'none'; };
     $a('bgBranch').onchange = () => { $a('bgTrackRow').style.display = ($a('bgBranch').value && $a('bgBranch').value !== 'civ') ? 'block' : 'none'; };
     $a('bgSaveBtn').onclick = async () => {
       const v = $a('bgBranch').value; const e = $a('bgErr');
       if (!v) { e.textContent = 'Please pick one.'; e.style.display = 'block'; return; }
-      e.style.display = 'none'; setBranch(v, $a('bgTrack').value); $a('branchGate').classList.remove('active'); await saveBranchRemote();
+      if (v !== 'civ' && !$a('bgSvc').value) { e.textContent = 'Please pick Active duty or Veteran.'; e.style.display = 'block'; return; }
+      e.style.display = 'none'; setBranch(v, $a('bgTrack').value, $a('bgSvc').value); $a('branchGate').classList.remove('active'); await saveBranchRemote(); grantServiceBonus();
     };
-    $a('branchSelect').onchange = async () => { setBranch($a('branchSelect').value, $a('trackSelect').value); await saveBranchRemote(); playAudioFeedback('BUY', false, false); };
-    $a('trackSelect').onchange = async () => { setBranch($a('branchSelect').value, $a('trackSelect').value); await saveBranchRemote(); playAudioFeedback('BUY', false, false); };
+    const _setFromSettings = async () => { setBranch($a('branchSelect').value, $a('trackSelect').value, $a('svcSelect').value); await saveBranchRemote(); playAudioFeedback('BUY', false, false); grantServiceBonus(); };
+    $a('branchSelect').onchange = _setFromSettings;
+    $a('trackSelect').onchange = _setFromSettings; $a('svcSelect').onchange = _setFromSettings;
     syncBranchSelects();
 
     // ---- 18+ gate ----
