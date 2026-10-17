@@ -496,13 +496,14 @@
           <div><label class="metric-label">Confirm password (8 or more characters)</label><input type="password" id="authPass2" class="input-field" autocomplete="new-password" style="margin-top:4px;"></div>
           <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
+          <label class="auth-check"><input type="checkbox" id="authAge"><span>I am 18 years of age or older.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCov"><span>I understand Thrift Scout works best in Weber, Davis and Salt Lake counties in Utah, and needs a solid data connection. It may be slow, time out or fail in areas with weak signal.</span></label>
           <label class="auth-check"><input type="checkbox" id="authNews"><span>(Optional) Email me Thrift Scout updates.</span></label>
         </div>
         <div class="auth-err" id="authErr"></div>
         <button class="btn btn-accent" id="authSubmit">Sign in</button>
         <button class="btn btn-outline" id="guestStartBtn" style="display:none;">Try 10 free scans (no sign-up)</button>
-        <div id="guestTermsNote" style="display:none; text-align:center; font-size:.72rem; color:var(--text-muted);">Trying it means you agree to the <button type="button" class="auth-link" id="guestTermsBtn" style="padding:0; font-size:.72rem;">Terms of Use</button>. Values are estimates only.</div>
+        <div id="guestTermsNote" style="display:none; text-align:center; font-size:.72rem; color:var(--text-muted);">Trying it means you are 18 or older and agree to the <button type="button" class="auth-link" id="guestTermsBtn" style="padding:0; font-size:.72rem;">Terms of Use</button>. Values are estimates only.</div>
         <div style="text-align:center;"><button class="auth-link" id="authBackBtn" style="display:none;">Back to the app</button></div>
         <div style="text-align:center;"><button class="auth-link" id="authForgot">Forgot password?</button></div>
       </div>
@@ -554,7 +555,7 @@
 
 5. Early testing. Thrift Scout is a new product and may contain errors, change, be interrupted or be removed at any time. It is provided as is, with no warranty of any kind. To the fullest extent the law allows, Thrift Scout and its owner are not liable for losses arising from your use of it.
 
-6. Age. If you are under 18, use Thrift Scout together with a parent or guardian.
+6. Age. Thrift Scout is for adults 18 and older. By creating an account or trying it as a guest, you confirm you are at least 18. If you are under 18, do not use Thrift Scout.
 
 7. Not affiliated. Thrift Scout is independent. It is not affiliated with Google, any thrift store or retailer, or any branch of the U.S. military.
 
@@ -2395,7 +2396,7 @@ This is a plain-language starting document, not legal advice.</div>
     };
 
     // ================= ACCOUNTS =================
-    const TERMS_VERSION = '2026-10-14';
+    const TERMS_VERSION = '2026-10-17';
     let authMode = 'in';
     const $a = (id) => document.getElementById(id);
     function authError(msg) { const e = $a('authErr'); e.textContent = msg; e.style.display = msg ? 'block' : 'none'; }
@@ -2439,12 +2440,12 @@ This is a plain-language starting document, not legal advice.</div>
         if (authMode === 'up') {
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
-          if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked) { authError('Please check all three required boxes to create an account.'); return; }
+          if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all four required boxes to create an account.'); return; }
           let cred;
           if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
           else cred = await createUserWithEmailAndPassword(auth, email, pass);
           try {
-            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
           if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
         } else {
