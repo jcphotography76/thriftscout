@@ -202,6 +202,7 @@
     </div>
     <div class="header-pills">
       <span class="badge-accent" id="quotaPill" title="Scans left on this device's counter">100 left</span>
+      <button class="badge-accent" id="sigBtn" title="Report your signal here" style="cursor:pointer; border:none;">📶 Signal</button>
     </div>
   </header>
 
@@ -316,16 +317,6 @@
         </div>
       </div>
 
-      <div class="card" id="covReportCard">
-        <div class="card-title"><span>📶 HOW'S THE SIGNAL HERE?</span></div>
-        <p style="font-size:.78rem; color:var(--text-muted); margin:0;">Optional. One tap tells us how scans are going at your spot. Only a rounded area is saved, never your exact location or name.</p>
-        <div class="cov-faces">
-          <button class="cov-face" data-r="1"><span>😞</span><small>Bad</small></button>
-          <button class="cov-face" data-r="2"><span>😬</span><small>So-so</small></button>
-          <button class="cov-face" data-r="3"><span>😄</span><small>Great</small></button>
-        </div>
-        <div id="covMsg" style="font-size:.8rem; color:var(--text-muted); min-height:1.1em;"></div>
-      </div>
     </section>
 
     <!-- TAB 2: RANKS (was Intel) -->
@@ -515,6 +506,18 @@
         <div style="text-align:center;"><button class="auth-link" id="authBackBtn" style="display:none;">Back to the app</button></div>
         <div style="text-align:center;"><button class="auth-link" id="authForgot">Forgot password?</button></div>
       </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="covModal" style="z-index:1040;">
+    <div class="modal-content">
+      <div class="card-title"><span>📶 HOW'S THE SIGNAL HERE?</span><button class="settings-btn" id="covCloseBtn">X</button></div>
+      <p style="font-size:.85rem; color:var(--text-muted); margin:0;">Optional. One tap tells us how scans are going at your spot. Only a rounded area is saved, never your exact location or name.</p>
+      <div class="cov-faces">
+        <button class="cov-face" data-r="1"><span>😞</span><small>Bad</small></button>
+        <button class="cov-face" data-r="2"><span>😬</span><small>So-so</small></button>
+        <button class="cov-face" data-r="3"><span>😄</span><small>Great</small></button>
+      </div>
+      <div id="covMsg" style="font-size:.85rem; color:var(--text-muted); min-height:1.2em;"></div>
     </div>
   </div>
   <div class="modal-overlay" id="guestWall" style="z-index:1050;">
@@ -2486,6 +2489,8 @@ This is a plain-language starting document, not legal advice.</div>
     };
 
 
+    document.getElementById('sigBtn').onclick = () => { document.getElementById('covMsg').textContent = ''; document.getElementById('covModal').classList.add('active'); };
+    document.getElementById('covCloseBtn').onclick = () => document.getElementById('covModal').classList.remove('active');
     // ---- connection report (non-personal: rounded area + rating only) ----
     document.querySelectorAll('.cov-face').forEach(btn => btn.onclick = () => {
       const msg = document.getElementById('covMsg');
@@ -2497,7 +2502,7 @@ This is a plain-language starting document, not legal advice.</div>
           const rec = { lat: Math.round(pos.coords.latitude * 100) / 100, lng: Math.round(pos.coords.longitude * 100) / 100, rating: parseInt(btn.dataset.r, 10), conn: String(c.effectiveType || ''), at: Date.now() };
           await addDoc(collection(db, 'coverage_reports'), rec);
           document.querySelectorAll('.cov-face').forEach(b => b.classList.add('done'));
-          msg.textContent = 'Thanks! Logged. It will show on the coverage map.';
+          msg.textContent = 'Thanks! Logged. It will show on the coverage map.'; setTimeout(() => document.getElementById('covModal').classList.remove('active'), 1800);
           setTimeout(() => { document.querySelectorAll('.cov-face').forEach(b => b.classList.remove('done')); }, 60000);
         } catch (e) { msg.textContent = 'Could not save the report: ' + (e.code || e.message); }
       }, () => { msg.textContent = 'Location was not shared, so nothing was saved. Allow location for this site if you want to report.'; }, { timeout: 10000, maximumAge: 60000 });
