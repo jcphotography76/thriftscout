@@ -487,6 +487,7 @@
       <div style="text-align:center;">
         <div style="font-weight:900; font-size:1.7rem; letter-spacing:-.02em;">THRIFT <span style="color:var(--accent);">SCOUT</span></div>
         <div id="authSub" style="color:var(--text-muted); font-size:.85rem; margin-top:2px;">Loading...</div>
+        <div style="color:var(--text-muted); font-size:.75rem; margin-top:4px;">Adults only: 18 and older.</div>
       </div>
       <div id="authForm" style="display:none; flex-direction:column; gap:12px;">
         <div class="auth-tabs"><button class="auth-tab active" id="authTabIn">Sign in</button><button class="auth-tab" id="authTabUp">Create account</button></div>
@@ -502,6 +503,7 @@
         </div>
         <div class="auth-err" id="authErr"></div>
         <button class="btn btn-accent" id="authSubmit">Sign in</button>
+        <label class="auth-check" id="guestAgeRow" style="display:none;"><input type="checkbox" id="guestAge"><span>I am 18 years of age or older.</span></label>
         <button class="btn btn-outline" id="guestStartBtn" style="display:none;">Try 10 free scans (no sign-up)</button>
         <div id="guestTermsNote" style="display:none; text-align:center; font-size:.72rem; color:var(--text-muted);">Trying it means you are 18 or older and agree to the <button type="button" class="auth-link" id="guestTermsBtn" style="padding:0; font-size:.72rem;">Terms of Use</button>. Values are estimates only.</div>
         <div style="text-align:center;"><button class="auth-link" id="authBackBtn" style="display:none;">Back to the app</button></div>
@@ -519,6 +521,20 @@
         <button class="cov-face" data-r="3"><span>😄</span><small>Great</small></button>
       </div>
       <div id="covMsg" style="font-size:.85rem; color:var(--text-muted); min-height:1.2em;"></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="ageGate" style="z-index:3000;">
+    <div class="modal-content">
+      <div class="card-title"><span>Adults only (18+)</span></div>
+      <div style="font-size:.9rem; color:var(--text-muted);">Thrift Scout is for adults 18 and older. Please confirm your age to continue.</div>
+      <button class="btn btn-accent" id="ageYesBtn">I am 18 or older</button>
+      <button class="btn btn-outline" id="ageNoBtn">I am under 18</button>
+    </div>
+  </div>
+  <div class="modal-overlay" id="ageLock" style="z-index:3100; background:#000;">
+    <div class="modal-content">
+      <div class="card-title"><span>Sorry</span></div>
+      <div style="font-size:.9rem;">Thrift Scout is for adults 18 and older, so we cannot let you in. Thanks for understanding.</div>
     </div>
   </div>
   <div class="modal-overlay" id="guestWall" style="z-index:1050;">
@@ -1292,7 +1308,7 @@ This is a plain-language starting document, not legal advice.</div>
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
-        if (e.target === overlay && overlay.id !== 'webcamModal') overlay.classList.remove('active');
+        if (e.target === overlay && overlay.id !== 'webcamModal' && overlay.id !== 'ageGate' && overlay.id !== 'ageLock') overlay.classList.remove('active');
       });
     });
 
@@ -2441,6 +2457,8 @@ This is a plain-language starting document, not legal advice.</div>
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
           if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all four required boxes to create an account.'); return; }
+          if (ageBlocked()) { showAgeLock(); return; }
+          setAgeOk();
           let cred;
           if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
           else cred = await createUserWithEmailAndPassword(auth, email, pass);
@@ -2460,6 +2478,7 @@ This is a plain-language starting document, not legal advice.</div>
       if (user) {
         CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || '';
         IS_GUEST = !!user.isAnonymous;
+        checkAgeGate();
         $a('authOverlay').classList.add('hidden');
         $a('meEmail').textContent = IS_GUEST ? 'Guest' : CURRENT_EMAIL;
         updateGuestUI(); updatePills();
@@ -2467,7 +2486,7 @@ This is a plain-language starting document, not legal advice.</div>
       } else {
         CURRENT_UID = null; CURRENT_EMAIL = ''; IS_GUEST = false;
         updateGuestUI();
-        $a('guestStartBtn').style.display = GUEST_KEY ? 'block' : 'none'; $a('guestTermsNote').style.display = GUEST_KEY ? 'block' : 'none'; $a('authBackBtn').style.display = 'none';
+        $a('guestStartBtn').style.display = GUEST_KEY ? 'block' : 'none'; $a('guestAgeRow').style.display = GUEST_KEY ? 'flex' : 'none'; $a('guestTermsNote').style.display = GUEST_KEY ? 'block' : 'none'; $a('authBackBtn').style.display = 'none';
         if (unsubVault) { unsubVault(); unsubVault = null; }
         STATE.vaultItems = []; renderVault();
         $a('authOverlay').classList.remove('hidden');
@@ -2508,6 +2527,26 @@ This is a plain-language starting document, not legal advice.</div>
         } catch (e) { msg.textContent = 'Could not save the report: ' + (e.code || e.message); }
       }, () => { msg.textContent = 'Location was not shared, so nothing was saved. Allow location for this site if you want to report.'; }, { timeout: 10000, maximumAge: 60000 });
     });
+    // ---- 18+ gate ----
+    function ageOk() { try { return localStorage.getItem('ts_age18') === '1'; } catch (e) { return false; } }
+    function setAgeOk() { try { localStorage.setItem('ts_age18', '1'); } catch (e) {} }
+    function ageBlocked() { try { return localStorage.getItem('ts_age_blocked') === '1'; } catch (e) { return false; } }
+    function showAgeLock() { $a('ageGate').classList.remove('active'); $a('ageLock').classList.add('active'); }
+    function checkAgeGate() {
+      if (ageBlocked()) { showAgeLock(); return; }
+      if (!ageOk()) $a('ageGate').classList.add('active');
+    }
+    $a('ageYesBtn').onclick = async () => {
+      setAgeOk(); $a('ageGate').classList.remove('active');
+      if (CURRENT_UID) { try { await setDoc(doc(db, 'users', CURRENT_UID), { age18: true, age18At: Date.now() }, { merge: true }); } catch (e) {} }
+    };
+    $a('ageNoBtn').onclick = async () => {
+      try { localStorage.setItem('ts_age_blocked', '1'); localStorage.removeItem('ts_age18'); } catch (e) {}
+      showAgeLock();
+      try { await signOut(auth); } catch (e) {}
+    };
+    if (ageBlocked()) showAgeLock();
+
     // ---- guest helpers ----
     function updateGuestUI() {
       const gi = $a('guestInfo'), sb = $a('signOutBtn');
@@ -2522,13 +2561,16 @@ This is a plain-language starting document, not legal advice.</div>
       $a('authOverlay').classList.remove('hidden');
       $a('authForm').style.display = 'flex';
       $a('authSub').textContent = 'Create a free account to keep going';
-      $a('guestStartBtn').style.display = 'none'; $a('guestTermsNote').style.display = 'none';
+      $a('guestStartBtn').style.display = 'none'; $a('guestAgeRow').style.display = 'none'; $a('guestTermsNote').style.display = 'none';
       $a('authBackBtn').style.display = 'inline';
       setAuthMode('up');
     }
     $a('authBackBtn').onclick = () => { $a('authOverlay').classList.add('hidden'); };
     $a('guestTermsBtn').onclick = () => $a('termsModal').classList.add('active');
     $a('guestStartBtn').onclick = async () => {
+      if (ageBlocked()) { showAgeLock(); return; }
+      if (!$a('guestAge').checked) { authError('Please confirm you are 18 or older to try it as a guest.'); return; }
+      setAgeOk();
       const b = $a('guestStartBtn'); b.classList.add('disabled'); authError('');
       try { await signInAnonymously(auth); }
       catch (e) { authError((e && e.code === 'auth/operation-not-allowed') ? 'Guest mode is not switched on in Firebase yet (Authentication, Sign-in method, Anonymous).' : friendlyAuthError(e)); }
