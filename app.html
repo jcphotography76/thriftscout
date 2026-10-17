@@ -414,10 +414,10 @@
       </div>
             <div class="card">
         <div class="settings-section-title">Branch and ranks</div>
-        <div style="font-size:.8rem; color:var(--text-muted);">Your rank ladder and rank colors follow this. Your XP stays the same if you switch.</div>
-        <select id="branchSelect" class="input-field"><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
-        <select id="trackSelect" class="input-field" style="display:none;"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select>
-        <select id="svcSelect" class="input-field" style="display:none;"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select>
+        <div style="font-size:.8rem; color:var(--text-muted);">🔒 Locked. Your branch and service status were set at signup and cannot be changed. Wrong pick? Contact support.</div>
+        <select id="branchSelect" class="input-field" disabled><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
+        <select id="trackSelect" class="input-field" style="display:none;" disabled><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select>
+        <select id="svcSelect" class="input-field" style="display:none;" disabled><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select>
       </div>
 <div class="card">
         <div class="settings-section-title">Account</div>
@@ -510,6 +510,7 @@
           <div id="authTrackRow" style="display:none;"><label class="metric-label">Ranks</label>
             <select id="authTrack" class="input-field" style="margin-top:4px;"><option value="enl">Enlisted</option><option value="off">Officer</option></select></div>
           <div id="authSvcRow" style="display:none;"><select id="authSvc" class="input-field"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select></div>
+          <label class="auth-check"><input type="checkbox" id="authLock"><span><b>🔒 I understand my branch and service status are permanent</b> and cannot be changed after signup.</span></label>
           <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
           <label class="auth-check"><input type="checkbox" id="authAge"><span>I am 18 years of age or older.</span></label>
@@ -541,9 +542,10 @@
   <div class="modal-overlay" id="branchGate" style="z-index:2900;">
     <div class="modal-content">
       <div class="card-title"><span>Pick your branch</span></div>
-      <div style="font-size:.9rem; color:var(--text-muted);">This sets your rank ladder and colors. Choose Civilian if you did not serve. You can change it anytime in Settings.</div>
+      <div style="font-size:.9rem; color:var(--text-muted);">This sets your rank ladder and colors. Choose Civilian if you did not serve. <b>Once saved, it is locked and cannot be changed.</b></div>
       <select id="bgBranch" class="input-field"><option value="">Select your branch...</option><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
       <div id="bgTrackRow" style="display:none;"><select id="bgTrack" class="input-field"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select><select id="bgSvc" class="input-field" style="margin-top:8px;"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select></div>
+      <label class="auth-check"><input type="checkbox" id="bgLock"><span><b>🔒 I understand this is permanent</b> and cannot be changed later.</span></label>
       <div class="auth-err" id="bgErr" style="display:none;"></div>
       <button class="btn btn-accent" id="bgSaveBtn">Save</button>
     </div>
@@ -2561,6 +2563,7 @@ This is a plain-language starting document, not legal advice.</div>
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
           if (!$a('authBranch').value) { authError('Please pick your branch (or Civilian). It sets your rank ladder.'); return; }
+          if (!$a('authLock').checked) { authError('Please confirm your branch choice is permanent.'); return; }
           if ($a('authBranch').value !== 'civ' && !$a('authSvc').value) { authError('Please pick Active duty or Veteran.'); return; }
           if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all four required boxes to create an account.'); return; }
           if (ageBlocked()) { showAgeLock(); return; }
@@ -2685,6 +2688,7 @@ This is a plain-language starting document, not legal advice.</div>
     $a('bgSaveBtn').onclick = async () => {
       const v = $a('bgBranch').value; const e = $a('bgErr');
       if (!v) { e.textContent = 'Please pick one.'; e.style.display = 'block'; return; }
+      if (!$a('bgLock').checked) { e.textContent = 'Please confirm this is permanent.'; e.style.display = 'block'; return; }
       if (v !== 'civ' && !$a('bgSvc').value) { e.textContent = 'Please pick Active duty or Veteran.'; e.style.display = 'block'; return; }
       e.style.display = 'none'; setBranch(v, $a('bgTrack').value, $a('bgSvc').value); $a('branchGate').classList.remove('active'); await saveBranchRemote(); grantServiceBonus();
     };
