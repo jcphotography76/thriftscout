@@ -164,6 +164,11 @@
     .dock-btn.active .dock-ico { transform:scale(1.12); }
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; padding:16px; z-index:200; pointer-events:auto; touch-action:manipulation; }
     .modal-overlay.active { display:flex; }
+    .cov-faces { display:flex; gap:8px; }
+    .cov-face { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; border-radius:12px; border:1.5px solid var(--border); background:rgba(0,0,0,.25); color:var(--text); cursor:pointer; }
+    .cov-face span { font-size:2rem; line-height:1; } .cov-face small { font-size:.72rem; color:var(--text-muted); }
+    .cov-face[data-r="1"] { border-color:#a8453d; } .cov-face[data-r="2"] { border-color:#b59a2e; } .cov-face[data-r="3"] { border-color:#3f9a4f; }
+    .cov-face.done { opacity:.5; pointer-events:none; }
     .gw-row { display:flex; gap:8px; margin-top:4px; }
     .gw-row .btn { padding:9px 4px; font-size:.85rem; }
     .gw-row .btn.sel { background:var(--accent); color:#111; border-color:var(--accent); }
@@ -309,6 +314,17 @@
           <button id="scoutMissionCompsBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📊 View Target Comps</button>
           <button id="scoutMissionScanBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📸 Hunt For This</button>
         </div>
+      </div>
+
+      <div class="card" id="covReportCard">
+        <div class="card-title"><span>📶 HOW'S THE SIGNAL HERE?</span></div>
+        <p style="font-size:.78rem; color:var(--text-muted); margin:0;">Optional. One tap tells us how scans are going at your spot. Only a rounded area is saved, never your exact location or name.</p>
+        <div class="cov-faces">
+          <button class="cov-face" data-r="1"><span>😞</span><small>Bad</small></button>
+          <button class="cov-face" data-r="2"><span>😬</span><small>So-so</small></button>
+          <button class="cov-face" data-r="3"><span>😄</span><small>Great</small></button>
+        </div>
+        <div id="covMsg" style="font-size:.8rem; color:var(--text-muted); min-height:1.1em;"></div>
       </div>
     </section>
 
@@ -489,6 +505,7 @@
           <div><label class="metric-label">Confirm password (8 or more characters)</label><input type="password" id="authPass2" class="input-field" autocomplete="new-password" style="margin-top:4px;"></div>
           <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
+          <label class="auth-check"><input type="checkbox" id="authCov"><span>I understand Thrift Scout works best in Weber, Davis and Salt Lake counties in Utah, and needs a solid data connection. It may be slow, time out or fail in areas with weak signal.</span></label>
           <label class="auth-check"><input type="checkbox" id="authNews"><span>(Optional) Email me Thrift Scout updates.</span></label>
         </div>
         <div class="auth-err" id="authErr"></div>
@@ -1445,14 +1462,14 @@ This is a plain-language starting document, not legal advice.</div>
           // quietly try again a few times before bothering the user. Same model every time.
           if (res.status === 503 || res.status === 500 || res.status === 502 || res.status === 504) {
             refund();
-            if (busyTries < 3) {
+            if (busyTries < 5) {
               busyTries++;
-              setProgress(`Google's AI is busy. Trying again (${busyTries}/3)...`, 55);
-              await sleep(1500 * busyTries);
+              setProgress(`Google's AI is busy. Trying again (${busyTries}/5)...`, 55);
+              await sleep(2000 * busyTries);
               mi--;
               continue;
             }
-            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 4 times. No scan was counted. Wait a minute and tap Retry; your photos are kept." };
+            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 6 times over about 30 seconds. No scan was counted. Wait a minute and tap Retry; your photos are kept." };
           }
           if (res.status === 404) continue;
           if (res.status === 429) return { ok: false, error: `Google says you're over the limit (429). ${msg}` };
@@ -2419,12 +2436,12 @@ This is a plain-language starting document, not legal advice.</div>
         if (authMode === 'up') {
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
-          if (!$a('authTerms').checked || !$a('authCert').checked) { authError('Please check both required boxes to create an account.'); return; }
+          if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked) { authError('Please check all three required boxes to create an account.'); return; }
           let cred;
           if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
           else cred = await createUserWithEmailAndPassword(auth, email, pass);
           try {
-            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
           if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
         } else {
@@ -2468,6 +2485,23 @@ This is a plain-language starting document, not legal advice.</div>
       try { await signOut(auth); } catch (e) {} goTab('tab-scout');
     };
 
+
+    // ---- connection report (non-personal: rounded area + rating only) ----
+    document.querySelectorAll('.cov-face').forEach(btn => btn.onclick = () => {
+      const msg = document.getElementById('covMsg');
+      if (!navigator.geolocation) { msg.textContent = 'This phone will not share location, so the report cannot be saved.'; return; }
+      msg.textContent = 'Getting your area...';
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+          const c = navigator.connection || {};
+          const rec = { lat: Math.round(pos.coords.latitude * 100) / 100, lng: Math.round(pos.coords.longitude * 100) / 100, rating: parseInt(btn.dataset.r, 10), conn: String(c.effectiveType || ''), at: Date.now() };
+          await addDoc(collection(db, 'coverage_reports'), rec);
+          document.querySelectorAll('.cov-face').forEach(b => b.classList.add('done'));
+          msg.textContent = 'Thanks! Logged. It will show on the coverage map.';
+          setTimeout(() => { document.querySelectorAll('.cov-face').forEach(b => b.classList.remove('done')); }, 60000);
+        } catch (e) { msg.textContent = 'Could not save the report: ' + (e.code || e.message); }
+      }, () => { msg.textContent = 'Location was not shared, so nothing was saved. Allow location for this site if you want to report.'; }, { timeout: 10000, maximumAge: 60000 });
+    });
     // ---- guest helpers ----
     function updateGuestUI() {
       const gi = $a('guestInfo'), sb = $a('signOutBtn');
