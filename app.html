@@ -412,7 +412,13 @@
           <button class="btn btn-outline" id="scanLogClearBtn" style="font-size:.8rem; padding:10px; flex:1;">Clear</button>
         </div>
       </div>
-      <div class="card">
+            <div class="card">
+        <div class="settings-section-title">Branch and ranks</div>
+        <div style="font-size:.8rem; color:var(--text-muted);">Your rank ladder and rank colors follow this. Your XP stays the same if you switch.</div>
+        <select id="branchSelect" class="input-field"><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
+        <select id="trackSelect" class="input-field" style="display:none;"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select>
+      </div>
+<div class="card">
         <div class="settings-section-title">Account</div>
         <div style="font-size:.95rem;">Signed in as <b id="meEmail">...</b></div>
         <div id="guestInfo" style="display:none; font-size:.85rem; color:var(--text-muted);"></div>
@@ -498,6 +504,10 @@
         <div><label class="metric-label">Password</label><input type="password" id="authPass" class="input-field" autocomplete="current-password" style="margin-top:4px;"></div>
         <div id="authSignupOnly" style="display:none; flex-direction:column; gap:12px;">
           <div><label class="metric-label">Confirm password (8 or more characters)</label><input type="password" id="authPass2" class="input-field" autocomplete="new-password" style="margin-top:4px;"></div>
+          <div><label class="metric-label">Branch (sets your rank ladder)</label>
+            <select id="authBranch" class="input-field" style="margin-top:4px;"><option value="">Select your branch...</option><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select></div>
+          <div id="authTrackRow" style="display:none;"><label class="metric-label">Ranks</label>
+            <select id="authTrack" class="input-field" style="margin-top:4px;"><option value="enl">Enlisted</option><option value="off">Officer</option></select></div>
           <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
           <label class="auth-check"><input type="checkbox" id="authAge"><span>I am 18 years of age or older.</span></label>
@@ -524,6 +534,16 @@
         <button class="cov-face" data-r="3"><span>😄</span><small>Great</small></button>
       </div>
       <div id="covMsg" style="font-size:.85rem; color:var(--text-muted); min-height:1.2em;"></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="branchGate" style="z-index:2900;">
+    <div class="modal-content">
+      <div class="card-title"><span>Pick your branch</span></div>
+      <div style="font-size:.9rem; color:var(--text-muted);">This sets your rank ladder and colors. Choose Civilian if you did not serve. You can change it anytime in Settings.</div>
+      <select id="bgBranch" class="input-field"><option value="">Select your branch...</option><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
+      <div id="bgTrackRow" style="display:none;"><select id="bgTrack" class="input-field"><option value="enl">Enlisted ranks</option><option value="off">Officer ranks</option></select></div>
+      <div class="auth-err" id="bgErr" style="display:none;"></div>
+      <button class="btn btn-accent" id="bgSaveBtn">Save</button>
     </div>
   </div>
   <div class="modal-overlay" id="ageGate" style="z-index:3000;">
@@ -771,7 +791,7 @@ This is a plain-language starting document, not legal advice.</div>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
     import {
-      getFirestore, collection, doc, setDoc, addDoc, getDocs, deleteDoc, updateDoc, onSnapshot, query, orderBy, limit
+      getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, query, orderBy, limit
     } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
     import {
       getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, EmailAuthProvider, linkWithCredential
@@ -1012,7 +1032,7 @@ This is a plain-language starting document, not legal advice.</div>
     // Rank ribbons: original patterns (not copies of any real uniform pattern), one camo-inspired era per rank
     const RANK_RIBBONS = ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAA4CAYAAADQHGKWAAAA9ElEQVR42u3WIQ6AMBBE0S3pMTkRly6KBERx0BHv2XUrfqYdx14vRgHwpTY7dGEGWGrMQt2FGSAz1Js4A0SG+hFoAIJs1jNA5oq2oAGCF7T1DBC4oi1ogOAFDYBAAyDQAAINgEADCDQAAg2AQAMINAACDSDQAAg0AAININAACDSAQAMg0AACDYBAAyDQAAINgEADCDQAAg2AQAMINAACDSDQAAg0gEADINAACDSAQAMg0AACDYBAAyDQAAINgEADCDQA/wW6eQNAnGZBAwQv6LKiAbLW8z3QAIQuaCsaIGg9V1X1yWH4EcCaMM8CLdQAi8N8OQHDow7ondhHqAAAAABJRU5ErkJggg==", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAA4CAYAAADQHGKWAAABEklEQVR42u3WIQ7CUBBF0fnNrApVVdsl4NldbVV3VhQJJP0EAemEnGPHjbh57Xq7xBt7APBLrXdIYQY41d4LdQozQM1QD+IMUDLUL4EGoJDBegaouaItaIDCC9p6Bii4oi1ogMILGgCBBuBTOU+jLwBY0AAINIBAAyDQAAINgEADcCiXdfMFAAsaAIEGEGgABBpAoAEQaAAEGkCgARBoAIEGQKABEGgAgQZAoAEEGgCBBhBoAAQaAIEGEGgAviTnafQFAAsaAIEGEGgABBpAoAEQaAAO5bJuvgBgQQMg0AB/EOjmDQDlNAsaoPCCDisaoNZ6fg40AEUXtBUNUGg9R0Rk57D7EcA5Ye4FWqgBTg7zwx2lIxSDy4/B3gAAAABJRU5ErkJggg==", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAA4CAYAAADQHGKWAAABKUlEQVR42u3XOwrCQBiF0TuSfdgJLsT12LtRwc6VxCogyPiCmJ94Tmm6MfNx046nQ54YQ5Jkv9s+/Ha+XB0MzHC3PrGCe9i6DzqBFuY3XyaRhuXCvbL7114FWpi/eIFEGty7OUI9iPNff1qBu1fPOEV6468GxLmmjfUMUHJFW9AAlRe09QxQcEVb0ACFFzQAAg2AQAMINAACDSDQAAg0AAININAACDSAQAMg0AAINIBAAyDQAAINgEADCDQAAg2AQAMINAACDSDQAAg0AAININAACDSAQAMg0AACDYBAAyDQAAINgEADCDQAAg2AQAMINAACDSDQAPwu0M0xAJTTLGiAwgs6VjRArfV8H2gAii5oKxqg0HpOkqHzYHRGAMuEuRdooQZYOMyTG3t+KLewt9XFAAAAAElFTkSuQmCC", "data:image/png;base64,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", "data:image/png;base64,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", "data:image/png;base64,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", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAA4CAYAAADQHGKWAAAEkUlEQVR42u3dQUsbQRjG8YnssVixgiAIoRS8iHoQvJZe+4V66xfo1+m19Cp4UPFSKCUgCIUkqPSeniypzfNO+s7O7Gzy/x2zjZvszL673Ty8M/j46UNQDobDWXD6/OWr3Pb+3Vu57dtotPD1+4dHc39bLzfVdzDfp/YXe5/yczoObdvd3nEd55g3rxd/x63NF+b77h9/ucbo7Pio9bmknJ4chpqoY1aT2LiPbu8Wvj7c33PtT/29GO/+YvtUf/fi8sb8m1Y9W3JOD9S/a8TrswAAKGGmCnVDYQaAOgv1BsUZAKos1H8VaABARTa4ewaAOu+iuYMGgEo19w+PRe+eT08OzSiaivrEIkBWFE2x4lvff4yyfX9FRYBiMZ/SvGN0fnUtt1kRvJ1X23LbeDLtxYkWiyB6eGOLlrZjoilz1xr3HPuz5pI6b0e3d+a8tr7bEuM3a7wnlDVBzq+uXQcX5SZybTyTPHaiqpx3jmIZOx8ADx5xAAAFGgBAgQYACjQAgAINAGumWZUvkqOLXGmqm5Y3SuaNYdV0LGOdyzydzXKlOFRaIyUKaCV0VEy0tk5+q8Ab30tNWDUpWUrVqrMvYhPZak2ojltK+0/UUfS9c6LkZ+0iG69a+lqtVK1WnLH4oTVOfWjf2sbNE484AKBSFGgAoEADACjQAECBBgDkktQsyWN0e5f0K3pJffmcwLyLy5uiUTuri6EV2Rzu75mpGKtDpdqWqwulV2raq6kpKudpGRqbBLmoi5eVe/QW/NjJpiJH1gXW01oxtWh4jCdT2ZXOWzRivKuW5+CN9anjXVtGuu2WqbEVtlWtsGpPl9FZHnEAQKUo0ABAgQYAUKABgAINAMilSYmlqMRCHxazjMnRjCZXbK+LdEFJnjmaklZQCZAujnPbHQ5T5jVd8joo0ClvVt2toE+OWAxI6cvCo6W7vZUUK4resVVR15SoIP5vfloxO++4xuaKGvf5GwEecQBApSjQAECBBgBQoAGAAg0AyCUtxcGvzHhGxcJyRC9DKNvIJhYz80RBu1hbsA9yxWrV/IztT6U8Uj7nwXC48PX5xFbDVOgHT6TRyu1aXfe8Ubma2rNeXN7ILnjcWPioLn+q0CwqOMvOtXVu9Xt2fPQngscjDgCoFAUaACjQAAAKNABQoAEAuSSlOLxrCHqiUaU7aVkpB0vs12fPmmghxH8p92i7AZN3AdBcrC54anxZKFjzpl88Ecsu1hn1nCu550tjFb6Uk0p1avK2N03pBGcNtsqhegu0l/UZuyhupS8Gqasf91WOGw/rQtmXC9Du9o7rBmLVLrA84gAACjQAgAINABRoAAAFGgDWTBNCGIQQZos2xn5Bt1IVtTSk8aYAxpNpliRHHxIZsV/CVUogtmZfyWSMd1+51lT0pgu83e7WdYHXXMero3TIoFEdqmpU08KpqhiNJ1M52KsQl8tRpHIs2NmXRXZTikoO3jlqHW/VidG6iSu9+HBsDHJc8JbJej894hjwnwkAqMZgvkADACqz8bxiAwC6v3sO4d9eHE8bZhwjAOimMKsCTaEGgI4L85PfVICrT78KU20AAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAA4CAYAAADQHGKWAAAEzklEQVR42u3doW7bUBTG8ZvIqqahwKoaCIqmaqCoYGio2hPsOQaG9jTDRcNFQwNFAdNUBQVMVaHRNAUsQ5kqree72bHP9XXy/8FYTuzr6xMr+XTu5POn90nYWhtuv92lCJevXj75+vX1F9f7vXv3xtyWe0+1rzr/2ezZk6+37S9zn/ZkKo9l/vzkydfXPzfusbbeM4I6znZ5r4/z/NT1mdZ1KH2c6+8P9jFenLnO7WqxkNut+WndX11E1QLFul9y49K3XA25eD3f520m1obmfwszAKBXW6tQNxRmAKizUE8pzgBQZaFOU8YCAOo05ekZAOp8iuYJGgAq1dx+uxvF07OKI802v81t3gjQ/PxU7qtica0V1TqZmsfqjQctnfHDlFJaim1WPKhLDK00FWs051ISUc/M+ak4HY6TmoNWDHT5df33Kbrp8uGeTGWuYN6sVsUGz5uvRVmeHLH60h6ClamPmu8ReeearrvlenlvPlwsXszddWmo8eQnDgCoFAUaACjQAAAKNABQoAEAUZraDsiKm5VMd6Bbl7xS5uenKVWW1rCUnr/q81TCpab0h5WyynV+tObuerUq3u1O2ScGOvn44a07B9137lO194y6AayWm54M7T48rUhzPDdVVMFQWWgr/vQo99nLDbzvjdznuWWvu7OtaMgcFAW671a5EXHHvq9rjXVih584AKBSFGgAoEADACjQAECBBgBECYvZ9f2vdW0xO+8/yVanu5nzOFSCIzdmEZEj1fHNm9awrL8/yCSHN0FgjelN7tqKc7eOZYhEgtL3NUoBi+JG1ILcvbD6sR7kejQ1TRC1Qm6u4Pe9QrVaEXoMGeGh9B2lO3TqS0S2tM1E/mqK9ZUupiULraoTfUTw+IkDACpFgQYACjQAgAINABRoAECUqrrZqchUG/B5XZIFqrFTyUigWkttNsA1tNZ9W6Z1yOdZDbvGst5kl5hkqbE8JGpdwlrG8/HcbcYysNlM6/NxnIcVB1ynTcy4BFBxyC4dCUsVPq9svEts96wuf7VYmPvlHlisGJ66PhEFul3eh8wJKy7XpQAPlXVW+IkDACpFgQYACjQAgAINABRoAECU4imOXOrA07xptvltNiZR/+ZHRb8sKgXgbf/iSQfgeKn5Mj8/lUkOTwOmqEVaPQvDdrlXVB2xUk19RD0bNYAqTnUIaomEHYOoXLJVUHJz1+q6Jx8eghcI/d/CEPIAdcBd8MaInzgAgAINAKBAAwAFGgBAgQaAIzOaZklqDbZW7Ff6X3ClSyomInFSsulRVNc2bzpEJTKsY71tY2JaHn10Sjs2XZpBefbN7bPPtWiiOjhdOTt7masfdyhCnknpHdzaVmlWhcE7YYkn9kveD2JR0jG4EbnkLg8shxAHVLVi1/WSnzgAoFIUaACgQAMAKNAAQIEGAERpUkqTlNL2kE/SSiuof4JnF2eudd0OvcHU2K95132t9E7u87yL21pxwFznuZqUvies2GaX5EfE2p+X+aTbROagjz1OVVNm1MwKZ2J9KmOsOrp54pdqlXQ1l3ItKWmpWu6Ly5oT6tpG3WNWxFAtDFt6JfRou7t7wtQFgGpMHhdoAEClT9A8RQNARU/PKf3bi2O3YcsYAcAwhdkq0BRqABi4MO/8Aa1A0grT9OwBAAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWgAAAA4CAYAAADQHGKWAAAFP0lEQVR42u3dsWobWRTG8SMzqDDLIIxJMYSgSsUiTNgiZVC9pPAj+NHyCFvsA6jeIizGpEglglGxCCEG40IEvJVCNqtzrnXuvTNX8v9XWlix7sx8GqQv5w7e/z4Vw5P2wHRcW78n49FIfWyx2YjH4p/H/T//vBav8a8X+3/+6lxysNbF69NfX12/dzGpi3lt8y/Lg4/tVeP/+9tRJV2pN9+yPK91/LRrxSt0jcUciy7OzVwZcnM9tf+952Xd4OcfrL+0IiJSHRrMAICknrSgrghmACgzqM8IZwAoMqj/E9AAgIKccfcMAGXeRXMHDQCFqnLdPVvVL2+F5uFxf13pMlD5Wy1a9TGtXpOrZpd6Lb2WQ5GlsS6WUMWyK7+9e5PlebXKn3b+Bc/bof14s03/GmaTJunzfXTW0HLV5dRjN7/P8ryhOl2uu+jqw9s3nQeH1kX0XgClHejZ7PX+0M/QgS5rbfxrpvXRtbU8JV2H2CnY9YT75v0/Hc/FRxwAUCgCGgAIaAAAAQ0ABDQAIBf3SK+Pf9ypj3krKdZzxrhMXAtbLVrOnD2sxkXwW3dl4tt608rtslXOsxGLnlDM9WdVHrWmw13MdTQ8nrXxXC/fA1rrfMIOfKu7qtUIQyGljcAMvb24RmcalcZQ9fLT9isnQUKpR4Om7kDvqFXITP/eqbOqvLubSj7iAIBCEdAAQEADAAhoACCgAQC5VNY3sFa1xKqu/fn38X/LHzNEyqINmLpdtiLOQs3lcP+xsJomDxE1Jc9wn4tJnXzATWhQjXc4lTbJ0FsLC9UyV8Zjns1YQ0PMvFMA1Y1VaXH4rlsjQ3fXbnUsf3Auv5x3uwTLISfmwYGp1LtCvDcK2jhV71jQ1Qs/ft43Ns+1ueohX7S/M8V0Tj7iAIBCEdAAQEADAAhoACCgAQC5VFZVyZq2ZH0zm2MTTJH0DYhmKyLbMvZBjPmG2bOJq9WLWGw2ZkVNq8uF6nfeehcDvdKtZR88eeDdp3H86jzbxrGanHupVjGhcHfCYzdDXVJtglxJG9/G0EKx3pTz+qwpcDmOw8Wk9k2eO5L3l5vrqdott96wc+w6H0PrjvdxGLQOfGjU6O5Nho84AKBQBDQAENAAAAIaAAhoAEAu7hbHeDSS8dtR8j/IGnAzdVbRcrRNtDZDLacxEEmb6Db/rFeYZpO607+l62Mu0n1Lp+s6nbZud9Jmm/Co5YvFqgdrFb3biPpdH4PcREQq74aV3lGOJVkO7bGi2rjV0AhIzxSuU6jnhUJxvrh3XQDTDBeHNQI09f7NoYtbe32lXWNaKLrrhy/YfH7/rFGyfMQBAIUioAGAgAYAENAAQEADAHKpWILD3S4DFS5jKot3fz2L1Z7wNiC0iXVXTR1+/R3JNbXMUyfzbrDcbPW1Xkvbec3Oe75Ym093OY0w9cbEz1kXb6VTu44ux/X3c8Yd0N5FD01DaxwXZKiiZS2uZ9xqjmDwjmgNda49J497c9SI7vG0p55pF6x1aZrTfd0xQju2H8vxjcVHHABQKAIaAAhoAAABDQAENAAgl+rh8dtARJ48v+z5tr+0SW+eWk5M1cyqI2li9nyz2hFaGyXULLhyNg+0NQvtz6au5ey1OVDIqr6ldtVxG8Oa+hjD26bxtC6sRtd6c7r7nR5gcFQ9aK1Ol2sXcYvWZ/YE8EuRowNuubmeFr8mpe3O7a2Qet9kc1B3BA/cVFlvsta65Kzj7j7iGBAfAFDO3fOPAQ0AKMzZz4kNAOj/7lnk///Ve/fAE2sEAP0EsxbQBDUA9BzMO/8CYZTBuhcBB9wAAAAASUVORK5CYII=", "data:image/png;base64,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"];
     const RANK_PALETTES = [{"bg": "#14150d", "card": "#1c1d12", "surface": "#272818", "border": "#4a4b2c", "accent": "#b9ba7e", "text": "#f1f0dc", "muted": "#a6a678"}, {"bg": "#0f1409", "card": "#171e0e", "surface": "#212b14", "border": "#3c4a22", "accent": "#b7c27a", "text": "#eff2dc", "muted": "#9fae72"}, {"bg": "#10150b", "card": "#182010", "surface": "#222d17", "border": "#3d5022", "accent": "#9bbf5a", "text": "#f0f5e2", "muted": "#98b070"}, {"bg": "#0e0f08", "card": "#17180d", "surface": "#22241a", "border": "#4a3b2a", "accent": "#8fae3c", "text": "#f2f2e4", "muted": "#a39a78"}, {"bg": "#17120b", "card": "#221a10", "surface": "#302416", "border": "#6e4a30", "accent": "#d9a86a", "text": "#fbf1de", "muted": "#c0a27a"}, {"bg": "#14160e", "card": "#1e2115", "surface": "#2b2f1e", "border": "#7a5a3c", "accent": "#a9b783", "text": "#f6f2de", "muted": "#b2b58c"}, {"bg": "#0e1210", "card": "#161c19", "surface": "#202925", "border": "#4a5a52", "accent": "#a6c0b0", "text": "#eef3ef", "muted": "#8fa396"}, {"bg": "#12120a", "card": "#1b1c10", "surface": "#272916", "border": "#5a4a30", "accent": "#c2b070", "text": "#f6f0da", "muted": "#b0a470"}, {"bg": "#0b0e08", "card": "#131a0d", "surface": "#1c2614", "border": "#3e4a2c", "accent": "#7ea35a", "text": "#eef3e2", "muted": "#8fa675"}, {"bg": "#090b06", "card": "#10140a", "surface": "#1a2012", "border": "#54623a", "accent": "#c6b878", "text": "#f2f3e6", "muted": "#98a67a"}];
-    const TIERS = [
+    const ARMY_ENL = [
       { name: "Private", grade: "E-1", minXp: 0, bg: "#2f3a4f", fg: "#b9b49a", desc: "Fresh off the bus. Learning hallmarks, tags and basic comps." },
       { name: "Private", grade: "E-2", minXp: 750, bg: "#34435c", fg: "#c2b98f", desc: "Finding your footing. Starting to trust your eye." },
       { name: "Private First Class", grade: "E-3", minXp: 2000, bg: "#3d4a5a", fg: "#c8b878", desc: "Reliable in the aisles with a growing list of sure bets." },
@@ -1028,7 +1048,7 @@ This is a plain-language starting document, not legal advice.</div>
     function rankBadgeHTML(t, size) {
       size = size || 44;
       const idx = Math.max(0, TIERS.indexOf(t)), w = Math.round(size * 2.1), h = Math.round(size * 0.62);
-      return `<img src="${RANK_RIBBONS[idx]}" alt="${t.name} ribbon" title="${t.name} (${t.grade})" style="width:${w}px; height:${h}px; border-radius:${Math.max(4, Math.round(h * 0.16))}px; flex:0 0 auto; image-rendering:auto; box-shadow:0 1px 4px rgba(0,0,0,.5);">`;
+      return `<img src="${ribbonFor(idx)}" alt="${t.name} ribbon" title="${t.name} (${t.grade})" style="width:${w}px; height:${h}px; border-radius:${Math.max(4, Math.round(h * 0.16))}px; flex:0 0 auto; image-rendering:auto; box-shadow:0 1px 4px rgba(0,0,0,.5);">`;
     }
 
     // ===== Unlockable themes: free base themes + a military tree (branch -> job -> specialty) =====
@@ -1058,11 +1078,88 @@ This is a plain-language starting document, not legal advice.</div>
         jobs: [["Space Operations","#9ec9ff"],["Cyber & Comms","#6c8cff"],["Intelligence","#b79cff"],["Engineering & Acquisitions","#6fe3ff"],["Logistics & Support","#c0c8d8"]],
         specs: [["Orbital Warfare","#ff8fd0"],["Satellite Operator","#7dd3b0"]] }
     ];
+
+    // ===== BRANCH + TRACK: each branch has its own enlisted ladder and officer ladder (10 steps each, same XP curve) =====
+    const XP_STEPS = [0, 750, 2000, 5000, 12000, 25000, 45000, 75000, 120000, 200000];
+    const BRANCH_LIST = [["army","Army"],["navy","Navy"],["af","Air Force"],["usmc","Marine Corps"],["uscg","Coast Guard"],["ussf","Space Force"],["civ","Civilian"]];
+    const BRANCH_KEYS = BRANCH_LIST.map(b => b[0]);
+    const ENL_ROWS = {
+      navy: [["Seaman Recruit","E-1"],["Seaman Apprentice","E-2"],["Seaman","E-3"],["Petty Officer Third Class","E-4"],["Petty Officer Second Class","E-5"],["Petty Officer First Class","E-6"],["Chief Petty Officer","E-7"],["Senior Chief Petty Officer","E-8"],["Master Chief Petty Officer","E-9"],["Master Chief Petty Officer of the Navy","MCPON"]],
+      af: [["Airman Basic","E-1"],["Airman","E-2"],["Airman First Class","E-3"],["Senior Airman","E-4"],["Staff Sergeant","E-5"],["Technical Sergeant","E-6"],["Master Sergeant","E-7"],["Senior Master Sergeant","E-8"],["Chief Master Sergeant","E-9"],["Chief Master Sergeant of the Air Force","CMSAF"]],
+      usmc: [["Private","E-1"],["Private First Class","E-2"],["Lance Corporal","E-3"],["Corporal","E-4"],["Sergeant","E-5"],["Staff Sergeant","E-6"],["Gunnery Sergeant","E-7"],["Master Sergeant / First Sergeant","E-8"],["Master Gunnery Sergeant / Sergeant Major","E-9"],["Sergeant Major of the Marine Corps","SMMC"]],
+      uscg: [["Seaman Recruit","E-1"],["Seaman Apprentice","E-2"],["Seaman","E-3"],["Petty Officer Third Class","E-4"],["Petty Officer Second Class","E-5"],["Petty Officer First Class","E-6"],["Chief Petty Officer","E-7"],["Senior Chief Petty Officer","E-8"],["Master Chief Petty Officer","E-9"],["Master Chief Petty Officer of the Coast Guard","MCPOCG"]],
+      ussf: [["Specialist 1","E-1"],["Specialist 2","E-2"],["Specialist 3","E-3"],["Specialist 4","E-4"],["Sergeant","E-5"],["Technical Sergeant","E-6"],["Master Sergeant","E-7"],["Senior Master Sergeant","E-8"],["Chief Master Sergeant","E-9"],["Chief Master Sergeant of the Space Force","CMSSF"]]
+    };
+    const OFF_ARMYLIKE = [["Second Lieutenant","O-1"],["First Lieutenant","O-2"],["Captain","O-3"],["Major","O-4"],["Lieutenant Colonel","O-5"],["Colonel","O-6"],["Brigadier General","O-7"],["Major General","O-8"],["Lieutenant General","O-9"],["General","O-10"]];
+    const OFF_NAVYLIKE = [["Ensign","O-1"],["Lieutenant Junior Grade","O-2"],["Lieutenant","O-3"],["Lieutenant Commander","O-4"],["Commander","O-5"],["Captain","O-6"],["Rear Admiral (Lower Half)","O-7"],["Rear Admiral (Upper Half)","O-8"],["Vice Admiral","O-9"],["Admiral","O-10"]];
+    const OFF_ROWS = { army: OFF_ARMYLIKE, usmc: OFF_ARMYLIKE, af: OFF_ARMYLIKE, ussf: OFF_ARMYLIKE, navy: OFF_NAVYLIKE, uscg: OFF_NAVYLIKE };
+    const ENL_DESCS = ARMY_ENL.map(t => t.desc);
+    const OFF_DESCS = [
+      "Freshly commissioned. Bright eyes, big plans and a lot to learn about tags and comps.",
+      "Gaining confidence. Starting to lead the hunt, not just join it.",
+      "Running your own operation with a steady record of smart buys.",
+      "Plans ahead. Knows which aisles pay and which to skip.",
+      "A seasoned leader whose vault pays its own way.",
+      "Senior leadership. Trusted to call the shots on a big haul.",
+      "Top-level ranks begin. A reputation that precedes you at every counter.",
+      "Sees the whole market picture. Few buy better than you.",
+      "A strategic mind that reads trends before anyone else sees them.",
+      "The pinnacle. Top tier authority over a high-performance vault."
+    ];
+    const CIV_ROWS = [
+      ["Rookie","L1","Just getting started. Learning tags, brands and comps."],
+      ["Rack Walker","L2","Finding your footing. Starting to trust your eye."],
+      ["Thrifter","L3","Reliable in the aisles with a growing list of sure bets."],
+      ["Seasoned Thrifter","L4","Solid skills across most categories."],
+      ["Deal Hunter","L5","Spots a bargain from across the store."],
+      ["Pro Thrifter","L6","A seasoned seller whose vault pays its own way."],
+      ["Master Thrifter","L7","Reads the market before the market reads you."],
+      ["Elite Thrifter","L8","Deep knowledge and a reputation built over hundreds of trips."],
+      ["Top Thrifter","L9","Whispered about at every thrift counter."],
+      ["Legendary Thrifter","L10","The very top. Commanding a high-performance vault."]
+    ];
+    function tierSetFor(branch, track) {
+      if (branch === 'civ') return CIV_ROWS.map((r, i) => ({ name: r[0], grade: r[1], minXp: XP_STEPS[i], desc: r[2] }));
+      if (track === 'off' && OFF_ROWS[branch]) return OFF_ROWS[branch].map((r, i) => ({ name: r[0], grade: r[1], minXp: XP_STEPS[i], desc: OFF_DESCS[i] }));
+      if (branch === 'army' || !ENL_ROWS[branch]) return ARMY_ENL;
+      return ENL_ROWS[branch].map((r, i) => ({ name: r[0], grade: r[1], minXp: XP_STEPS[i], desc: ENL_DESCS[i] }));
+    }
+    let BRANCH = 'army', TRACK = 'enl';
+    try { const b = localStorage.getItem('ts_branch'), tr = localStorage.getItem('ts_track'); if (BRANCH_KEYS.includes(b)) BRANCH = b; if (tr === 'off' && BRANCH !== 'civ') TRACK = 'off'; } catch (e) {}
+    let TIERS = tierSetFor(BRANCH, TRACK);
+    function gradeText(t) { return BRANCH === 'civ' ? 'Level ' + (TIERS.indexOf(t) + 1) : 'Pay grade ' + t.grade; }
+    function topRankText() { return BRANCH === 'civ' ? 'Top rank achieved.' : (TRACK === 'off' ? 'Top officer rank achieved.' : 'Top enlisted rank achieved.'); }
+    // color families: military branches use their own palette, civilians get warm copper and tan
+    const CIV_PAL = { bg:"#14100c", card:"#1d1813", surface:"#2a221a", border:"#4f4030", accent:"#d9a05b", text:"#f5efe4", muted:"#b5a58b" };
+    function branchBasePal(branch) { return branch === 'civ' ? CIV_PAL : (MIL_TREE.find(b => b.key === branch) || MIL_TREE[0]).pal; }
+    function lerpHex(a, b, t) { const x = hexToRgb(a), y = hexToRgb(b); return '#' + [0, 1, 2].map(i => Math.round(x[i] + (y[i] - x[i]) * t).toString(16).padStart(2, '0')).join(''); }
+    function rankPalettesFor(branch) {
+      if (branch === 'army') return RANK_PALETTES;
+      const base = branchBasePal(branch);
+      return Array.from({ length: 10 }, (_, i) => { const t = i / 9; return { bg: base.bg, card: base.card, surface: base.surface, border: lerpHex(base.border, base.accent, .12 + .3 * t), accent: lerpHex(base.muted, base.accent, .35 + .65 * t), text: base.text, muted: base.muted }; });
+    }
+    // Ribbons: Army enlisted keeps its camo-inspired art. Everything else gets an original striped ribbon:
+    // enlisted/civilian = vertical bars, officer = horizontal bands, one more per rank. No insignia shapes.
+    const _ribCache = {};
+    function ribbonFor(i) {
+      if (BRANCH === 'army' && TRACK === 'enl') return RANK_RIBBONS[i];
+      const key = BRANCH + TRACK + i; if (_ribCache[key]) return _ribCache[key];
+      const pal = rankPalettesFor(BRANCH)[i], W = 336, H = 100, n = i + 1;
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+      const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, pal.surface); gr.addColorStop(1, pal.bg); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      g.fillStyle = pal.accent;
+      if (TRACK === 'off' && BRANCH !== 'civ') { const bh = 5, gap = 4, total = n * bh + (n - 1) * gap, y0 = (H - total) / 2; for (let k = 0; k < n; k++) g.fillRect(28, y0 + k * (bh + gap), W - 56, bh); }
+      else { const bw = 14, gap = 8, total = n * bw + (n - 1) * gap, x0 = (W - total) / 2; for (let k = 0; k < n; k++) g.fillRect(x0 + k * (bw + gap), 14, bw, H - 28); }
+      g.fillStyle = pal.border; g.fillRect(0, 0, W, 4); g.fillRect(0, H - 4, W, 4);
+      g.strokeStyle = pal.border; g.lineWidth = 3; g.strokeRect(1.5, 1.5, W - 3, H - 3);
+      return (_ribCache[key] = c.toDataURL('image/png'));
+    }
     function buildThemes() {
       const out = BASE_THEMES.map(t => ({ ...t, group: "Base Themes", unlockXp: 0, base: true }));
       const roundTo = (n, step) => Math.round(n / step) * step;
       // rank themes (auto-applied when you are promoted): one per Army enlisted rank
-      TIERS.forEach((t, i) => out.push({ id: `rank${i}`, label: `${t.name} (${t.grade})`, group: 'Rank Themes (auto on promotion)', unlockXp: t.minXp, rank: i, pal: RANK_PALETTES[i] }));
+      const RP = rankPalettesFor(BRANCH);
+      TIERS.forEach((t, i) => out.push({ id: `rank${i}`, label: `${t.name} (${t.grade})`, group: 'Rank Themes (auto on promotion)', unlockXp: t.minXp, rank: i, pal: RP[i] }));
       // branch themes: first few thousand XP
       MIL_TREE.forEach((br, i) => out.push({ id: br.key, label: br.name, group: br.name, unlockXp: roundTo(1000 + i * 600, 100), pal: { ...br.pal, accent: br.pal.accent } }));
       // job themes: interleave branches by job rank so bigger jobs come first, spread 4k -> 150k
@@ -1081,7 +1178,7 @@ This is a plain-language starting document, not legal advice.</div>
       });
       return out;
     }
-    const THEMES = buildThemes();
+    let THEMES = buildThemes();
     const themeUnlocked = (id) => { const t = THEMES.find(x => x.id === id); return !!t && STATE.xp >= t.unlockXp; };
 
     const THEME_VARS = ['--rank-strip','--bg','--card-bg','--surface','--border','--border-focus','--text','--text-muted','--accent','--accent-glow','--on-accent'];
@@ -1101,7 +1198,8 @@ This is a plain-language starting document, not legal advice.</div>
     ];
     const _wallCache = {};
     function wallTile(idx) {
-      if (_wallCache[idx]) return _wallCache[idx];
+      const wkey = BRANCH + ':' + idx;
+      if (_wallCache[wkey]) return _wallCache[wkey];
       const sp = WALL_SPECS[Math.max(0, Math.min(WALL_SPECS.length - 1, idx))], S = 320;
       const c = document.createElement('canvas'); c.width = c.height = S;
       const g = c.getContext('2d'); g.fillStyle = sp.base; g.fillRect(0, 0, S, S);
@@ -1122,7 +1220,8 @@ This is a plain-language starting document, not legal advice.</div>
       } else {
         for (let i = 0; i < 40; i++) { g.fillStyle = pick(); g.globalAlpha = .35; g.fillRect(rnd() * S, rnd() * S, 60 + rnd() * 80, 60 + rnd() * 80); } g.globalAlpha = 1;
       }
-      return (_wallCache[idx] = c.toDataURL('image/png'));
+      if (BRANCH !== 'army') { try { g.globalCompositeOperation = 'color'; g.globalAlpha = 0.85; g.fillStyle = branchBasePal(BRANCH).accent; g.fillRect(0, 0, S, S); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } catch (e) {} }
+      return (_wallCache[wkey] = c.toDataURL('image/png'));
     }
     let _weaveUrl = '';
     function weaveTile() {
@@ -1161,7 +1260,7 @@ This is a plain-language starting document, not legal advice.</div>
       const p = t.pal, [r, g, b] = hexToRgb(p.accent);
       const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       root.setAttribute('data-theme', 'custom');
-      if (t.rank !== undefined) root.style.setProperty('--rank-strip', `url(${RANK_RIBBONS[t.rank]})`);
+      if (t.rank !== undefined) root.style.setProperty('--rank-strip', `url(${ribbonFor(t.rank)})`);
       root.style.setProperty('--bg', p.bg); root.style.setProperty('--card-bg', p.card); root.style.setProperty('--surface', p.surface);
       root.style.setProperty('--border', p.border); root.style.setProperty('--border-focus', p.accent);
       root.style.setProperty('--text', p.text); root.style.setProperty('--text-muted', p.muted);
@@ -1311,7 +1410,7 @@ This is a plain-language starting document, not legal advice.</div>
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
-        if (e.target === overlay && overlay.id !== 'webcamModal' && overlay.id !== 'ageGate' && overlay.id !== 'ageLock') overlay.classList.remove('active');
+        if (e.target === overlay && overlay.id !== 'webcamModal' && overlay.id !== 'ageGate' && overlay.id !== 'ageLock' && overlay.id !== 'branchGate') overlay.classList.remove('active');
       });
     });
 
@@ -1610,10 +1709,10 @@ This is a plain-language starting document, not legal advice.</div>
     }
     function renderMeRank() {
       const { tier, index } = getCurrentTier(STATE.xp), next = TIERS[index + 1];
-      document.getElementById('meRankRow').innerHTML = rankBadgeHTML(tier, 56) + `<div><div style="font-weight:800; font-size:1.1rem; color:var(--text);">${tier.name}</div><div style="font-size:.8rem; color:var(--text-muted);">Pay grade ${tier.grade} • ${STATE.xp.toLocaleString()} XP</div></div>`;
+      document.getElementById('meRankRow').innerHTML = rankBadgeHTML(tier, 56) + `<div><div style="font-weight:800; font-size:1.1rem; color:var(--text);">${tier.name}</div><div style="font-size:.8rem; color:var(--text-muted);">${gradeText(tier)} • ${STATE.xp.toLocaleString()} XP</div></div>`;
       const f = document.getElementById('meRankFill'), nx = document.getElementById('meRankNext');
       if (next) { f.style.width = Math.min(100, Math.max(0, Math.round(((STATE.xp - tier.minXp) / (next.minXp - tier.minXp)) * 100))) + '%'; nx.textContent = (next.minXp - STATE.xp).toLocaleString() + ' XP to ' + next.name + ' (' + next.grade + ')'; }
-      else { f.style.width = '100%'; nx.textContent = 'Top enlisted rank achieved.'; }
+      else { f.style.width = '100%'; nx.textContent = topRankText(); }
     }
     document.getElementById('meHandbookBtn').onclick = () => { playAudioFeedback('MONITOR', false, false); openLevelModal(); };
     document.getElementById('meConfigBtn').onclick = () => { document.getElementById('geminiApiKey').value = STATE.geminiKey; configModal.classList.add('active'); };
@@ -1707,13 +1806,13 @@ This is a plain-language starting document, not legal advice.</div>
     }
     function renderRankSummary() {
       const { tier, index } = getCurrentTier(STATE.xp), next = TIERS[index + 1];
-      document.getElementById('rankSummaryRow').innerHTML = rankBadgeHTML(tier, 52) + `<div><div style="font-weight:800; font-size:1rem; color:var(--text);">${tier.name}</div><div style="font-size:.74rem; color:var(--text-muted);">Pay grade ${tier.grade}</div></div>`;
+      document.getElementById('rankSummaryRow').innerHTML = rankBadgeHTML(tier, 52) + `<div><div style="font-weight:800; font-size:1rem; color:var(--text);">${tier.name}</div><div style="font-size:.74rem; color:var(--text-muted);">${gradeText(tier)}</div></div>`;
       document.getElementById('rankSummaryXp').textContent = STATE.xp.toLocaleString() + ' XP';
       const fill = document.getElementById('rankSummaryFill'), nx = document.getElementById('rankSummaryNext');
       if (next) {
         fill.style.width = Math.min(100, Math.max(0, Math.round(((STATE.xp - tier.minXp) / (next.minXp - tier.minXp)) * 100))) + '%';
         nx.textContent = (next.minXp - STATE.xp).toLocaleString() + ' XP to ' + next.name + ' (' + next.grade + ')';
-      } else { fill.style.width = '100%'; nx.textContent = 'Top enlisted rank achieved.'; }
+      } else { fill.style.width = '100%'; nx.textContent = topRankText(); }
     }
     function primeMissionScan() {
       playAudioFeedback('BUY', false, false);
@@ -2459,14 +2558,16 @@ This is a plain-language starting document, not legal advice.</div>
         if (authMode === 'up') {
           if (pass.length < 8) throw { code: 'auth/weak-password' };
           if (pass !== $a('authPass2').value) { authError('The two passwords do not match.'); return; }
+          if (!$a('authBranch').value) { authError('Please pick your branch (or Civilian). It sets your rank ladder.'); return; }
           if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all four required boxes to create an account.'); return; }
           if (ageBlocked()) { showAgeLock(); return; }
           setAgeOk();
+          setBranch($a('authBranch').value, $a('authTrack').value);
           let cred;
           if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
           else cred = await createUserWithEmailAndPassword(auth, email, pass);
           try {
-            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, branch: BRANCH, track: TRACK, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
           if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
         } else {
@@ -2482,6 +2583,7 @@ This is a plain-language starting document, not legal advice.</div>
         CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || '';
         IS_GUEST = !!user.isAnonymous;
         checkAgeGate();
+        syncBranch();
         $a('authOverlay').classList.add('hidden');
         $a('meEmail').textContent = IS_GUEST ? 'Guest' : CURRENT_EMAIL;
         updateGuestUI(); updatePills();
@@ -2530,6 +2632,49 @@ This is a plain-language starting document, not legal advice.</div>
         } catch (e) { msg.textContent = 'Could not save the report: ' + (e.code || e.message); }
       }, () => { msg.textContent = 'Location was not shared, so nothing was saved. Allow location for this site if you want to report.'; }, { timeout: 10000, maximumAge: 60000 });
     });
+    // ---- branch / rank ladder ----
+    function setBranch(b, tr) {
+      if (!BRANCH_KEYS.includes(b)) b = 'army';
+      BRANCH = b; TRACK = (b !== 'civ' && tr === 'off') ? 'off' : 'enl';
+      try { localStorage.setItem('ts_branch', BRANCH); localStorage.setItem('ts_track', TRACK); } catch (e) {}
+      TIERS = tierSetFor(BRANCH, TRACK);
+      THEMES = buildThemes();
+      STATE.currentTheme = 'rank' + getCurrentTier(STATE.xp).index;
+      try { localStorage.setItem('ts_theme', STATE.currentTheme); } catch (e) {}
+      applyTheme(STATE.currentTheme);
+      try { buildThemeSelect(); renderMeRank(); renderRankSummary(); syncBranchSelects(); if (levelModal.classList.contains('active')) openLevelModal(); } catch (e) {}
+    }
+    function syncBranchSelects() {
+      const bs = $a('branchSelect'), ts = $a('trackSelect'); if (!bs) return;
+      bs.value = BRANCH; ts.value = TRACK; ts.style.display = BRANCH === 'civ' ? 'none' : 'block';
+    }
+    async function saveBranchRemote() {
+      if (!CURRENT_UID) return;
+      try { await setDoc(doc(db, 'users', CURRENT_UID), { branch: BRANCH, track: TRACK }, { merge: true }); } catch (e) {}
+    }
+    function branchKnown() { try { return BRANCH_KEYS.includes(localStorage.getItem('ts_branch')); } catch (e) { return false; } }
+    async function syncBranch() {
+      if (branchKnown()) { return; }
+      if (CURRENT_UID) {
+        try {
+          const d = await getDoc(doc(db, 'users', CURRENT_UID));
+          const v = d && d.exists && d.exists() ? d.data() : null;
+          if (v && BRANCH_KEYS.includes(v.branch)) { setBranch(v.branch, v.track); return; }
+        } catch (e) {}
+      }
+      $a('branchGate').classList.add('active');
+    }
+    $a('authBranch').onchange = () => { $a('authTrackRow').style.display = ($a('authBranch').value && $a('authBranch').value !== 'civ') ? 'block' : 'none'; };
+    $a('bgBranch').onchange = () => { $a('bgTrackRow').style.display = ($a('bgBranch').value && $a('bgBranch').value !== 'civ') ? 'block' : 'none'; };
+    $a('bgSaveBtn').onclick = async () => {
+      const v = $a('bgBranch').value; const e = $a('bgErr');
+      if (!v) { e.textContent = 'Please pick one.'; e.style.display = 'block'; return; }
+      e.style.display = 'none'; setBranch(v, $a('bgTrack').value); $a('branchGate').classList.remove('active'); await saveBranchRemote();
+    };
+    $a('branchSelect').onchange = async () => { setBranch($a('branchSelect').value, $a('trackSelect').value); await saveBranchRemote(); playAudioFeedback('BUY', false, false); };
+    $a('trackSelect').onchange = async () => { setBranch($a('branchSelect').value, $a('trackSelect').value); await saveBranchRemote(); playAudioFeedback('BUY', false, false); };
+    syncBranchSelects();
+
     // ---- 18+ gate ----
     function ageOk() { try { return localStorage.getItem('ts_age18') === '1'; } catch (e) { return false; } }
     function setAgeOk() { try { localStorage.setItem('ts_age18', '1'); } catch (e) {} }
