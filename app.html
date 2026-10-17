@@ -412,7 +412,12 @@
           <button class="btn btn-outline" id="scanLogClearBtn" style="font-size:.8rem; padding:10px; flex:1;">Clear</button>
         </div>
       </div>
-            <div class="card">
+                  <div class="card" id="statsCard" style="display:none;">
+        <div class="settings-section-title">Crowd stats (owner only)</div>
+        <button class="btn btn-outline" id="statsBtn">Load totals</button>
+        <div id="statsOut" style="font-size:.85rem; line-height:1.6; white-space:pre-wrap;"></div>
+      </div>
+<div class="card">
         <div class="settings-section-title">Branch and ranks</div>
         <div style="font-size:.8rem; color:var(--text-muted);">🔒 Locked. Your branch and service status were set at signup and cannot be changed. Wrong pick? Contact support.</div>
         <select id="branchSelect" class="input-field" disabled><option value="army">Army</option><option value="navy">Navy</option><option value="af">Air Force</option><option value="usmc">Marine Corps</option><option value="uscg">Coast Guard</option><option value="ussf">Space Force</option><option value="civ">Civilian</option></select>
@@ -593,6 +598,8 @@
 2. Your own Gemini key. Thrift Scout asks you to supply your own Google Gemini API key. The key is stored only on your own device. You are responsible for keeping it private and for any limits, charges or terms that Google applies to your key.
 
 3. Your account and your items. You sign in with an email address and password. Your saved items, photos and notes are stored in our cloud database under your account. Keep your password private. Do not store sensitive personal information in item notes.
+
+Your branch of service and whether you are active duty or a veteran are used only to set your rank ladder and to build anonymous group totals (for example, the share of users per branch). They are never sold or shared with anyone, and totals never show names or emails.
 
 4. Shared scan library. To help recognize items that were scanned before, the photo thumbnail, item name and estimated value from a scan may be saved in a shared library without your name or email, and may be used for matching other scans.
 
@@ -2586,7 +2593,7 @@ This is a plain-language starting document, not legal advice.</div>
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || '';
+        CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || ''; showStatsIfOwner();
         IS_GUEST = !!user.isAnonymous;
         checkAgeGate();
         syncBranch();
@@ -2696,6 +2703,24 @@ This is a plain-language starting document, not legal advice.</div>
     $a('branchSelect').onchange = _setFromSettings;
     $a('trackSelect').onchange = _setFromSettings; $a('svcSelect').onchange = _setFromSettings;
     syncBranchSelects();
+
+    // ---- owner-only crowd stats (totals only, no names or emails) ----
+    const OWNER_EMAIL = 'jclaypool007@gmail.com';
+    function showStatsIfOwner() { const c = $a('statsCard'); if (c) c.style.display = (CURRENT_EMAIL && CURRENT_EMAIL.toLowerCase() === OWNER_EMAIL) ? 'block' : 'none'; }
+    $a('statsBtn').onclick = async () => {
+      const out = $a('statsOut'); out.textContent = 'Loading...';
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        const n = { total: 0, branch: {}, svc: {}, track: {} };
+        snap.docs.forEach(d => { const v = d.data(); n.total++; const b = v.branch || 'not set'; n.branch[b] = (n.branch[b] || 0) + 1; if (v.branch && v.branch !== 'civ') { const sv = v.service || 'not set'; n.svc[sv] = (n.svc[sv] || 0) + 1; const t = v.track || 'enl'; n.track[t] = (n.track[t] || 0) + 1; } });
+        const pct = (c) => Math.round(c / Math.max(1, n.total) * 100) + '%';
+        const nm = Object.fromEntries(BRANCH_LIST);
+        let t = 'Accounts: ' + n.total + '\n\nBranch\n' + Object.entries(n.branch).sort((a, b) => b[1] - a[1]).map(([k, c]) => '  ' + (nm[k] || k) + ': ' + c + ' (' + pct(c) + ')').join('\n');
+        t += '\n\nService members\n' + (Object.keys(n.svc).length ? Object.entries(n.svc).map(([k, c]) => '  ' + ({ active: 'Active duty', vet: 'Veteran' }[k] || k) + ': ' + c).join('\n') : '  none yet');
+        t += '\n\nRank type\n' + (Object.keys(n.track).length ? Object.entries(n.track).map(([k, c]) => '  ' + (k === 'off' ? 'Officer' : 'Enlisted') + ': ' + c).join('\n') : '  none yet');
+        out.textContent = t;
+      } catch (e) { out.textContent = 'Could not load totals. The Firestore rule for owner access is probably not published yet.'; }
+    };
 
     // ---- 18+ gate ----
     function ageOk() { try { return localStorage.getItem('ts_age18') === '1'; } catch (e) { return false; } }
