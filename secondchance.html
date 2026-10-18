@@ -616,6 +616,19 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     return { canvas: out, mode: mode };
   };
 
+  /* ---- photo quality check: blurry or too dark photos are turned away ---- */
+  SC.QC = { sharpMin: 60, darkMin: 60 };
+  SC.quality = function (canvas) {
+    var k = Math.min(1, 320 / Math.max(canvas.width, canvas.height)), w = Math.max(8, Math.round(canvas.width * k)), h = Math.max(8, Math.round(canvas.height * k));
+    var c = document.createElement('canvas'); c.width = w; c.height = h; var x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(canvas, 0, 0, w, h);
+    var d = x.getImageData(0, 0, w, h).data, g = new Float32Array(w * h), i, sum = 0;
+    for (i = 0; i < w * h; i++) { g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]; sum += g[i]; }
+    var mean = sum / (w * h), n = 0, s1 = 0, s2 = 0;
+    for (var y = 1; y < h - 1; y++) for (var xx = 1; xx < w - 1; xx++) { var o = y * w + xx, l = 4 * g[o] - g[o - 1] - g[o + 1] - g[o - w] - g[o + w]; s1 += l; s2 += l * l; n++; }
+    var sharp = s2 / n - (s1 / n) * (s1 / n);
+    return { sharp: sharp, mean: mean, blurry: sharp < SC.QC.sharpMin, dark: mean < SC.QC.darkMin };
+  };
+
   /* ---- add photos: live camera (take many in a row) or pick from the device ---- */
   SC.pick = function (cb) {
     var f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.multiple = true; f.style.display = 'none';
@@ -625,7 +638,9 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   SC.camera = function (onShot, onDone, countStart, strict) {
     var ov = document.createElement('div'), n = countStart || 0, stream = null;
     ov.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:system-ui,sans-serif;color:#fff');
-    ov.innerHTML = '<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>' +
+    ov.innerHTML = '<div data-a="tip" style="padding:10px 14px;background:#111;font-size:14px;line-height:1.35;text-align:center">Wipe your lens first. Use good light. Hold steady until it is sharp.</div>' +
+      '<div data-a="warn" style="display:none;padding:10px 14px;background:#8A1F2B;font-size:15px;text-align:center"></div>' +
+      '<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:#111">' +
       '<button type="button" data-a="done" style="min-width:92px;padding:14px 16px;border-radius:10px;border:1px solid #444;background:#222;color:#fff;font-size:16px">Done</button>' +
       '<button type="button" data-a="snap" aria-label="Take photo" style="width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#d8d8d8"></button>' +
@@ -636,7 +651,16 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     ov.querySelector('[data-a=done]').onclick = function () { stop(); if (onDone) onDone(n); };
     ov.querySelector('[data-a=snap]').onclick = function () {
       if (!v.videoWidth) return;
-      var c = SC.fit(v, v.videoWidth, v.videoHeight, 1400); n++; cnt.textContent = n + ' taken';
+      var c = SC.fit(v, v.videoWidth, v.videoHeight, 1400), warn = ov.querySelector('[data-a=warn]');
+      var qc = window.SC_QC_OFF ? { blurry: false, dark: false } : SC.quality(c);
+      if (qc.blurry || qc.dark) {
+        warn.style.display = 'block';
+        warn.innerHTML = (qc.dark ? 'Too dark. Move to better light and retake.' : 'That looks blurry. Wipe the lens, hold steady, and retake.') + ' <button type="button" data-a="keep" style="margin-left:8px;padding:6px 10px;border-radius:8px;border:1px solid #fff;background:transparent;color:#fff;font-size:13px">Keep anyway</button>';
+        warn.querySelector('[data-a=keep]').onclick = function () { warn.style.display = 'none'; n++; cnt.textContent = n + ' taken'; onShot(c); };
+        return;
+      }
+      warn.style.display = 'none';
+      n++; cnt.textContent = n + ' taken';
       ov.style.outline = '6px solid #fff'; setTimeout(function () { ov.style.outline = 'none'; }, 120);
       onShot(c);
     };
@@ -792,7 +816,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       '<div class="own-photos" id="oPhotos"></div>' +
       '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Clean up backgrounds</label>' +
       '<label>Strength <input type="range" id="oStr" min="10" max="100" value="' + E.strength + '"></label></div>' +
-      '<div class="own-msg" id="oNote">Every photo is centered and placed on the shop backdrop. Raise Strength if a shadow or edge is left behind. A plain, light surface works best.</div></div>' +
+      '<div class="own-msg" id="oNote">Photo rules: clean the camera lens (no smudges or streaks), shoot in good light, and keep the photo sharp. Blurry or dark photos are not allowed. Every photo is centered and placed on the shop backdrop. Raise Strength if a shadow or edge is left behind. A plain, light surface works best.</div></div>' +
       '<div><div class="own-form">' +
       '<div class="full"><label for="fName">Item name <i>*</i></label><input class="field" id="fName" value="' + esc(d.name) + '" placeholder="Levi’s straight-leg jeans, vintage wash"></div>' +
       '<div><label for="fCat">Section <i>*</i></label><select class="field" id="fCat">' + opt(CFG.categories, d.category, 'Choose a section') + '</select></div>' +
