@@ -499,6 +499,11 @@
           <div id="shThumbs" style="display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 10px;"></div>
           <input class="input-field" id="shName" placeholder="Name (optional), like “Levi’s 501 jeans”" style="margin-bottom:8px;">
           <input class="input-field" id="shCost" type="number" inputmode="decimal" min="0" step="0.01" placeholder="What you paid, in dollars (optional, private)" style="margin-bottom:8px;">
+          <button class="btn btn-outline" id="shAiBtn" style="margin-bottom:8px;">✨ Write description from photos (uses 1 scan)</button>
+          <div id="shDescWrap" style="display:none; margin-bottom:8px;">
+            <textarea class="input-field" id="shDesc" rows="5" placeholder="Description"></textarea>
+            <div style="font-size:.78rem; color:var(--coral); margin-top:4px;">AI draft. It can be wrong about brand, material and flaws. Check it against the item before it goes live.</div>
+          </div>
           <div style="font-size:.78rem; color:var(--text-muted); margin-bottom:8px;">Tip: a plain light surface behind the item gives the cleanest result. Take 3 or more photos: front, back, a close-up of any flaw or tag.</div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-primary" id="shSaveBtn" style="flex:2;">Save to holding pile</button>
@@ -2907,10 +2912,11 @@ This is a plain-language starting document, not legal advice.</div>
 
     // ================= SECOND CHANCE INTAKE (owner only) =================
     // Photos go to a private holding pile in Firestore. Finishing and publishing happens on secondchance.html.
-    const isOwnerUser = (u) => !!(u && !u.isAnonymous && (u.email || '').toLowerCase() === OWNER_EMAIL);
+    const SHOP_OWNERS = [OWNER_EMAIL, 'jennibean007@gmail.com'];
+    const isOwnerUser = (u) => !!(u && !u.isAnonymous && SHOP_OWNERS.indexOf((u.email || '').toLowerCase()) >= 0);
     function showShopIfOwner(u) { const b = $a('dockShop'); if (b) b.style.display = isOwnerUser(u) ? 'flex' : 'none'; if (isOwnerUser(u)) shLoadPile(); }
     onAuthStateChanged(auth, showShopIfOwner);
-    const SH = { shots: [] };           // canvases taken in this batch
+    const SH = { shots: [], ai: false };           // canvases taken in this batch
     const shNewId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const shMsg = (t, bad) => { const m = $a('shMsg'); m.textContent = t || ''; m.style.color = bad ? 'var(--coral)' : 'var(--text-muted)'; };
     function shRenderBatch() {
@@ -2927,7 +2933,28 @@ This is a plain-language starting document, not legal advice.</div>
     const shAdd = (c) => { if (SH.shots.length >= 8) { shMsg('That is the limit: 8 photos per item.', true); return; } SH.shots.push(c); shRenderBatch(); };
     $a('shCamBtn').onclick = () => { shMsg(''); SC.camera(shAdd, () => shRenderBatch(), SH.shots.length); };
     $a('shPickBtn').onclick = () => { shMsg(''); SC.pick(shAdd); };
-    $a('shClearBtn').onclick = () => { SH.shots = []; $a('shName').value = ''; $a('shCost').value = ''; shRenderBatch(); shMsg(''); };
+    $a('shClearBtn').onclick = () => { SH.ai = false; $a('shDesc').value = ''; $a('shDescWrap').style.display = 'none'; SH.shots = []; $a('shName').value = ''; $a('shCost').value = ''; shRenderBatch(); shMsg(''); };
+
+    const SH_PROMPT = 'You are helping a thrift reseller write an honest listing for ONE secondhand item. Look at ALL the photos. Reply with JSON only, with these keys: name (short product title), brand (only if clearly visible on the item or its tag, otherwise empty), category (exactly one of Tops, Bottoms, Hats, Jewelry, Home, Handmade, or empty if unsure), material (empty unless a tag or the item clearly shows it), description (2 to 4 plain sentences: what it is, color, style, and its visible condition. Mention any stain, wear, damage or flaw you can actually see. Never invent size, measurements, fabric content, age or flaws you cannot see. If something needs checking in person, say so).';
+    $a('shAiBtn').onclick = async () => {
+      if (!SH.shots.length) { shMsg('Take or choose photos first.', true); return; }
+      const btn = $a('shAiBtn'); if (btn.classList.contains('disabled')) return;
+      if (SH.ai && !confirm('Write a new draft? This uses another scan.')) return;
+      btn.classList.add('disabled'); shMsg('Writing the description...');
+      try {
+        const parts = [{ text: SH_PROMPT }];
+        SH.shots.slice(0, 4).forEach(c => parts.push({ inlineData: { mimeType: 'image/jpeg', data: SC.fit(c, c.width, c.height, SCAN_IMAGE_MAX).toDataURL('image/jpeg', SCAN_IMAGE_QUALITY).split(',')[1] } }));
+        const r = await callGemini(parts, { maxTokens: SCAN_MAX_TOKENS });
+        if (!r.ok) { shMsg((r.error || 'The AI could not answer.') + ' You can still type the description yourself.', true); return; }
+        let j; try { j = JSON.parse(String(r.text).replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()); } catch (e) { shMsg('The AI answer could not be read. Type the description yourself.', true); return; }
+        if (j.name && !$a('shName').value.trim()) $a('shName').value = String(j.name).slice(0, 120);
+        SH.brand = String(j.brand || '').slice(0, 60); SH.material = String(j.material || '').slice(0, 80);
+        SH.category = ['Tops', 'Bottoms', 'Hats', 'Jewelry', 'Home', 'Handmade'].indexOf(j.category) >= 0 ? j.category : '';
+        $a('shDesc').value = String(j.description || '').slice(0, 900); $a('shDescWrap').style.display = 'block'; SH.ai = true;
+        shMsg('Draft ready. Read it and fix anything wrong before saving.');
+      } catch (e) { shMsg('Something went wrong. Type the description yourself.', true); }
+      finally { btn.classList.remove('disabled'); }
+    };
     $a('shSaveBtn').onclick = async () => {
       if (!SH.shots.length) return;
       const btn = $a('shSaveBtn'); btn.classList.add('disabled');
@@ -2941,9 +2968,10 @@ This is a plain-language starting document, not legal advice.</div>
         }
         const cover = SC.fit(SH.shots[0], SH.shots[0].width, SH.shots[0].height, 200).toDataURL('image/jpeg', .55);
         const name = $a('shName').value.trim(), cost = parseFloat($a('shCost').value);
-        await setDoc(doc(db, 'shop_items', id), { status: 'draft', name, rawOrder: ids, rawCount: ids.length, cover, createdAt: Date.now(), updatedAt: Date.now(), ownerUid: CURRENT_UID });
+        const extra = SH.ai ? { brand: SH.brand || '', material: SH.material || '', category: SH.category || '', description: $a('shDesc').value.trim(), aiDraft: true } : {};
+        await setDoc(doc(db, 'shop_items', id), { ...extra, status: 'draft', name, rawOrder: ids, rawCount: ids.length, cover, createdAt: Date.now(), updatedAt: Date.now(), ownerUid: CURRENT_UID });
         if (cost >= 0) await setDoc(doc(db, 'shop_private', id), { cost });
-        SH.shots = []; $a('shName').value = ''; $a('shCost').value = ''; shRenderBatch();
+        SH.shots = []; SH.ai = false; $a('shDesc').value = ''; $a('shDescWrap').style.display = 'none'; $a('shName').value = ''; $a('shCost').value = ''; shRenderBatch();
         shMsg('Saved to the holding pile.'); shLoadPile();
       } catch (e) {
         shMsg(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed yet. The Second Chance security rules still need to be published in Firebase.' : 'Could not save. Check your connection and try again.', true);
