@@ -8,83 +8,220 @@
 <meta property="og:title" content="Thrift Scout">
 <meta property="og:description" content="Independent, woman owned and operated. Adults 18+. Step inside.">
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#0d0f08;--bg:#11140c;--gold:#c6b878;--text:#f2f3e6;--muted:#aab38f;--wood1:#6b4a2b;--wood2:#4a321c;--wood3:#2f1f11}
+:root{--ink:#0d0f08;--gold:#d2c27f;--text:#f2f3e6;--muted:#a9b08c;--serif:"Cormorant Garamond",Georgia,"Times New Roman",serif}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--ink);color:var(--text);font-family:Georgia,"Times New Roman",serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
-.stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3.2vh,28px);padding:16px;background:radial-gradient(ellipse at 50% 38%,#232a17 0%,#11140c 55%,#080a05 100%)}
-.stage::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 2px,transparent 2px 6px);pointer-events:none}
-h1{font-size:clamp(1.5rem,5.5vw,2.4rem);letter-spacing:.18em;text-transform:uppercase;color:var(--gold);text-align:center;font-weight:700;transition:opacity .5s}
-.sub{font-size:clamp(.8rem,2.6vw,1rem);color:var(--muted);letter-spacing:.08em;text-align:center;margin-top:-6px;transition:opacity .5s}
-.hint{margin-top:22px;font-size:.9rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;animation:pulse 2.2s ease-in-out infinite;transition:opacity .4s}
-@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
-/* the tent */
-.scene{position:relative;width:min(90vw,440px);aspect-ratio:6/5;transition:transform 1.5s cubic-bezier(.65,0,.35,1);will-change:transform;transform-origin:50% 72%}
-.ground{position:absolute;left:-6%;right:-6%;bottom:-3%;height:12%;border-radius:50%;background:radial-gradient(ellipse,#2a2415 0%,#1a170d 55%,rgba(0,0,0,0) 72%)}
-.guys{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}.guys line{stroke:#a79a6a;stroke-width:1.6;vector-effect:non-scaling-stroke;opacity:.75}
-.stake{position:absolute;bottom:1%;width:10px;height:22px;background:linear-gradient(90deg,#6c5a36,#3a2f1a);border-radius:2px;transform:rotate(18deg)}
-.tent{position:absolute;inset:0;clip-path:polygon(50% 0,100% 100%,0 100%);
- background:
-  repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 2px,rgba(0,0,0,.05) 2px 4px),
-  repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0 2px,rgba(0,0,0,.05) 2px 4px),
-  linear-gradient(90deg,transparent 24.6%,rgba(0,0,0,.35) 25%,transparent 25.5%,transparent 74.5%,rgba(0,0,0,.35) 75%,transparent 75.4%),
-  linear-gradient(180deg,#6a7348 0%,#566038 55%,#3f4828 100%)}
-.tent::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(255,255,255,.05) 40%,rgba(0,0,0,.35))}
-.door{position:absolute;left:0;right:0;top:0;bottom:0;border:0;background:none;cursor:pointer;display:block;outline-offset:4px;padding:0}
-.door:focus-visible{outline:3px solid var(--gold)}
-.opening{position:absolute;left:33%;width:34%;top:30%;bottom:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
-.room{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 85%,#ffe9a8 0%,#f3c969 30%,#b9852f 65%,#3a2810 100%)}
-.flap{position:absolute;top:0;bottom:0;width:50%;transition:transform 1.5s cubic-bezier(.5,0,.2,1);
- background:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0 2px,rgba(0,0,0,.06) 2px 4px),linear-gradient(180deg,#788253,#4a5330)}
-.fl{left:0;transform-origin:left center;clip-path:polygon(100% 0,0 100%,100% 100%);box-shadow:inset -6px 0 10px rgba(0,0,0,.4)}
-.fr{right:0;transform-origin:right center;clip-path:polygon(0 0,100% 100%,0 100%)}
-.fr::after,.fl::after{content:"";position:absolute;top:30%;bottom:6%;width:3px;background:repeating-linear-gradient(180deg,#d9cf9a 0 6px,transparent 6px 12px);opacity:.75}
-.fl::after{right:2px;transform:skewX(-27deg)}.fr::after{left:2px;transform:skewX(27deg)}
-.stencil{position:absolute;left:0;right:0;top:106%;transform:none;text-align:center;font:700 clamp(.55rem,2.2vw,.8rem) Impact,"Arial Narrow",sans-serif;letter-spacing:.28em;color:#d9cf9a;opacity:.85;text-transform:uppercase;pointer-events:none;transition:opacity .4s;left:0}
-.ties{position:absolute;top:30%;left:33%;width:34%;height:0;pointer-events:none}
-.stage.open .fl{transform:scaleX(.07) skewY(-6deg)}
-.stage.open .fr{transform:scaleX(.07) skewY(6deg)}
-.stage.open .stencil{opacity:0}
-.stage.open .hint,.stage.open h1,.stage.open .sub{opacity:0}
-.stage.zoom .scene{transform:scale(16)}
-.fade{position:fixed;inset:0;background:#fff3cf;opacity:0;pointer-events:none;transition:opacity .7s ease}
-.stage.zoom ~ .fade{opacity:1;transition-delay:.55s}
-.foot{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:.72rem;color:var(--muted);letter-spacing:.06em;transition:opacity .5s}
+html,body{height:100%;background:var(--ink);color:var(--text);font-family:var(--serif);overflow:hidden;-webkit-tap-highlight-color:transparent}
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,18px);padding:16px 16px 56px;
+ background:radial-gradient(ellipse at 50% 55%,#2b331b 0%,#161a0e 52%,#080a05 100%)}
+.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(255,214,120,.10),transparent 55%);pointer-events:none}
+.head{display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .5s}
+h1{font-size:clamp(2rem,7vw,3.2rem);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;text-align:center;line-height:1;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.beta{display:inline-block;font-size:.8rem;letter-spacing:.3em;font-weight:700;color:#fff;background:#9f2f2a;border:1px solid #c0443d;border-radius:4px;padding:3px 9px 3px 12px}
+.sub{font-size:clamp(.95rem,2.9vw,1.1rem);color:var(--muted);letter-spacing:.1em;text-align:center;font-style:italic}
+.scene{position:relative;width:min(94vw,560px);aspect-ratio:600/440;transition:transform 1.7s cubic-bezier(.62,0,.3,1);will-change:transform;transform-origin:48.3% 72.7%;cursor:pointer;background:none;border:0;display:block}
+.scene:focus-visible{outline:3px solid var(--gold);outline-offset:4px;border-radius:8px}
+.scene svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 18px 24px rgba(0,0,0,.55))}
+.flap{transition:transform 1.5s cubic-bezier(.5,0,.2,1);transform-box:fill-box}
+.fl{transform-origin:0% 55%}.fr{transform-origin:100% 55%}
+#ties{transition:opacity .35s}
+.stage.open .fl{transform:scaleX(.16) skewY(-14deg)}
+.stage.open .fr{transform:scaleX(.16) skewY(14deg)}
+.stage.open #ties{opacity:0}
+#spill{transition:opacity 1.2s}.stage.open #spill{opacity:.55}
+.lantern{animation:flick 3.2s ease-in-out infinite;transform-origin:290px 280px}
+@keyframes flick{0%,100%{opacity:1}45%{opacity:.88}60%{opacity:1}78%{opacity:.93}}
+.hint{font-size:1.15rem;color:var(--gold);letter-spacing:.32em;text-transform:uppercase;font-weight:600;animation:pulse 2.4s ease-in-out infinite;transition:opacity .4s}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.stage.open .hint{animation:none;opacity:0}.stage.open .head{opacity:0}
+.stage.zoom .scene{transform:scale(15)}
+.fade{position:fixed;inset:0;background:#ffe9a8;opacity:0;pointer-events:none;transition:opacity .8s ease}
+.stage.zoom ~ .fade{opacity:1;transition-delay:.6s}
+.foot{position:absolute;bottom:max(16px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:.95rem;color:var(--muted);letter-spacing:.08em;transition:opacity .5s}
 .stage.open .foot{opacity:0}
 .skip{color:var(--gold)}
-@media (prefers-reduced-motion:reduce){.door,.scene,.fade{transition-duration:.01s!important}.hint{animation:none}}
+@media (prefers-reduced-motion:reduce){.scene,.flap,.fade{transition-duration:.01s!important}.hint,.lantern{animation:none}}
 </style></head>
 <body>
 <main class="stage" id="stage">
-  <h1>Thrift Scout</h1>
-  <div class="sub">Independent &middot; Woman Owned &amp; Operated &middot; Adults 18+</div>
-  <div class="scene" id="scene">
-    <div class="ground"></div>
-    <svg class="guys" viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="50" y1="1" x2="-3" y2="97"/><line x1="50" y1="1" x2="103" y2="97"/></svg>
-    <div class="stake" style="left:-4%"></div><div class="stake" style="right:-4%;transform:rotate(-18deg)"></div>
-    <div class="tent"></div>
-    <div class="stencil">Thrift Scout &middot; Beta</div>
-    <button class="door" id="door" aria-label="Open the tent flap and enter Thrift Scout">
-      <span class="opening"><span class="room"></span><span class="flap fl"></span><span class="flap fr"></span></span>
-    </button>
-  </div>
+  <div class="head"><h1>Thrift Scout</h1><span class="beta">BETA</span><div class="sub">Independent &middot; Woman Owned &amp; Operated &middot; Adults 18+</div></div>
+  <button class="scene" id="scene" aria-label="Open the tent flap and enter Thrift Scout">
+<svg id="tentsvg" viewBox="0 0 600 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Canvas tent with a lantern glowing inside">
+<defs>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85 0.55" numOctaves="2" seed="7" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 -.18"/>
+  </filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="blur8"><feGaussianBlur stdDeviation="8"/></filter>
+  <pattern id="weave" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
+    <path d="M0 .5H5M.5 0V5" stroke="#000" stroke-opacity=".10" stroke-width=".7"/>
+    <path d="M0 3H5M3 0V5" stroke="#fff" stroke-opacity=".05" stroke-width=".6"/>
+  </pattern>
+  <linearGradient id="faceG" x1="0" y1="0" x2="1" y2="0.25">
+    <stop offset="0" stop-color="#8b9560"/><stop offset=".55" stop-color="#707a49"/><stop offset="1" stop-color="#4f5832"/>
+  </linearGradient>
+  <linearGradient id="faceV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity=".10"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/>
+  </linearGradient>
+  <linearGradient id="roofG" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#5d6740"/><stop offset="1" stop-color="#3b4328"/>
+  </linearGradient>
+  <linearGradient id="wallG" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#4d5733"/><stop offset="1" stop-color="#2d351d"/>
+  </linearGradient>
+  <linearGradient id="hemG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2a2314" stop-opacity="0"/><stop offset="1" stop-color="#2a2314" stop-opacity=".75"/>
+  </linearGradient>
+  <linearGradient id="flapG" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#7c8755"/><stop offset=".5" stop-color="#6a7547"/><stop offset="1" stop-color="#5a653b"/>
+  </linearGradient>
+  <linearGradient id="flapG2" x1="1" y1="0" x2="0" y2="0">
+    <stop offset="0" stop-color="#6a7547"/><stop offset=".5" stop-color="#5a653b"/><stop offset="1" stop-color="#49532f"/>
+  </linearGradient>
+  <radialGradient id="glow" cx=".5" cy=".62" r=".75">
+    <stop offset="0" stop-color="#fff0b8"/><stop offset=".25" stop-color="#ffd272"/><stop offset=".6" stop-color="#d98d2a"/><stop offset="1" stop-color="#5a3510"/>
+  </radialGradient>
+  <radialGradient id="halo" cx=".5" cy=".5" r=".5">
+    <stop offset="0" stop-color="#ffd985" stop-opacity=".55"/><stop offset="1" stop-color="#ffd985" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="groundG" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#2b2512"/><stop offset=".7" stop-color="#1c180b" stop-opacity=".85"/><stop offset="1" stop-color="#1c180b" stop-opacity="0"/></radialGradient>
+  <radialGradient id="shadowG" cx=".5" cy=".5" r=".5">
+    <stop offset="0" stop-color="#000" stop-opacity=".75"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="poleG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a6a3c"/><stop offset="1" stop-color="#4a3319"/></linearGradient>
+  <clipPath id="faceClip"><polygon points="110,326 290,120 480,326 480,384 110,384"/></clipPath>
+  <clipPath id="doorClip"><polygon points="236,384 236,262 290,222 344,262 344,384"/></clipPath>
+  <clipPath id="roofClip"><polygon points="290,120 480,326 548,304 356,108"/></clipPath>
+</defs>
+
+<!-- ground -->
+<ellipse cx="300" cy="392" rx="330" ry="34" fill="url(#shadowG)"/>
+<ellipse cx="300" cy="396" rx="340" ry="30" fill="url(#groundG)"/>
+<g stroke="#4b5a26" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".85">
+  <path d="M40 396l-3-12M44 396l2-14M48 396l5-10"/><path d="M95 400l-2-10M99 400l3-12"/>
+  <path d="M520 398l-3-12M524 398l2-14M528 398l5-10"/><path d="M570 394l-2-10M574 394l3-12"/>
+  <path d="M170 404l-2-9M174 404l3-11"/><path d="M430 405l-2-9M434 405l3-11"/>
+</g>
+
+<!-- right roof plane + wall (depth) -->
+<polygon points="290,120 480,326 548,304 356,108" fill="url(#roofG)"/>
+<g clip-path="url(#roofClip)">
+  <rect x="280" y="100" width="280" height="240" fill="url(#weave)"/>
+  <rect x="280" y="100" width="280" height="240" filter="url(#grain)" opacity=".5"/>
+  <path d="M330 114L508 316M385 106L534 306" stroke="#000" stroke-opacity=".28" stroke-width="1.2"/>
+  <path d="M330 114L508 316M385 106L534 306" stroke="#d9cf9a" stroke-opacity=".22" stroke-width="1" stroke-dasharray="4 5" transform="translate(1.5 1)"/>
+</g>
+<polygon points="480,326 548,304 548,364 480,384" fill="url(#wallG)"/>
+<polygon points="480,326 548,304 548,364 480,384" fill="url(#weave)"/>
+<polygon points="480,326 548,304 548,310 480,332" fill="#000" opacity=".25"/>
+<polygon points="480,360 548,342 548,364 480,384" fill="url(#hemG)"/>
+
+<!-- front face -->
+<g>
+  <polygon points="110,326 290,120 480,326 480,384 110,384" fill="url(#faceG)"/>
+  <g clip-path="url(#faceClip)">
+    <rect x="100" y="110" width="400" height="280" fill="url(#weave)"/>
+    <rect x="100" y="110" width="400" height="280" filter="url(#grain)" opacity=".55"/>
+    <rect x="100" y="110" width="400" height="280" fill="url(#faceV)"/>
+    <!-- seams + stitching -->
+    <g stroke="#000" stroke-opacity=".30" stroke-width="1.4">
+      <line x1="170" y1="100" x2="170" y2="390"/><line x1="410" y1="100" x2="410" y2="390"/>
+      <line x1="140" y1="100" x2="140" y2="390" stroke-opacity=".16"/><line x1="440" y1="100" x2="440" y2="390" stroke-opacity=".16"/>
+    </g>
+    <g stroke="#e0d6a0" stroke-opacity=".30" stroke-width="1" stroke-dasharray="5 5">
+      <line x1="172" y1="100" x2="172" y2="390"/><line x1="412" y1="100" x2="412" y2="390"/>
+    </g>
+    <!-- gable edge binding -->
+    <polyline points="110,326 290,120 480,326" fill="none" stroke="#2e3620" stroke-width="5"/>
+    <polyline points="113,326 290,125 477,326" fill="none" stroke="#e0d6a0" stroke-opacity=".28" stroke-width="1" stroke-dasharray="5 5"/>
+    <!-- eave line (wall / roof change) -->
+    <path d="M110 326 Q295 334 480 326" stroke="#000" stroke-opacity=".28" stroke-width="2" fill="none"/>
+    <!-- hem + mud splash -->
+    <rect x="100" y="340" width="400" height="46" fill="url(#hemG)"/>
+    <g fill="#2a2314" opacity=".5">
+      <circle cx="140" cy="378" r="3"/><circle cx="152" cy="372" r="2"/><circle cx="190" cy="380" r="2.4"/><circle cx="420" cy="376" r="3"/><circle cx="450" cy="381" r="2"/><circle cx="380" cy="379" r="2"/>
+    </g>
+    <!-- vent flap high on gable -->
+    <polygon points="268,200 312,200 304,184 276,184" fill="#3b4328" opacity=".9"/>
+    <line x1="268" y1="200" x2="312" y2="200" stroke="#e0d6a0" stroke-opacity=".35" stroke-dasharray="3 4"/>
+  </g>
+  <!-- corner pole shadow strip -->
+  <rect x="110" y="326" width="5" height="58" fill="#000" opacity=".22"/>
+  <rect x="475" y="326" width="5" height="58" fill="#000" opacity=".28"/>
+</g>
+
+<!-- ridge pole -->
+<line x1="290" y1="126" x2="290" y2="94" stroke="#6a4e2a" stroke-width="6" stroke-linecap="round"/>
+<circle cx="290" cy="92" r="6" fill="#a1824a"/><circle cx="288.5" cy="90.5" r="2" fill="#d6b97a"/>
+<line x1="290" y1="120" x2="356" y2="108" stroke="#2a2014" stroke-width="4.5" stroke-linecap="round"/>
+
+<!-- door opening: warm interior -->
+<g id="room" clip-path="url(#doorClip)">
+  <rect x="230" y="215" width="120" height="175" fill="url(#glow)"/>
+  <!-- floor + interior shapes -->
+  <polygon points="236,350 344,350 344,384 236,384" fill="#3a2410" opacity=".85"/>
+  <rect x="300" y="334" width="40" height="30" rx="3" fill="#2a1a0b" opacity=".92"/>
+  <rect x="300" y="334" width="40" height="5" fill="#8a6a3c" opacity=".7"/>
+  <path d="M240 352 h46 v-10 h-46z" fill="#1f160c" opacity=".9"/><path d="M240 352 v14 M284 352 v14" stroke="#1f160c" stroke-width="3"/>
+  <g class="lantern">
+    <circle cx="290" cy="290" r="46" fill="url(#halo)" id="halo"/>
+    <line x1="290" y1="222" x2="290" y2="270" stroke="#2a1b0b" stroke-width="2"/>
+    <rect x="281" y="270" width="18" height="26" rx="3" fill="#ffe9a8" stroke="#3a2a12" stroke-width="2.2"/>
+    <rect x="279" y="266" width="22" height="6" rx="2" fill="#3a2a12"/><rect x="279" y="294" width="22" height="5" rx="2" fill="#3a2a12"/>
+  </g>
+  <rect x="230" y="215" width="120" height="175" fill="#000" opacity=".0"/>
+</g>
+<polyline points="236,384 236,262 290,222 344,262 344,384" fill="none" stroke="#2a3019" stroke-width="3.5"/>
+
+<!-- flaps -->
+<g id="flapL" class="flap fl">
+  <polygon points="236,384 236,262 290,222 290,384" fill="url(#flapG)"/>
+  <polygon points="236,384 236,262 290,222 290,384" fill="url(#weave)"/>
+  <polygon points="236,384 236,262 290,222 290,384" filter="url(#grain)" opacity=".4"/>
+  <polygon points="236,384 236,262 290,222 290,384" fill="url(#faceV)"/>
+  <path d="M236 262 L290 222" stroke="#2a3019" stroke-width="3"/>
+  <line x1="244" y1="270" x2="244" y2="384" stroke="#000" stroke-opacity=".16" stroke-width="1.2"/>
+  <path d="M290 222V384" stroke="#000" stroke-opacity=".35" stroke-width="2.5"/>
+  <g fill="#c9b777" stroke="#4a3d1a" stroke-width="1"><circle cx="283" cy="300" r="3.2"/><circle cx="283" cy="335" r="3.2"/><circle cx="283" cy="368" r="3.2"/></g>
+</g>
+<g id="flapR" class="flap fr">
+  <polygon points="344,384 344,262 290,222 290,384" fill="url(#flapG2)"/>
+  <polygon points="344,384 344,262 290,222 290,384" fill="url(#weave)"/>
+  <polygon points="344,384 344,262 290,222 290,384" filter="url(#grain)" opacity=".4"/>
+  <polygon points="344,384 344,262 290,222 290,384" fill="url(#faceV)"/>
+  <path d="M344 262 L290 222" stroke="#2a3019" stroke-width="3"/>
+  <line x1="336" y1="270" x2="336" y2="384" stroke="#000" stroke-opacity=".16" stroke-width="1.2"/>
+  <g fill="#c9b777" stroke="#4a3d1a" stroke-width="1"><circle cx="297" cy="300" r="3.2"/><circle cx="297" cy="335" r="3.2"/><circle cx="297" cy="368" r="3.2"/></g>
+</g>
+<!-- ties holding flaps shut -->
+<g id="ties" fill="none" stroke="#d9cf9a" stroke-width="2.4" stroke-linecap="round">
+  <path d="M283 300L297 335M297 300L283 335M283 335L297 368M297 335L283 368"/>
+</g>
+
+<!-- lantern light spill when open -->
+<ellipse id="spill" cx="290" cy="394" rx="58" ry="8" fill="#ffd985" opacity="0" filter="url(#blur8)"/>
+</svg>
+</button>
   <div class="hint" id="hint">Tap the tent</div>
   <div class="foot"><a class="skip" href="home.html">Skip and enter</a></div>
 </main>
 <div class="fade" id="fade"></div>
-<noscript><p style="position:fixed;bottom:60px;left:0;right:0;text-align:center"><a style="color:#c6b878" href="home.html">Enter Thrift Scout</a></p></noscript>
+<noscript><p style="position:fixed;bottom:60px;left:0;right:0;text-align:center"><a style="color:#d2c27f" href="home.html">Enter Thrift Scout</a></p></noscript>
 <script>
 (function(){
-  var stage=document.getElementById('stage'),door=document.getElementById('door'),go=false,T='home.html';
+  var stage=document.getElementById('stage'),scene=document.getElementById('scene'),go=false,T='home.html';
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function enter(){
     if(go)return; go=true;
     if(reduce){location.href=T;return;}
     stage.classList.add('open');
-    setTimeout(function(){stage.classList.add('zoom');},900);
-    setTimeout(function(){location.href=T;},2300);
+    setTimeout(function(){stage.classList.add('zoom');},1100);
+    setTimeout(function(){location.href=T;},2900);
   }
-  door.addEventListener('click',enter);
+  scene.addEventListener('click',enter);
   window.addEventListener('pageshow',function(e){if(e.persisted){go=false;stage.classList.remove('open','zoom');}});
 })();
 </script>
