@@ -688,7 +688,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 <script>
 /* ---- Owner area: sign in, holding pile, evaluate, publish ---- */
 (function () {
-  var OWNER = 'thriftscout.official@gmail.com', CFG = window.SHOP_CONFIG;
+  var OWNERS = ['thriftscout.official@gmail.com', 'jennibean007@gmail.com'], CFG = window.SHOP_CONFIG;
   var dlg = document.getElementById('own'), body = document.getElementById('ownBody'), FB = null;
   var S = { user: null, items: [], tab: 'draft', E: null };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -697,7 +697,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   var newId = function () { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); };
   var today = function () { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); };
   function say(t, kind) { var m = $('ownMsg'); if (m) { m.textContent = t || ''; m.className = 'own-msg' + (kind ? ' ' + kind : ''); } }
-  var isOwner = function (u) { return !!(u && !u.isAnonymous && (u.email || '').toLowerCase() === OWNER); };
+  var isOwner = function (u) { return !!(u && !u.isAnonymous && OWNERS.indexOf((u.email || '').toLowerCase()) >= 0); };
 
   function frame(inner) {
     body.innerHTML = '<div class="own-top"><h2>Owner area</h2><div style="display:flex;align-items:center;gap:12px">' +
@@ -791,7 +791,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       '<div><label for="fStripe">Stripe payment link</label><input class="field" id="fStripe" value="' + esc(d.stripe) + '" placeholder="https://buy.stripe.com/..."></div>' +
       '<div class="full"><label for="fDesc">Description and condition notes <i>*</i></label><textarea class="field" id="fDesc" placeholder="What it is, how it fits, any flaws. Be specific and honest.">' + esc(d.description) + '</textarea></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
-      '</div><div id="oErr"></div><div class="own-bar">' +
+      (d.aiDraft ? '<div class="own-err full" style="margin-top:12px"><label style="display:flex;gap:8px;align-items:flex-start;color:inherit"><input type="checkbox" id="fAiOk" style="margin-top:4px"> <span><b>This description was written by AI.</b> I checked the name, brand, material and condition notes against the actual item.</span></label></div>' : '') + '</div><div id="oErr"></div><div class="own-bar">' +
       (live ? '<button class="btn btn-solid" id="oPub">Save changes</button>' + (d.status === 'sold' ? '<button class="btn btn-line" id="oAvail">Mark available</button>' : '<button class="btn btn-line" id="oSold">Mark sold</button>') + '<button class="btn btn-line" id="oDraft">Move to holding pile</button>'
         : '<button class="btn btn-solid" id="oPub">Publish to shop</button><button class="btn btn-line" id="oSave">Save draft</button>') +
       '<span class="grow"></span><button class="btn btn-line" id="oBack">Back</button>' + (E.isNew && !E.raw.length ? '' : '<button class="btn btn-line" id="oDel" style="color:var(--sale);border-color:var(--sale)">Delete</button>') +
@@ -840,6 +840,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   }
   function check(d, nPhotos) {
     var m = [];
+    if (S.E && S.E.data.aiDraft && $('fAiOk') && !$('fAiOk').checked) m.push('Tick the box to confirm you checked the AI description');
     if (!d.name) m.push('Item name'); if (!d.category) m.push('Section'); if (!d.condition) m.push('Condition'); if (!d.description) m.push('Description');
     if (!(d.price > 0)) m.push('Price');
     if (CFG.needsSize.indexOf(d.category) >= 0) { if (!d.size) m.push('Size'); if (!d.measurements) m.push('Measurements'); }
@@ -862,6 +863,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       E.removed = [];
       var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, status: status,
         rawOrder: E.raw.map(function (r) { return r.id; }), rawCount: E.raw.length, updatedAt: Date.now(), ownerUid: FB.auth.currentUser.uid };
+      if (pub) up.aiDraft = false;
       up.price = d.price > 0 ? d.price : F.deleteField(); up.was = d.was > 0 ? d.was : F.deleteField();
       if (E.raw.length) up.cover = SC.fit(E.raw[0].canvas, E.raw[0].canvas.width, E.raw[0].canvas.height, 200).toDataURL('image/jpeg', 0.55);
       if (!E.data.createdAt) up.createdAt = Date.now();
