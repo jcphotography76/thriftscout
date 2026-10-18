@@ -974,7 +974,7 @@ This is a plain-language starting document, not legal advice.</div>
     f.onchange = function () { var fs = Array.prototype.slice.call(f.files || []); f.remove(); fs.reduce(function (p, file) { return p.then(function () { return SC.fromFile(file).then(cb).catch(function () {}); }); }, Promise.resolve()); };
     document.body.appendChild(f); f.click();
   };
-  SC.camera = function (onShot, onDone, countStart) {
+  SC.camera = function (onShot, onDone, countStart, strict) {
     var ov = document.createElement('div'), n = countStart || 0, stream = null;
     ov.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:system-ui,sans-serif;color:#fff');
     ov.innerHTML = '<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>' +
@@ -992,10 +992,10 @@ This is a plain-language starting document, not legal advice.</div>
       ov.style.outline = '6px solid #fff'; setTimeout(function () { ov.style.outline = 'none'; }, 120);
       onShot(c);
     };
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { stop(); SC.pick(onShot); if (onDone) setTimeout(function () { onDone(0); }, 0); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { stop(); if (strict) { alert('This needs a live camera, and this device or browser does not offer one.'); } else { SC.pick(onShot); } if (onDone) setTimeout(function () { onDone(0); }, 0); return; }
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false })
       .then(function (s) { stream = s; v.srcObject = s; })
-      .catch(function () { ov.remove(); alert('The camera was blocked. Allow camera access for this site, or choose photos from your device.'); SC.pick(onShot); if (onDone) onDone(0); });
+      .catch(function () { ov.remove(); alert(strict ? 'The camera was blocked. Allow camera access for this site. Shipping proof must be taken live with the camera.' : 'The camera was blocked. Allow camera access for this site, or choose photos from your device.'); if (!strict) SC.pick(onShot); if (onDone) onDone(0); });
   };
 })();
 
