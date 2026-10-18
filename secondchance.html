@@ -188,7 +188,7 @@ dialog[open]{animation:pop .22s ease-out}
   .dir-row{padding:16px 2px}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
-/* owner area */
+.d-ack{display:flex;gap:8px;align-items:center;font-size:.92rem;margin:0 0 12px}.d-cons{background:#F7F4EE;border-left:3px solid var(--brass);padding:10px 12px;font-size:.88rem;line-height:1.5;margin:0 0 14px}.d-terms{font-size:.8rem;color:#6b675f;line-height:1.5;margin:14px 0 0}.btn[aria-disabled=true]{cursor:not-allowed}/* owner area */
 .foot-owner{margin-top:14px;font-size:.78rem}
 .foot-owner a{color:inherit;opacity:.6}
 dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
@@ -404,7 +404,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       (p.was&&!sold?'<span class="tag tag-sale">Sale</span>':'')+(p.sample?'<span class="tag tag-sample">Sample</span>':'')+(sold?'<div class="sold-veil">Sold</div>':'')+'</div>'+
       '<div class="meta"><div class="m-brand">'+esc(p.brand||'')+'</div><div class="m-name">'+esc(p.name)+'</div>'+
       '<div class="m-price'+(p.was?' m-sale':'')+'">'+money(p.price)+(p.was?'<span class="m-was">'+money(p.was)+'</span>':'')+'</div>'+
-      '<div class="m-line">'+esc([p.size,p.condition].filter(Boolean).join(' · '))+'</div></div></button>';
+      '<div class="m-line">'+esc([p.size,p.condition,p.consigned?'Consignment':''].filter(Boolean).join(' · '))+'</div></div></button>';
   }
   function render(){
     var out=list();
@@ -425,17 +425,18 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var im=imgs(p), sold=p.status==='sold';
     var spec=[['Size',p.size],['Measurements',p.measurements],['Condition',p.condition],['Material',p.material],['Category',p.category]].filter(function(r){return r[1]});
     var canBuy=!sold&&!p.sample&&p.stripe;
-    var buy=canBuy?'<a class="btn btn-solid" href="'+esc(p.stripe)+'" target="_blank" rel="noopener">Buy now, '+money(p.price)+'</a><div class="d-fine">Secure checkout with Stripe. Shipping is added at checkout.</div>'
+    var buy=canBuy?'<label class="d-ack"><input type="checkbox" id="ack"> I understand all sales are final.</label><a class="btn btn-solid" id="buyBtn" aria-disabled="true" data-href="'+esc(p.stripe)+'" target="_blank" rel="noopener">Buy now, '+money(p.price)+'</a><div class="d-fine">Secure checkout with Stripe. Shipping is added at checkout.</div>'
       :'<button class="btn" disabled>'+(sold?'Sold':(p.sample?'Sample item, not for sale':'Not available yet'))+'</button>';
     $('dBody').innerHTML='<div class="d-grid"><div class="d-gal"><div class="d-main"><img id="dMain" src="'+esc(im[0])+'" alt="'+esc(p.name)+', photo 1 of '+im.length+'"></div>'+
       (im.length>1?'<div class="d-thumbs">'+im.map(function(s,i){return '<button class="d-thumb" data-i="'+i+'" aria-label="Show photo '+(i+1)+'" aria-current="'+(i===0)+'"><img src="'+esc(s)+'" alt=""></button>'}).join('')+'</div>':'')+'</div>'+
       '<div class="d-info"><div class="d-brand">'+esc(p.brand||p.category)+'</div><h2 class="d-name" id="dName">'+esc(p.name)+'</h2>'+
       '<div class="d-price">'+money(p.price)+(p.was?'<span class="m-was">'+money(p.was)+'</span>':'')+'</div>'+
-      '<p class="d-note">One of a kind. Once it sells, it is gone.</p>'+
+      '<p class="d-note">One of a kind. Once it sells, it is gone.</p>'+(p.consigned?'<p class="d-cons"><b>Consignment item.</b> Sold and shipped by an independent seller, not by Second Chance or Thrift Scout. The seller is responsible for the item&rsquo;s description, condition, shipping and returns.</p>':'')+
       '<dl class="d-spec">'+spec.map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd></div>'}).join('')+'</dl>'+
-      '<p class="d-desc">'+esc(p.description)+'</p><div class="d-buy">'+buy+'</div></div></div>';
+      '<p class="d-desc">'+esc(p.description)+'</p><div class="d-buy">'+buy+'</div><p class="d-terms"><b>All sales are final.</b> We do not accept returns for fit or change of mind. If your item never arrives, arrives damaged, or is not as described, contact us within 3 days of delivery with photos. Refunds for damage or loss are made after the item is returned or the carrier approves a claim.</p></div></div>';
+    var ack=$('ack'),bb=$('buyBtn');if(ack&&bb){ack.onchange=function(){if(ack.checked){bb.setAttribute('href',bb.getAttribute('data-href'));bb.setAttribute('aria-disabled','false')}else{bb.removeAttribute('href');bb.setAttribute('aria-disabled','true')}}}
     $('dBody').querySelectorAll('.d-thumb').forEach(function(t){t.onclick=function(){var i=+t.dataset.i;$('dMain').src=im[i];$('dMain').alt=p.name+', photo '+(i+1)+' of '+im.length;$('dBody').querySelectorAll('.d-thumb').forEach(function(x){x.setAttribute('aria-current',String(x===t))})}});
-    if(p.remote&&!p.full&&window.SC_SHOP.loadPhotos&&!p.loading){p.loading=true;window.SC_SHOP.loadPhotos(p.id).then(function(u){if(u&&u.length){p.images=u;p.full=true}p.loading=false;if(dlg.open&&curId===id)openItem(id,false)}).catch(function(){p.loading=false})}
+    if(p.remote&&!p.full&&window.SC_SHOP.loadPhotos&&!p.loading){p.loading=true;window.SC_SHOP.loadPhotos(p.id).then(function(u){p.full=true;p.loading=false;if(u&&u.length){p.images=u;if(dlg.open&&curId===id)openItem(id,false)}}).catch(function(){p.full=true;p.loading=false})}
     if(!dlg.open)lastFocus=document.activeElement;
     if(!dlg.open)dlg.showModal();
     if(push!==false){try{history.replaceState(null,'','#item='+encodeURIComponent(id))}catch(e){}}
@@ -621,7 +622,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     f.onchange = function () { var fs = Array.prototype.slice.call(f.files || []); f.remove(); fs.reduce(function (p, file) { return p.then(function () { return SC.fromFile(file).then(cb).catch(function () {}); }); }, Promise.resolve()); };
     document.body.appendChild(f); f.click();
   };
-  SC.camera = function (onShot, onDone, countStart) {
+  SC.camera = function (onShot, onDone, countStart, strict) {
     var ov = document.createElement('div'), n = countStart || 0, stream = null;
     ov.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:system-ui,sans-serif;color:#fff');
     ov.innerHTML = '<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>' +
@@ -639,10 +640,10 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       ov.style.outline = '6px solid #fff'; setTimeout(function () { ov.style.outline = 'none'; }, 120);
       onShot(c);
     };
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { stop(); SC.pick(onShot); if (onDone) setTimeout(function () { onDone(0); }, 0); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { stop(); if (strict) { alert('This needs a live camera, and this device or browser does not offer one.'); } else { SC.pick(onShot); } if (onDone) setTimeout(function () { onDone(0); }, 0); return; }
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false })
       .then(function (s) { stream = s; v.srcObject = s; })
-      .catch(function () { ov.remove(); alert('The camera was blocked. Allow camera access for this site, or choose photos from your device.'); SC.pick(onShot); if (onDone) onDone(0); });
+      .catch(function () { ov.remove(); alert(strict ? 'The camera was blocked. Allow camera access for this site. Shipping proof must be taken live with the camera.' : 'The camera was blocked. Allow camera access for this site, or choose photos from your device.'); if (!strict) SC.pick(onShot); if (onDone) onDone(0); });
   };
 })();
 
@@ -666,7 +667,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   window.SC_CLEAR_CACHE = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} };
   function mapDoc(d) {
     var v = d.data();
-    return { id: d.id, remote: true, name: v.name, brand: v.brand, category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0 };
+    return { id: d.id, remote: true, name: v.name, brand: v.brand, category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
   }
   function apply(items) { if (window.SC_SHOP) window.SC_SHOP.set(items); }
   window.SC_LOAD_LIVE = function (force) {
@@ -690,7 +691,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 (function () {
   var OWNERS = ['thriftscout.official@gmail.com', 'jennibean007@gmail.com'], CFG = window.SHOP_CONFIG;
   var dlg = document.getElementById('own'), body = document.getElementById('ownBody'), FB = null;
-  var S = { user: null, items: [], tab: 'draft', E: null };
+  var S = { user: null, items: [], orders: [], tab: 'draft', E: null, O: null };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var money = function (n) { return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0 }); };
   var $ = function (id) { return document.getElementById(id); };
@@ -735,19 +736,33 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   }
   var byTab = function (t) { return S.items.filter(function (x) { return (x.status || 'draft') === t; }).sort(function (a, b) { return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0); }); };
   function viewList() {
-    S.E = null;
-    var tabs = [['draft', 'Holding pile'], ['available', 'Live'], ['sold', 'Sold']];
-    var rows = byTab(S.tab);
-    frame('<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
-      '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + byTab(t[0]).length + ')</button>'; }).join('') + '</div>' +
-      '<div id="oRows">' + (rows.length ? rows.map(function (r) {
+    S.E = null; S.O = null;
+    var tabs = [['draft', 'Holding pile'], ['available', 'Live'], ['sold', 'Sold'], ['ledger', 'Ledger']];
+    var cnt = function (t) { return t === 'sold' ? (S.orders.length + byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); }).length) : t === 'ledger' ? S.orders.length : byTab(t).length; };
+    var rowsHtml;
+    if (S.tab === 'ledger') rowsHtml = ledgerHtml();
+    else if (S.tab === 'sold') {
+      var os = S.orders.slice().sort(function (a, b) { return (b.soldAt || 0) - (a.soldAt || 0); });
+      var legacy = byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); });
+      rowsHtml = (os.length || legacy.length) ? os.map(function (o) {
+        var it = S.items.filter(function (x) { return x.id === o.itemId; })[0] || {}, im = (it.thumbs && it.thumbs[0]) || it.cover || '';
+        return '<button class="own-row" data-oid="' + esc(o.id) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(o.itemName) + '</b><span>' + esc(o.buyerName) + ' · ' + esc(statusOf(o)) + '</span></span><span class="p">' + money(num(o.salePrice)) + '</span></button>';
+      }).join('') + legacy.map(function (r) { return '<button class="own-row" data-id="' + esc(r.id) + '"><img alt="" src="' + esc((r.thumbs && r.thumbs[0]) || r.cover || '') + '"><span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>Sold, no sale record</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>'; }).join('') : '<div class="own-empty">Nothing sold yet.</div>';
+    } else {
+      var rows = byTab(S.tab);
+      rowsHtml = rows.length ? rows.map(function (r) {
         var im = (r.thumbs && r.thumbs[0]) || r.cover || '';
         return '<button class="own-row" data-id="' + esc(r.id) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos'].filter(Boolean).join(' · ')) + '</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
-      }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : S.tab === 'available' ? 'Nothing is live yet. Publish an item from the holding pile.' : 'Nothing sold yet.') + '</div>') + '</div><div class="own-msg" id="ownMsg"></div>');
+      }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
+    }
+    frame('<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
+      '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '</div>' +
+      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>');
     $('oNew').onclick = function () { openEditor(null); };
     $('oCam').onclick = function () { openEditor(null, 'cam'); };
     body.querySelectorAll('.own-tab').forEach(function (b) { b.onclick = function () { S.tab = b.dataset.t; viewList(); }; });
-    body.querySelectorAll('.own-row').forEach(function (b) { b.onclick = function () { openEditor(b.dataset.id); }; });
+    body.querySelectorAll('.own-row').forEach(function (b) { b.onclick = function () { if (b.dataset.oid) openOrder(b.dataset.oid); else openEditor(b.dataset.id); }; });
+    if ($('oCsv')) $('oCsv').onclick = downloadCsv;
   }
 
   /* ---------- editor ---------- */
@@ -763,7 +778,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     ]).then(function (r) {
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
       var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0; }));
-      E.cost = r[1] && r[1].exists() && r[1].data().cost != null ? String(r[1].data().cost) : '';
+      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || '';
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
   }
@@ -791,6 +806,9 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       '<div><label for="fStripe">Stripe payment link</label><input class="field" id="fStripe" value="' + esc(d.stripe) + '" placeholder="https://buy.stripe.com/..."></div>' +
       '<div class="full"><label for="fDesc">Description and condition notes <i>*</i></label><textarea class="field" id="fDesc" placeholder="What it is, how it fits, any flaws. Be specific and honest.">' + esc(d.description) + '</textarea></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
+      '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
+      '<div class="own-form" style="margin-top:10px"><div><label for="fSellerName">Seller name</label><input class="field" id="fSellerName" value="' + esc(E.sellerName) + '"></div><div><label for="fSellerEmail">Seller email</label><input class="field" id="fSellerEmail" type="email" value="' + esc(E.sellerEmail) + '"></div></div>' +
+      '<small>Shoppers see a "Consignment, sold by an independent seller" notice. The seller\'s name and email stay private.</small></div>' +
       (d.aiDraft ? '<div class="own-err full" style="margin-top:12px"><label style="display:flex;gap:8px;align-items:flex-start;color:inherit"><input type="checkbox" id="fAiOk" style="margin-top:4px"> <span><b>This description was written by AI.</b> I checked the name, brand, material and condition notes against the actual item.</span></label></div>' : '') + '</div><div id="oErr"></div><div class="own-bar">' +
       (live ? '<button class="btn btn-solid" id="oPub">Save changes</button>' + (d.status === 'sold' ? '<button class="btn btn-line" id="oAvail">Mark available</button>' : '<button class="btn btn-line" id="oSold">Mark sold</button>') + '<button class="btn btn-line" id="oDraft">Move to holding pile</button>'
         : '<button class="btn btn-solid" id="oPub">Publish to shop</button><button class="btn btn-line" id="oSave">Save draft</button>') +
@@ -804,7 +822,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     $('oBack').onclick = function () { viewList(); };
     $('oPub').onclick = function () { save(live ? d.status : 'available'); };
     if ($('oSave')) $('oSave').onclick = function () { save('draft'); };
-    if ($('oSold')) $('oSold').onclick = function () { save('sold'); };
+    if ($('oSold')) $('oSold').onclick = function () { openSale(E.id); };
     if ($('oAvail')) $('oAvail').onclick = function () { save('available'); };
     if ($('oDraft')) $('oDraft').onclick = function () { save('draft'); };
     if ($('oDel')) $('oDel').onclick = del;
@@ -836,11 +854,12 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
     d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
-    E.cost = $('fCost').value; return d;
+    E.cost = $('fCost').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
   function check(d, nPhotos) {
     var m = [];
     if (S.E && S.E.data.aiDraft && $('fAiOk') && !$('fAiOk').checked) m.push('Tick the box to confirm you checked the AI description');
+    if (d.consigned && !S.E.sellerName) m.push('Seller name (this is a consignment item)');
     if (!d.name) m.push('Item name'); if (!d.category) m.push('Section'); if (!d.condition) m.push('Condition'); if (!d.description) m.push('Description');
     if (!(d.price > 0)) m.push('Price');
     if (CFG.needsSize.indexOf(d.category) >= 0) { if (!d.size) m.push('Size'); if (!d.measurements) m.push('Measurements'); }
@@ -861,7 +880,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       for (var i = 0; i < E.raw.length; i++) { var r = E.raw[i]; if (!r.saved) { await F.setDoc(F.doc(db, 'shop_items', E.id, 'raw', r.id), { data: SC.jpeg(r.canvas, 230000, 0.82), at: Date.now() }); r.saved = true; } }
       for (i = 0; i < E.removed.length; i++) await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', E.removed[i]));
       E.removed = [];
-      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, status: status,
+      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
         rawOrder: E.raw.map(function (r) { return r.id; }), rawCount: E.raw.length, updatedAt: Date.now(), ownerUid: FB.auth.currentUser.uid };
       if (pub) up.aiDraft = false;
       up.price = d.price > 0 ? d.price : F.deleteField(); up.was = d.was > 0 ? d.was : F.deleteField();
@@ -885,7 +904,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       say('Saving details...');
       await F.setDoc(ref, up, { merge: true });
       var cost = parseFloat(E.cost);
-      if (cost >= 0) await F.setDoc(F.doc(db, 'shop_private', E.id), { cost: cost }); else { try { await F.deleteDoc(F.doc(db, 'shop_private', E.id)); } catch (e) {} }
+      if (cost >= 0 || E.sellerName || E.sellerEmail) await F.setDoc(F.doc(db, 'shop_private', E.id), { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '' }); else { try { await F.deleteDoc(F.doc(db, 'shop_private', E.id)); } catch (e) {} }
       window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
       await load();
       S.tab = status === 'draft' ? 'draft' : status; viewList();
@@ -906,6 +925,205 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     } catch (e) { say('Could not delete.', 'bad'); }
   }
 
+  /* ---------- sales, shipping proof, ledger ---------- */
+  var CARD = { pct: 0.029, flat: 0.30 }, CONSIGN = { pct: 15, min: 2 }, HOLD_DAYS = 3;
+  var STEPS = [
+    ['before', 'Item as it is now', 'Front, back, and any flaws, so the condition is on record.'],
+    ['materials', 'Packing materials', 'Show the box, wrap, and padding you are using.'],
+    ['packed', 'Item packed in the box', 'The item wrapped and sitting in the box.'],
+    ['sealed', 'Box sealed', 'The box taped shut. A short moment of you sealing it is ideal.'],
+    ['label', 'Label on the box', 'The shipping label stuck on, readable.'],
+    ['receipt', 'Carrier receipt', 'The drop-off receipt or scan, with the tracking number visible.']
+  ];
+  var num = function (v) { var n = parseFloat(v); return isFinite(n) ? n : 0; };
+  var r2 = function (n) { return Math.round(n * 100) / 100; };
+  var fmtT = function (v) { if (!v) return ''; var d = v.toDate ? v.toDate() : new Date(v); return d.toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+  var fmtD = function (v) { if (!v) return ''; var d = v.toDate ? v.toDate() : new Date(v); return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }); };
+  var cardFeeOf = function (total) { return total > 0 ? r2(total * CARD.pct + CARD.flat) : 0; };
+  function calc(o) {
+    var total = num(o.salePrice) + num(o.shipping) + num(o.tax);
+    var fee = (o.cardFee !== undefined && o.cardFee !== null && o.cardFee !== '') ? num(o.cardFee) : cardFeeOf(total);
+    var out = { fee: fee, commission: 0, payout: 0, profit: 0 };
+    if (o.type === 'consign') {
+      out.commission = r2(Math.max(num(o.salePrice) * num(o.pct) / 100, num(o.min)));
+      out.payout = r2(num(o.salePrice) + num(o.shipping) - out.commission - fee);
+      out.profit = out.commission;
+    } else out.profit = r2(num(o.salePrice) + num(o.shipping) - fee - num(o.shipCost) - num(o.cost));
+    return out;
+  }
+  function statusOf(o) {
+    var s = !o.shippedAt ? 'Needs shipping proof' : !o.deliveredAt ? 'Shipped' : (o.type === 'consign' && !o.payoutReleasedAt) ? 'Delivered, payout on hold' : 'Complete';
+    return o.dispute ? s + ' · DISPUTE' : s;
+  }
+  function loadOrders() {
+    var F = FB.F;
+    return F.getDocs(F.collection(FB.db, 'shop_orders')).then(function (s) { S.orders = s.docs.map(function (d) { var v = d.data(); v.id = d.id; return v; }); }).catch(function () { S.orders = []; });
+  }
+  function lightbox(src) {
+    var o = document.createElement('div'); o.setAttribute('style', 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:14px;cursor:zoom-out');
+    o.innerHTML = '<img alt="" style="max-width:100%;max-height:100%;object-fit:contain" src="' + src + '">'; o.onclick = function () { o.remove(); }; document.body.appendChild(o);
+  }
+  var base = function () { return location.origin + location.pathname; };
+
+  /* ----- sale form ----- */
+  function openSale(itemId) {
+    var F = FB.F, item = S.items.filter(function (x) { return x.id === itemId; })[0]; if (!item) return;
+    frame('<div class="own-empty">Loading...</div>');
+    F.getDoc(F.doc(FB.db, 'shop_private', itemId)).catch(function () { return null; }).then(function (pv) {
+      var p = pv && pv.exists() ? pv.data() : {}, cons = !!item.consigned;
+      frame('<h3 style="font-family:var(--serif);font-weight:400;margin:0 0 4px">Record the sale</h3><p class="own-msg" style="margin:0 0 14px">' + esc(item.name) + '. Recording a sale takes the item off the shop and opens the shipping checklist.</p>' +
+        '<div class="own-form" style="max-width:720px">' +
+        '<div><label for="sBuyer">Buyer name <i>*</i></label><input class="field" id="sBuyer"></div>' +
+        '<div><label for="sEmail">Buyer email</label><input class="field" id="sEmail" type="email"></div>' +
+        '<div><label for="sPrice">Sale price <i>*</i></label><input class="field" id="sPrice" type="number" step="0.01" min="0" value="' + esc(item.price || '') + '"></div>' +
+        '<div><label for="sShip">Shipping the buyer paid</label><input class="field" id="sShip" type="number" step="0.01" min="0" value="0"></div>' +
+        '<div><label for="sTax">Sales tax collected</label><input class="field" id="sTax" type="number" step="0.01" min="0" value="0"></div>' +
+        '<div><label for="sFee">Card fee (auto, change if Stripe shows different)</label><input class="field" id="sFee" type="number" step="0.01" min="0" placeholder="auto"></div>' +
+        '<div class="full"><label>Whose item is it?</label><label style="display:inline-flex;gap:6px;margin-right:18px"><input type="radio" name="sType" value="house"' + (cons ? '' : ' checked') + '> Ours (Second Chance)</label><label style="display:inline-flex;gap:6px"><input type="radio" name="sType" value="consign"' + (cons ? ' checked' : '') + '> Consignment seller</label></div>' +
+        '<div class="sCons"><label for="sSeller">Seller name <i>*</i></label><input class="field" id="sSeller" value="' + esc(p.sellerName || '') + '"></div>' +
+        '<div class="sCons"><label for="sSellerEmail">Seller email</label><input class="field" id="sSellerEmail" type="email" value="' + esc(p.sellerEmail || '') + '"></div>' +
+        '<div class="sCons"><label for="sPct">Our commission, percent</label><input class="field" id="sPct" type="number" step="0.5" min="0" value="' + CONSIGN.pct + '"></div>' +
+        '<div class="sCons"><label for="sMin">Minimum commission, dollars</label><input class="field" id="sMin" type="number" step="0.5" min="0" value="' + CONSIGN.min + '"></div>' +
+        '<div class="full priv" id="sPrev"></div></div><div id="oErr"></div>' +
+        '<div class="own-bar"><button class="btn btn-solid" id="sGo">Confirm sale and open checklist</button><span class="grow"></span><button class="btn btn-line" id="sBack">Cancel</button></div><div class="own-msg" id="ownMsg"></div>');
+      var cost = p.cost != null ? p.cost : '';
+      var read = function () { return { type: document.querySelector('input[name=sType]:checked').value, salePrice: num($('sPrice').value), shipping: num($('sShip').value), tax: num($('sTax').value), cardFee: $('sFee').value === '' ? null : num($('sFee').value), pct: num($('sPct').value), min: num($('sMin').value), cost: num(cost) }; };
+      var upd = function () {
+        var o = read(), c = calc(o), isC = o.type === 'consign';
+        body.querySelectorAll('.sCons').forEach(function (e) { e.style.display = isC ? '' : 'none'; });
+        $('sPrev').innerHTML = isC ? '<b>Seller payout: ' + money(c.payout) + '</b><small>Price ' + money(o.salePrice) + ' + shipping ' + money(o.shipping) + ' − commission ' + money(c.commission) + ' − card fee ' + money(c.fee) + '. The seller pays the carrier directly.</small>' : '<b>Your profit (before shipping label): ' + money(r2(o.salePrice + o.shipping - c.fee - num(cost))) + '</b><small>Price ' + money(o.salePrice) + ' + shipping ' + money(o.shipping) + ' − card fee ' + money(c.fee) + (cost !== '' ? ' − what you paid ' + money(num(cost)) : '') + '</small>';
+      };
+      body.querySelectorAll('input').forEach(function (i) { i.oninput = upd; i.onchange = upd; }); upd();
+      $('sBack').onclick = function () { viewList(); };
+      $('sGo').onclick = async function () {
+        var o = read(), buyer = $('sBuyer').value.trim(), miss = [];
+        if (!buyer) miss.push('Buyer name'); if (!(o.salePrice > 0)) miss.push('Sale price');
+        if (o.type === 'consign' && !$('sSeller').value.trim()) miss.push('Seller name');
+        if (miss.length) { $('oErr').innerHTML = '<div class="own-err"><b>Still needed:</b><ul>' + miss.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'; return; }
+        $('sGo').disabled = true;
+        try {
+          var oid = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), c = calc(o);
+          var order = { itemId: itemId, itemName: item.name || '', category: item.category || '', listedPrice: item.price || 0, buyerName: buyer, buyerEmail: $('sEmail').value.trim(), salePrice: o.salePrice, shipping: o.shipping, tax: o.tax, cardFee: c.fee, type: o.type, sellerName: o.type === 'consign' ? $('sSeller').value.trim() : '', sellerEmail: o.type === 'consign' ? $('sSellerEmail').value.trim() : '', pct: o.pct, min: o.min, commission: c.commission, payout: c.payout, cost: num(cost), shipCost: 0, soldAt: Date.now(), createdAt: Date.now(), ownerEmail: FB.auth.currentUser.email };
+          await F.setDoc(F.doc(FB.db, 'shop_orders', oid), order);
+          await F.setDoc(F.doc(FB.db, 'shop_items', itemId), { status: 'sold', updatedAt: Date.now() }, { merge: true });
+          window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE(); await load(); await loadOrders(); openOrder(oid);
+        } catch (e) { $('sGo').disabled = false; say(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed. The new security rules need to be published in Firebase.' : 'Could not save the sale.', 'bad'); }
+      };
+    });
+  }
+
+  /* ----- order and shipping proof ----- */
+  function openOrder(oid) {
+    var F = FB.F, o = (S.orders || []).filter(function (x) { return x.id === oid; })[0]; if (!o) { viewList(); return; }
+    S.O = { id: oid, data: JSON.parse(JSON.stringify(o)), ship: [], queue: Promise.resolve(), err: '' };
+    frame('<div class="own-empty">Loading...</div>');
+    reloadShip().then(renderOrder).catch(function () { frame('<div class="own-empty">Could not load the order. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
+  }
+  function reloadShip() {
+    var F = FB.F, O = S.O;
+    return F.getDocs(F.collection(FB.db, 'shop_orders', O.id, 'ship')).then(function (s) {
+      O.ship = s.docs.map(function (d) { var v = d.data(); v.id = d.id; return v; }).sort(function (a, b) { var ta = a.at && a.at.toDate ? a.at.toDate().getTime() : (a.at || 0), tb = b.at && b.at.toDate ? b.at.toDate().getTime() : (b.at || 0); return ta - tb; });
+    });
+  }
+  function stepDone(O, k) { return O.ship.some(function (x) { return x.step === k; }); }
+  function readyToShip(O) {
+    var d = O.data, miss = [];
+    STEPS.forEach(function (s) { if (!stepDone(O, s[0])) miss.push('Photo: ' + s[1]); });
+    if (!($('oCarrier') && $('oCarrier').value)) miss.push('Carrier'); if (!($('oTrack') && $('oTrack').value.trim())) miss.push('Tracking number');
+    if ($('oBreak') && $('oBreak').checked && !($('oIns') && $('oIns').checked && num($('oInsAmt').value) > 0)) miss.push('Insurance for the breakable item, with its insured value');
+    return miss;
+  }
+  function renderOrder() {
+    var O = S.O, d = O.data, c = calc(d), shipped = !!d.shippedAt, isC = d.type === 'consign', done = STEPS.filter(function (s) { return stepDone(O, s[0]); }).length;
+    var rel = d.deliveredAt ? (d.deliveredAt + HOLD_DAYS * 86400000) : 0;
+    var h = '<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-family:var(--serif);font-weight:400;margin:0">' + esc(d.itemName) + '</h3><b>' + esc(statusOf(d)) + '</b></div>' +
+      '<p class="own-msg" style="margin:4px 0 16px">Sold ' + esc(fmtT(d.soldAt)) + ' to ' + esc(d.buyerName) + (d.buyerEmail ? ' (' + esc(d.buyerEmail) + ')' : '') + (isC ? ' · Consignment from ' + esc(d.sellerName) : ' · Our item') + '</p>';
+    h += '<div class="own-ed"><div>';
+    h += '<h4 style="margin:0 0 8px;font-weight:500">Shipping proof <span style="color:#6b675f;font-weight:400">(' + done + ' of ' + STEPS.length + ' steps)</span></h4>';
+    h += '<p class="own-msg" style="margin:0 0 10px">Live camera only. Each photo is stamped with the server time and cannot be edited or deleted afterward.</p>';
+    STEPS.forEach(function (s) {
+      var ph = O.ship.filter(function (x) { return x.step === s[0]; });
+      h += '<div style="border:1px solid #E1DCD3;padding:10px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b style="font-weight:500">' + (ph.length ? '✓ ' : '') + esc(s[1]) + '</b><div class="own-msg" style="min-height:0">' + esc(s[2]) + '</div></div>' + (shipped ? '' : '<button class="btn btn-line" data-shoot="' + s[0] + '" style="min-height:40px;padding:0 14px">' + (ph.length ? 'Add another' : '📷 Take photo') + '</button>') + '</div>' +
+        (ph.length ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + ph.map(function (x) { return '<div style="width:92px"><img data-big="' + x.id + '" alt="' + esc(s[1]) + '" src="' + x.data + '" style="width:92px;height:92px;object-fit:cover;cursor:zoom-in;border:1px solid #E1DCD3"><div style="font-size:.66rem;color:#6b675f">' + esc(fmtT(x.at)) + '</div></div>'; }).join('') + '</div>' : '') + '</div>';
+    });
+    h += '</div><div>';
+    h += '<h4 style="margin:0 0 8px;font-weight:500">Money</h4><div class="own-form priv" style="grid-template-columns:1fr auto;gap:4px 14px;margin-bottom:16px">' +
+      '<span>Sale price</span><span>' + money(num(d.salePrice)) + '</span><span>Shipping collected</span><span>' + money(num(d.shipping)) + '</span><span>Sales tax collected</span><span>' + money(num(d.tax)) + '</span><span>Card fee</span><span>' + money(c.fee) + '</span>' +
+      (isC ? '<span>Our commission (' + esc(d.pct) + '%, min ' + money(num(d.min)) + ')</span><span>' + money(c.commission) + '</span><span><b>Seller payout</b></span><span><b>' + money(c.payout) + '</b></span>' : '<span>What you paid</span><span>' + money(num(d.cost)) + '</span><span>Shipping label cost</span><span>' + money(num(d.shipCost)) + '</span><span><b>Profit</b></span><span><b>' + money(c.profit) + '</b></span>') + '</div>';
+    h += '<h4 style="margin:0 0 8px;font-weight:500">Shipment</h4><div class="own-form" style="margin-bottom:10px">' +
+      '<div><label for="oCarrier">Carrier <i>*</i></label><select class="field" id="oCarrier"' + (shipped ? ' disabled' : '') + '><option value="">Choose</option>' + ['USPS', 'UPS', 'FedEx', 'Other'].map(function (x) { return '<option' + (d.carrier === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></div>' +
+      '<div><label for="oTrack">Tracking number <i>*</i></label><input class="field" id="oTrack" value="' + esc(d.tracking) + '"' + (shipped ? ' disabled' : '') + '></div>' +
+      '<div><label for="oCost">Shipping label cost</label><input class="field" id="oCost" type="number" step="0.01" min="0" value="' + esc(d.shipCost || '') + '"' + (shipped ? ' disabled' : '') + '></div><div></div>' +
+      '<div class="full"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="oBreak"' + (d.breakable ? ' checked' : '') + (shipped ? ' disabled' : '') + '> This item is breakable</label></div>' +
+      '<div class="full" id="oInsRow"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="oIns"' + (d.insured ? ' checked' : '') + (shipped ? ' disabled' : '') + '> Shipped with tracking and insurance</label><label for="oInsAmt" style="margin-top:8px">Insured value, dollars</label><input class="field" id="oInsAmt" type="number" step="0.01" min="0" value="' + esc(d.insuredAmt || '') + '"' + (shipped ? ' disabled' : '') + '></div></div>';
+    h += '<div id="oErr"></div>';
+    h += '<div class="own-bar">';
+    if (!shipped) h += '<button class="btn btn-solid" id="oShip">Mark shipped</button>';
+    else if (!d.deliveredAt) h += '<button class="btn btn-solid" id="oDeliv">Mark delivered</button>';
+    else if (isC && !d.payoutReleasedAt) h += '<button class="btn btn-solid" id="oPay"' + ((Date.now() < rel || d.dispute) ? ' disabled' : '') + '>Mark payout sent (' + money(c.payout) + ')</button>';
+    h += '</div>';
+    if (shipped) h += '<p class="own-msg">Shipped ' + esc(fmtT(d.shippedAt)) + (d.deliveredAt ? ' · Delivered ' + esc(fmtD(d.deliveredAt)) : '') + (isC && d.deliveredAt && !d.payoutReleasedAt ? ' · Payout can go out on ' + esc(fmtD(rel)) + (d.dispute ? ' (held: dispute open)' : '') : '') + (d.payoutReleasedAt ? ' · Payout recorded ' + esc(fmtD(d.payoutReleasedAt)) : '') + '</p>';
+    if (isC && !d.payoutReleasedAt) h += '<p class="own-msg">This tool records the payout. It does not move money. Send the seller their payout yourself, then mark it here.</p>';
+    h += '<h4 style="margin:14px 0 6px;font-weight:500">Notes and disputes</h4><label style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="oDisp"' + (d.dispute ? ' checked' : '') + '> Buyer dispute open (holds the payout)</label><textarea class="field" id="oNotes" style="height:90px;padding:10px 14px" placeholder="Anything worth remembering about this order">' + esc(d.notes) + '</textarea>' +
+      '<div class="own-bar"><button class="btn btn-line" id="oSaveN">Save notes</button><a class="btn btn-line" id="oLink" href="' + esc(base() + '#order=' + O.id) + '">Link to this order</a><span class="grow"></span><button class="btn btn-line" id="oBackL">Back</button></div><div class="own-msg" id="ownMsg">' + esc(O.err) + '</div></div></div>';
+    frame(h);
+    body.querySelectorAll('[data-shoot]').forEach(function (b) { b.onclick = function () { shoot(b.dataset.shoot); }; });
+    body.querySelectorAll('[data-big]').forEach(function (im) { im.onclick = function () { lightbox(im.src); }; });
+    var sync = function () { var br = $('oBreak').checked; $('oInsRow').style.display = br ? '' : 'none'; };
+    $('oBreak').onchange = sync; sync();
+    $('oBackL').onclick = function () { S.tab = 'sold'; viewList(); };
+    $('oLink').onclick = function (e) { e.preventDefault(); try { navigator.clipboard.writeText(base() + '#order=' + O.id); say('Link copied. Only signed-in owners can open it.', 'good'); } catch (x) { say(base() + '#order=' + O.id); } };
+    $('oSaveN').onclick = function () { saveOrder({ notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Saved.'); };
+    if ($('oShip')) $('oShip').onclick = function () {
+      var miss = readyToShip(O);
+      if (miss.length) { $('oErr').innerHTML = '<div class="own-err"><b>This cannot be marked shipped yet. Still needed:</b><ul>' + miss.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'; return; }
+      saveOrder({ carrier: $('oCarrier').value, tracking: $('oTrack').value.trim(), shipCost: num($('oCost').value), breakable: $('oBreak').checked, insured: $('oBreak').checked && $('oIns').checked, insuredAmt: $('oBreak').checked ? num($('oInsAmt').value) : 0, shippedAt: Date.now(), notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Marked shipped.');
+    };
+    if ($('oDeliv')) $('oDeliv').onclick = function () { saveOrder({ deliveredAt: Date.now(), notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Marked delivered.'); };
+    if ($('oPay')) $('oPay').onclick = function () { if (confirm('Confirm you have sent ' + money(c.payout) + ' to ' + d.sellerName + '?')) saveOrder({ payoutReleasedAt: Date.now() }, 'Payout recorded.'); };
+  }
+  function saveOrder(fields, msg) {
+    var F = FB.F, O = S.O;
+    return F.setDoc(F.doc(FB.db, 'shop_orders', O.id), fields, { merge: true }).then(function () {
+      Object.assign(O.data, fields); var i = S.orders.findIndex(function (x) { return x.id === O.id; }); if (i >= 0) Object.assign(S.orders[i], fields);
+      O.err = ''; renderOrder(); say(msg, 'good');
+    }).catch(function () { say('Could not save. Check your connection.', 'bad'); });
+  }
+  function shoot(step) {
+    var F = FB.F, O = S.O, n = 0;
+    SC.camera(function (c) {
+      n++;
+      O.queue = O.queue.then(function () {
+        return F.setDoc(F.doc(FB.db, 'shop_orders', O.id, 'ship', step + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)), { step: step, data: SC.jpeg(SC.fit(c, c.width, c.height, 1200), 200000, 0.78), at: F.serverTimestamp() });
+      }).catch(function () { O.err = 'A photo could not be saved. Check your connection and take it again.'; });
+    }, function () {
+      frame('<div class="own-empty">Saving photos...</div>');
+      O.queue.then(reloadShip).then(renderOrder);
+    }, 0, true);
+  }
+
+  /* ----- ledger ----- */
+  function ledgerRows() {
+    return (S.orders || []).slice().sort(function (a, b) { return (b.soldAt || 0) - (a.soldAt || 0); }).map(function (o) {
+      var c = calc(o); return { o: o, c: c, row: [fmtD(o.soldAt), o.itemName, o.type === 'consign' ? 'Consignment: ' + (o.sellerName || '') : 'Ours', o.buyerName, num(o.salePrice), num(o.shipping), num(o.tax), c.fee, c.commission, o.type === 'consign' ? c.payout : '', c.profit, statusOf(o), o.carrier ? o.carrier + ' ' + (o.tracking || '') : '', base() + '#item=' + o.itemId, base() + '#order=' + o.id] };
+    });
+  }
+  var LCOLS = ['Date sold', 'Item', 'Seller', 'Buyer', 'Sale price', 'Shipping collected', 'Sales tax collected', 'Card fee', 'Our commission', 'Seller payout', 'Our profit', 'Status', 'Tracking', 'Listing photos link', 'Shipping proof link'];
+  function ledgerHtml() {
+    var rows = ledgerRows(); if (!rows.length) return '<div class="own-empty">No sales recorded yet.</div>';
+    var tot = [4, 5, 6, 7, 8, 9, 10].map(function () { return 0; });
+    rows.forEach(function (r) { [4, 5, 6, 7, 8, 9, 10].forEach(function (i, k) { tot[k] += num(r.row[i]); }); });
+    return '<div style="overflow:auto"><table style="border-collapse:collapse;font-size:.82rem;min-width:900px;width:100%"><thead><tr>' + LCOLS.slice(0, 13).concat(['Photos']).map(function (x) { return '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #CFCAC2;white-space:nowrap">' + x + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr>' + r.row.slice(0, 13).map(function (v, i) { return '<td style="padding:6px 8px;border-bottom:1px solid #EEE9E0;white-space:nowrap">' + (i >= 4 && i <= 10 && v !== '' ? money(v) : esc(v)) + '</td>'; }).join('') + '<td style="padding:6px 8px;border-bottom:1px solid #EEE9E0;white-space:nowrap"><a href="' + esc(r.row[13]) + '" target="_blank" rel="noopener">Listing</a> · <a href="' + esc(r.row[14]) + '" target="_blank" rel="noopener">Shipping proof</a></td></tr>'; }).join('') +
+      '<tr><td colspan="4" style="padding:8px;font-weight:600">Totals</td>' + tot.map(function (t) { return '<td style="padding:8px;font-weight:600">' + money(r2(t)) + '</td>'; }).join('') + '<td colspan="3"></td></tr></tbody></table></div>' +
+      '<div class="own-bar"><button class="btn btn-line" id="oCsv">Download as spreadsheet (CSV)</button></div><p class="own-msg">The CSV opens in Excel or Google Sheets (File, Import). The two link columns open the listing photos and the shipping proof photos, but only for a signed-in owner.</p>';
+  }
+  function downloadCsv() {
+    var q = function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var lines = [LCOLS.map(q).join(',')].concat(ledgerRows().map(function (r) { return r.row.map(q).join(','); }));
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' })); a.download = 'second-chance-ledger-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+
   /* ---------- open ---------- */
   window.SC_OWNER_OPEN = function () {
     if (!dlg.open) dlg.showModal();
@@ -917,7 +1135,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       fb.U.onAuthStateChanged(fb.auth, function (u) {
         if (!u) { S.user = null; viewLogin(S.deny); S.deny = ''; return; }
         if (!isOwner(u)) { S.deny = 'This area is for the shop owner only.'; fb.U.signOut(fb.auth); return; }
-        S.user = u; load().then(function () { if (!S.E) viewList(); }).catch(function () { frame('<div class="own-empty">Signed in, but the shop data could not be read. The Second Chance security rules still need to be published in Firebase.</div>'); });
+        S.user = u; load().then(loadOrders).then(function () { var m = location.hash.match(/^#order=(.+)$/); if (m && S.orders.some(function (o) { return o.id === m[1]; })) { openOrder(m[1]); return; } if (!S.E && !S.O) viewList(); }).catch(function () { frame('<div class="own-empty">Signed in, but the shop data could not be read. The Second Chance security rules still need to be published in Firebase.</div>'); });
       });
     }).catch(function () { body.innerHTML = '<div class="own-in"><div class="own-empty">Could not reach the server. Check your connection.</div></div>'; });
   };
@@ -925,8 +1143,8 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 
 (function(){function go(){window.SC_OWNER_OPEN&&window.SC_OWNER_OPEN()}
   document.getElementById('ownLink').addEventListener('click',function(e){e.preventDefault();try{history.replaceState(null,'',location.pathname+location.search+'#owner')}catch(x){}go()});
-  document.getElementById('own').addEventListener('close',function(){try{if(location.hash==='#owner')history.replaceState(null,'',location.pathname+location.search)}catch(x){}});
-  if(location.hash==='#owner')go();
+  document.getElementById('own').addEventListener('close',function(){try{if(location.hash==='#owner'||/^#order=/.test(location.hash))history.replaceState(null,'',location.pathname+location.search)}catch(x){}});
+  if(location.hash==='#owner'||/^#order=/.test(location.hash))go();
   window.SC_LOAD_LIVE();})();
 </script>
 </body>
