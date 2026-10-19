@@ -39,6 +39,19 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
 .foot a{color:var(--gold);margin:0 10px}
 @media(max-width:700px){.doors{flex-direction:column;align-items:center;gap:6px}.door{flex:0 0 auto;width:100%}.thr .art{max-width:min(46vw,200px)}.sc .art{max-width:min(86vw,360px)}.label{letter-spacing:.2em}.stage{gap:8px}.tag{display:none}}
 @media(prefers-reduced-motion:reduce){.art,.spill,.pglow,.fade{transition-duration:.01s!important}.glow{animation:none}}
+
+.beta{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(5,7,3,.88);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.beta.show{display:flex}
+.betacard{width:100%;max-width:560px;max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow:auto;background:#161a0e;border:1px solid #4a5530;border-radius:14px;padding:clamp(18px,4vw,28px);box-shadow:0 20px 60px rgba(0,0,0,.6);font-family:Georgia,"Times New Roman",serif;color:var(--text)}
+.betacard .tag{display:inline-block;font:700 .72rem/1 system-ui,sans-serif;letter-spacing:.16em;color:#fff;background:#9f2f2a;border-radius:5px;padding:5px 8px;margin-bottom:10px}
+.betacard h1{font-size:clamp(1.4rem,5vw,1.8rem);line-height:1.2;color:var(--gold);margin-bottom:8px}
+.betacard p,.betacard li{font-size:1.02rem;line-height:1.5;color:var(--text)}
+.betacard h2{font:700 .78rem/1 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:16px 0 6px}
+.betacard ul{padding-left:1.15em}
+.betacard li{margin:3px 0}
+.betacard .small{font-size:.9rem;color:var(--muted)}
+.betabtn{display:block;width:100%;margin-top:18px;padding:14px;border:0;border-radius:10px;background:var(--gold);color:#1a1d0f;font:700 1rem system-ui,sans-serif;cursor:pointer}
+.betabtn:focus-visible{outline:3px solid #fff;outline-offset:2px}
 </style></head>
 <body>
 <main class="stage" id="stage">
@@ -69,6 +82,24 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
   </div>
   <div class="foot"><a href="home.html">Skip to Thrift Scout</a><a href="secondchance.html">Skip to Second Chance</a></div>
 </main>
+<div class="beta" id="beta" role="dialog" aria-modal="true" aria-labelledby="betaT"><div class="betacard">
+<span class="tag">BETA</span>
+<h1 id="betaT">Welcome. You are early.</h1>
+<p>Thrift Scout and Second Chance are being built right now. Both are free to use while in beta.</p>
+<h2>What you get as a beta tester</h2>
+<ul><li>Free full access while we build.</li><li>Your feedback shapes what we make next.</li><li>The first 26 accounts earn a permanent Founding Tester badge.</li></ul>
+<h2>What we collect</h2>
+<ul><li>The photos and descriptions of items you scan or list.</li><li>No name, address or phone contacts. Your location is shared only if you choose to send a coverage report.</li><li>If you make an account: your email to sign you in, and your branch of service to set your rank. Nothing else.</li><li>Scans are analyzed by Google Gemini, using your own free Google key.</li></ul>
+<h2>Your Google key</h2>
+<p>You bring your own free Google Gemini key. Google sets the daily scan limit and can change it. Most people find it plenty. You can see yours in Google AI Studio.</p>
+<h2>Email updates</h2>
+<p>When you sign up you can tick one optional box to get email updates. If you do, one of us will personally thank you. If you do not tick it, we never email you.</p>
+<h2>Who we are</h2>
+<p>An independent, woman owned and operated small business. Questions? Email <b>thriftscout.official@gmail.com</b><span id="betaTxt"></span>.</p>
+<p class="small" style="margin-top:8px">Adults 18 and older only. Values are estimates, and every buying decision is yours.</p>
+<button class="betabtn" id="betaOk" type="button">I understand. Continue</button>
+</div></div>
+
 <div class="fade" id="fade"></div>
 <script>
 (function(){
@@ -84,6 +115,16 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
   }
   ['thr','sc'].forEach(function(id){var e=document.getElementById(id);e.addEventListener('click',function(){enter(e)});});
   window.addEventListener('pageshow',function(e){if(e.persisted){busy=false;stage.classList.remove('busy');['thr','sc'].forEach(function(i){document.getElementById(i).classList.remove('go','zoom')});fade.className='fade';}});
+})();
+</script>
+<script>
+(function(){
+  var TEXT_NUMBER='';/* e.g. '801-555-0123'. Leave empty to hide. */
+  var K='ts_beta_ok_v1',b=document.getElementById('beta'),ok=false;
+  try{ok=localStorage.getItem(K)==='1';}catch(e){}
+  if(TEXT_NUMBER){document.getElementById('betaTxt').textContent=' or text '+TEXT_NUMBER+' (text only, no calls)';}
+  if(!ok){b.classList.add('show');document.getElementById('betaOk').focus({preventScroll:true});b.querySelector('.betacard').scrollTop=0;}
+  document.getElementById('betaOk').addEventListener('click',function(){try{localStorage.setItem(K,'1');}catch(e){}b.classList.remove('show');});
 })();
 </script>
 </body></html>
