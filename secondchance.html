@@ -60,8 +60,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* hero */
 .hero{display:grid;grid-template-columns:1.12fr .88fr;min-height:560px}
 .hero-l{padding:84px 48px 76px max(28px,calc((100vw - var(--wrap))/2 + 28px));display:flex;flex-direction:column;justify-content:center}
-.hero-r{background:var(--stone);padding:56px max(28px,calc((100vw - var(--wrap))/2 + 28px)) 56px 48px;display:flex;align-items:center}
-.hero-r .dir{width:100%}
+.hero-r{background:none;padding:56px max(28px,calc((100vw - var(--wrap))/2 + 28px)) 56px 48px;display:flex;align-items:center;justify-content:flex-start}
+.hero-r .dir{width:100%;max-width:560px;background:var(--stone);padding:14px 32px 22px}
 .hero-h{font-family:var(--serif);font-weight:400;font-size:clamp(2.5rem,4.9vw,4.7rem);line-height:1.04;letter-spacing:-.015em}
 .hero-p{margin-top:26px;max-width:34rem;font-size:1.12rem;color:var(--soft)}
 .hero-cta{margin-top:30px;display:flex;gap:14px;flex-wrap:wrap}
@@ -176,7 +176,7 @@ dialog[open]{animation:pop .22s ease-out}
   .hero{grid-template-columns:1fr;min-height:0}
   .hero-l{padding:40px 18px 36px}
   .hero-cta .btn{flex:1 1 150px}
-  .hero-r{padding:8px 18px 30px;background:var(--stone)}
+  .hero-r{padding:8px 18px 30px;background:none}.hero-r .dir{padding:6px 18px 14px}
   .promise-in{grid-template-columns:1fr;gap:16px;padding-top:24px;padding-bottom:24px}
   .shop{padding:44px 0 28px}
   .grid{grid-template-columns:repeat(2,1fr);gap:26px 12px}
