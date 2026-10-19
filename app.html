@@ -416,6 +416,8 @@
         <div class="settings-section-title">Crowd stats (owner only)</div>
         <button class="btn btn-outline" id="statsBtn">Load totals</button>
         <div id="statsOut" style="font-size:.85rem; line-height:1.6; white-space:pre-wrap;"></div>
+        <button class="btn btn-outline" id="newsBtn" style="margin-top:10px;">Email list (opted in only)</button>
+        <div id="newsOut" style="font-size:.85rem; line-height:1.6; white-space:pre-wrap; user-select:all;"></div>
       </div>
 <div class="card">
         <div class="settings-section-title">Branch and ranks</div>
@@ -553,7 +555,7 @@
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
           <label class="auth-check"><input type="checkbox" id="authAge"><span>I am 18 years of age or older.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCov"><span>I understand Thrift Scout works best in Weber, Davis and Salt Lake counties in Utah, and needs a solid data connection. It may be slow, time out or fail in areas with weak signal.</span></label>
-          <label class="auth-check"><input type="checkbox" id="authNews"><span>(Optional) Email me Thrift Scout updates.</span></label>
+          <label class="auth-check"><input type="checkbox" id="authNews"><span>(Optional) Email me Thrift Scout updates. If you tick this, we will also send you a personal thank-you.</span></label>
         </div>
         <div class="auth-err" id="authErr"></div>
         <button class="btn btn-accent" id="authSubmit">Sign in</button>
@@ -1028,7 +1030,7 @@ This is a plain-language starting document, not legal advice.</div>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
     import {
-      getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, query, orderBy, limit, where
+      getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, query, orderBy, limit, where, runTransaction
     } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
     import {
       getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, EmailAuthProvider, linkWithCredential
@@ -1360,6 +1362,30 @@ This is a plain-language starting document, not legal advice.</div>
       if (track === 'off' && OFF_ROWS[branch]) return OFF_ROWS[branch].map((r, i) => ({ name: r[0], grade: r[1], minXp: XP_STEPS[i], desc: OFF_DESCS[i] }));
       if (branch === 'army' || !ENL_ROWS[branch]) return ARMY_ENL;
       return ENL_ROWS[branch].map((r, i) => ({ name: r[0], grade: r[1], minXp: XP_STEPS[i], desc: ENL_DESCS[i] }));
+    }
+    // ---- Founding Tester badge (first 26 accounts) ----
+    const FOUNDER_MAX = 26;
+    let FOUNDER = false;
+    try { FOUNDER = localStorage.getItem('ts_founder') === '1'; } catch (e) {}
+    function founderChip() { return FOUNDER ? '<div style="display:inline-block;margin-top:4px;font-size:.62rem;font-weight:800;letter-spacing:.1em;color:#2a2108;background:linear-gradient(135deg,#f3d98a,#c9a23f);border-radius:6px;padding:3px 7px;">FOUNDING TESTER</div>' : ''; }
+    function setFounder(v) { FOUNDER = !!v; try { localStorage.setItem('ts_founder', v ? '1' : '0'); } catch (e) {} try { renderMeRank(); renderRankSummary(); } catch (e) {} }
+    async function claimFounder(uid) {
+      try {
+        if (FOUNDER || localStorage.getItem('ts_founder_full') === '1') return;
+        try { const me = await getDoc(doc(db, 'users', uid)); if (me.exists() && me.data().founder === true) { setFounder(true); return; } } catch (e) {}
+        const uref = doc(db, 'users', uid), fref = doc(db, 'meta', 'founders');
+        const r = await runTransaction(db, async (tx) => {
+          const u = await tx.get(uref), ud = u.exists() ? u.data() : {};
+          if (ud.founder === true) return { got: true };
+          const f = await tx.get(fref), n = f.exists() ? (f.data().count || 0) : 0;
+          if (n >= FOUNDER_MAX) return { full: true };
+          tx.set(fref, { count: n + 1 });
+          tx.set(uref, { founder: true, founderNo: n + 1 }, { merge: true });
+          return { got: true, no: n + 1 };
+        });
+        if (r && r.got) setFounder(true);
+        else if (r && r.full) { try { localStorage.setItem('ts_founder_full', '1'); } catch (e) {} }
+      } catch (e) { console.warn('Founder check skipped', e); }
     }
     let BRANCH = 'army', TRACK = 'enl', SERVICE = '';
     try { const b = localStorage.getItem('ts_branch'), tr = localStorage.getItem('ts_track'); if (BRANCH_KEYS.includes(b)) BRANCH = b; if (tr === 'off' && BRANCH !== 'civ') TRACK = 'off'; const sv = localStorage.getItem('ts_service'); if (BRANCH !== 'civ' && (sv === 'active' || sv === 'vet')) SERVICE = sv; } catch (e) {}
@@ -1946,7 +1972,7 @@ This is a plain-language starting document, not legal advice.</div>
     }
     function renderMeRank() {
       const { tier, index } = getCurrentTier(STATE.xp), next = TIERS[index + 1];
-      document.getElementById('meRankRow').innerHTML = rankBadgeHTML(tier, 56) + `<div><div style="font-weight:800; font-size:1.1rem; color:var(--text);">${tier.name}</div><div style="font-size:.8rem; color:var(--text-muted);">${gradeText(tier)} • ${STATE.xp.toLocaleString()} XP</div></div>`;
+      document.getElementById('meRankRow').innerHTML = rankBadgeHTML(tier, 56) + `<div><div style="font-weight:800; font-size:1.1rem; color:var(--text);">${tier.name}</div><div style="font-size:.8rem; color:var(--text-muted);">${gradeText(tier)} • ${STATE.xp.toLocaleString()} XP</div>${founderChip()}</div>`;
       const f = document.getElementById('meRankFill'), nx = document.getElementById('meRankNext');
       if (next) { f.style.width = Math.min(100, Math.max(0, Math.round(((STATE.xp - tier.minXp) / (next.minXp - tier.minXp)) * 100))) + '%'; nx.textContent = (next.minXp - STATE.xp).toLocaleString() + ' XP to ' + next.name + ' (' + next.grade + ')'; }
       else { f.style.width = '100%'; nx.textContent = topRankText(); }
@@ -2043,7 +2069,7 @@ This is a plain-language starting document, not legal advice.</div>
     }
     function renderRankSummary() {
       const { tier, index } = getCurrentTier(STATE.xp), next = TIERS[index + 1];
-      document.getElementById('rankSummaryRow').innerHTML = rankBadgeHTML(tier, 52) + `<div><div style="font-weight:800; font-size:1rem; color:var(--text);">${tier.name}</div><div style="font-size:.74rem; color:var(--text-muted);">${gradeText(tier)}</div></div>`;
+      document.getElementById('rankSummaryRow').innerHTML = rankBadgeHTML(tier, 52) + `<div><div style="font-weight:800; font-size:1rem; color:var(--text);">${tier.name}</div><div style="font-size:.74rem; color:var(--text-muted);">${gradeText(tier)}</div>${founderChip()}</div>`;
       document.getElementById('rankSummaryXp').textContent = STATE.xp.toLocaleString() + ' XP';
       const fill = document.getElementById('rankSummaryFill'), nx = document.getElementById('rankSummaryNext');
       if (next) {
@@ -2808,6 +2834,7 @@ This is a plain-language starting document, not legal advice.</div>
           try {
             await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, branch: BRANCH, track: TRACK, service: SERVICE, svcBonus: SERVICE ? true : false, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
+          claimFounder(cred.user.uid);
           if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
         } else {
           await signInWithEmailAndPassword(auth, email, pass);
@@ -2827,6 +2854,7 @@ This is a plain-language starting document, not legal advice.</div>
         $a('meEmail').textContent = IS_GUEST ? 'Guest' : CURRENT_EMAIL;
         updateGuestUI(); updatePills();
         startVaultListener();
+        if (!IS_GUEST) claimFounder(user.uid);
       } else {
         CURRENT_UID = null; CURRENT_EMAIL = ''; IS_GUEST = false;
         updateGuestUI();
@@ -3040,6 +3068,17 @@ This is a plain-language starting document, not legal advice.</div>
         t += '\n\nRank type\n' + (Object.keys(n.track).length ? Object.entries(n.track).map(([k, c]) => '  ' + (k === 'off' ? 'Officer' : 'Enlisted') + ': ' + c).join('\n') : '  none yet');
         out.textContent = t;
       } catch (e) { out.textContent = 'Could not load totals. The Firestore rule for owner access is probably not published yet.'; }
+    };
+
+    $a('newsBtn').onclick = async () => {
+      const out = $a('newsOut'); out.textContent = 'Loading...';
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        const all = snap.docs.map(d => d.data());
+        const opted = all.filter(v => v.newsletter === true && v.email).map(v => ({ e: v.email, f: v.founderNo || 0 }));
+        const founders = all.filter(v => v.founder === true).length;
+        out.textContent = 'Founding testers: ' + founders + ' of ' + FOUNDER_MAX + '\nAccounts: ' + all.length + '   Agreed to email: ' + opted.length + '\n\n' + (opted.length ? opted.map(o => o.e + (o.f ? '   (Founding Tester #' + o.f + ')' : '')).join('\n') : 'No one has opted in yet.');
+      } catch (e) { out.textContent = 'Could not load the list. The owner rule in Firestore is probably not published yet.'; }
     };
 
     // ---- 18+ gate ----
