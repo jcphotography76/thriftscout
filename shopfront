@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Second Chance | Enter the shop</title>
+<meta name="theme-color" content="#1a120d">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#e3c98a;--text:#f5ecdc;--muted:#c2b49a;--serif:"Cormorant Garamond",Georgia,"Times New Roman",serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#1a120d;color:var(--text);font-family:var(--serif);overflow:hidden;-webkit-tap-highlight-color:transparent}
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,2vh,18px);padding:16px 16px 56px;background:radial-gradient(ellipse at 50% 55%,#3a2a1e 0%,#21170f 55%,#0e0906 100%)}
+.head{display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .5s;text-align:center}
+h1{font-size:clamp(1.9rem,6.5vw,3rem);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;line-height:1;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.sub{font-size:clamp(.95rem,2.9vw,1.1rem);color:var(--muted);letter-spacing:.08em;font-style:italic}
+.scene{position:relative;width:min(94vw,760px);aspect-ratio:1344/768;transition:transform 1.8s cubic-bezier(.62,0,.3,1);will-change:transform;transform-origin:50.6% 63%;cursor:pointer;background:none;border:0;display:block;border-radius:6px;box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.scene:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
+.scene img{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:6px}
+.glow{position:absolute;inset:0;border-radius:6px;pointer-events:none;mix-blend-mode:screen;animation:flick 3.6s ease-in-out infinite;
+ background:
+ radial-gradient(ellipse 14% 22% at 27% 52%,rgba(255,196,110,.35),transparent 70%),
+ radial-gradient(ellipse 14% 22% at 74.5% 52%,rgba(255,196,110,.35),transparent 70%),
+ radial-gradient(ellipse 9% 18% at 50.6% 58%,rgba(255,206,130,.30),transparent 70%)}
+@keyframes flick{0%,100%{opacity:.9}45%{opacity:.7}60%{opacity:1}80%{opacity:.8}}
+.sign{position:absolute;left:21%;width:45.5%;top:16.3%;height:6.2%;display:flex;align-items:center;justify-content:center;pointer-events:none;
+ background:linear-gradient(#1b110c,#261811);border-radius:2px;box-shadow:inset 0 0 0 1px rgba(227,201,138,.35)}
+.sign span{font-size:clamp(.7rem,2.6vw,1.45rem);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:700;white-space:nowrap;text-shadow:0 0 10px rgba(227,201,138,.45)}
+.sign{left:27.5%;width:45%}
+.spill{position:absolute;left:43.8%;top:44%;width:13.6%;height:49%;opacity:0;transition:opacity 1.3s;pointer-events:none;
+ background:radial-gradient(ellipse at 50% 55%,rgba(255,244,214,.95) 0%,rgba(255,222,150,.7) 55%,rgba(244,197,112,.35) 100%);filter:blur(5px);mix-blend-mode:screen}
+.stage.open .spill{opacity:.8}
+.hint{font-size:1.15rem;color:var(--gold);letter-spacing:.32em;text-transform:uppercase;font-weight:600;animation:pulse 2.4s ease-in-out infinite;transition:opacity .4s}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.stage.open .hint{animation:none;opacity:0}.stage.open .head{opacity:0}
+.stage.zoom .scene{transform:scale(11)}
+.fade{position:fixed;inset:0;background:#ECE8E2;opacity:0;pointer-events:none;transition:opacity .8s ease}
+.stage.zoom ~ .fade{opacity:1;transition-delay:.7s}
+.foot{position:absolute;bottom:max(16px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:.95rem;color:var(--muted);letter-spacing:.08em;transition:opacity .5s}
+.stage.open .foot{opacity:0}
+.skip{color:var(--gold)}
+@media (prefers-reduced-motion:reduce){.scene,.spill,.fade{transition-duration:.01s!important}.hint,.glow{animation:none}}
+</style></head>
+<body>
+<main class="stage" id="stage">
+  <div class="head"><h1>Second Chance</h1><div class="sub">Curated secondhand finds &middot; Independent &middot; Woman Owned &amp; Operated &middot; Adults 18+</div></div>
+  <button class="scene" id="scene" aria-label="Open the door and enter Second Chance">
+    <img src="shopfront.jpg" alt="Old-world shop front with a striped awning and a glowing window display" width="1344" height="768">
+    <div class="glow"></div>
+    <div class="sign"><span>Second Chance</span></div>
+    <div class="spill"></div>
+  </button>
+  <div class="hint" id="hint">Tap the door</div>
+  <div class="foot"><a class="skip" href="secondchance.html">Skip and enter</a></div>
+</main>
+<div class="fade" id="fade"></div>
+<noscript><p style="position:fixed;bottom:60px;left:0;right:0;text-align:center"><a style="color:#e3c98a" href="secondchance.html">Enter Second Chance</a></p></noscript>
+<script>
+(function(){
+  var stage=document.getElementById('stage'),scene=document.getElementById('scene'),go=false,T="secondchance.html";
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function enter(){
+    if(go)return; go=true;
+    if(reduce){location.href=T;return;}
+    stage.classList.add('open');
+    setTimeout(function(){stage.classList.add('zoom');},1100);
+    setTimeout(function(){location.href=T;},3000);
+  }
+  scene.addEventListener('click',enter);
+  window.addEventListener('pageshow',function(e){if(e.persisted){go=false;stage.classList.remove('open','zoom');}});
+})();
+</script>
+</body></html>
