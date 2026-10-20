@@ -139,15 +139,38 @@ select.field{background-image:linear-gradient(45deg,transparent 50%,var(--ink) 5
 .foot-links a:hover{text-decoration:underline}
 .foot-fine{margin-top:36px;padding-top:20px;border-top:1px solid rgba(255,255,255,.18);font-size:.86rem;color:#A9B7AF}
 
+
+/* photo gallery, arrows, full screen viewer, share */
+.d-main img{cursor:zoom-in}
+.g-btn{position:absolute;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--ink);box-shadow:0 1px 6px rgba(0,0,0,.18);padding:0}
+.g-btn:hover{background:#fff}
+.g-prev{left:10px;top:50%;margin-top:-22px}
+.g-next{right:10px;top:50%;margin-top:-22px}
+.g-full{right:10px;bottom:10px;font-size:1.15rem}
+.g-count{position:absolute;left:10px;bottom:14px;z-index:2;background:rgba(23,23,23,.72);color:#fff;font-size:.8rem;padding:4px 10px;border-radius:12px}
+.d-share{margin-top:14px;align-self:flex-start;background:none;border:1px solid var(--line);padding:9px 18px;font:inherit;font-size:.92rem;cursor:pointer;color:var(--ink)}
+.d-share:hover{border-color:var(--ink)}
+#lb{border:0;padding:0;width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;background:var(--stone);overflow:hidden;margin:0}
+#lb::backdrop{background:var(--stone)}
+.lb-stage{position:absolute;inset:0;touch-action:none;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:zoom-in}
+.lb-stage img{max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply;user-select:none;-webkit-user-drag:none;transform-origin:center center;will-change:transform}
+.lb-top{position:absolute;top:max(10px,env(safe-area-inset-top));right:10px;display:flex;gap:8px;z-index:3}
+.lb-top .g-btn,.lb-side .g-btn{position:static;margin:0}
+.lb-prev,.lb-next{position:absolute;top:50%;margin-top:-22px;z-index:3}
+.lb-prev{left:10px}.lb-next{right:10px}
+.lb-count{position:absolute;left:50%;transform:translateX(-50%);bottom:max(14px,env(safe-area-inset-bottom));z-index:3;background:rgba(23,23,23,.78);color:#fff;font-size:.85rem;padding:5px 12px;border-radius:14px}
+.lb-hint{position:absolute;left:12px;top:max(18px,env(safe-area-inset-top));z-index:3;font-size:.8rem;color:#5b564f}
+
 /* detail dialog */
-dialog{border:0;padding:0;width:min(1080px,calc(100vw - 32px));max-height:calc(100vh - 32px);background:#fff;color:var(--ink);margin:auto;overflow:auto}
+dialog{border:0;padding:0;width:min(1080px,calc(100vw - 32px));max-height:calc(100vh - 32px);background:#fff;color:var(--ink);margin:auto;overflow:auto;overflow-x:hidden}
 dialog::backdrop{background:rgba(15,20,18,.62)}
-.d-grid{display:grid;grid-template-columns:1.1fr 1fr}
+.d-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.d-grid>*{min-width:0}
 .d-gal{background:var(--stone);padding:0}
 .d-main{position:relative;aspect-ratio:4/5}
 .d-main img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
-.d-thumbs{display:flex;gap:8px;padding:10px;background:var(--stone-deep)}
-.d-thumb{width:64px;height:80px;background:var(--stone);position:relative;border:2px solid transparent}
+.d-thumbs{display:flex;gap:8px;padding:10px;background:var(--stone-deep);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.d-thumb{flex:0 0 auto;width:64px;height:80px;background:var(--stone);position:relative;border:2px solid transparent}
 .d-thumb[aria-current="true"]{border-color:var(--ink)}
 .d-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply}
 .d-info{padding:36px 34px 34px;display:flex;flex-direction:column}
@@ -183,7 +206,7 @@ dialog[open]{animation:pop .22s ease-out}
   .tools{grid-template-columns:1fr 1fr}
   .tools .check{grid-column:auto}
   .steps{grid-template-columns:1fr;gap:26px}
-  .d-grid{grid-template-columns:1fr}
+  .d-grid{grid-template-columns:minmax(0,1fr)}
   .d-info{padding:24px 20px 26px}
   .dir-row{padding:16px 2px}
 }
@@ -317,6 +340,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 
 <dialog class="own" id="own" aria-label="Owner area"><div id="ownBody"></div></dialog>
 
+<dialog id="lb" aria-label="Photo viewer"><div class="lb-stage" id="lbStage"><img id="lbImg" alt="" draggable="false"></div><div class="lb-hint" id="lbHint">Pinch, scroll or double tap to zoom</div><div class="lb-top"><button class="g-btn" id="lbOut" aria-label="Zoom out">&minus;</button><button class="g-btn" id="lbIn" aria-label="Zoom in">+</button><button class="g-btn" id="lbClose" aria-label="Close full screen">&times;</button></div><button class="g-btn lb-prev" id="lbPrev" aria-label="Previous photo">&lsaquo;</button><button class="g-btn lb-next" id="lbNext" aria-label="Next photo">&rsaquo;</button><div class="lb-count" id="lbCount"></div></dialog>
 <dialog id="dlg" aria-labelledby="dName"><button class="d-close" id="dClose" aria-label="Close item">&times;</button><div id="dBody"></div></dialog>
 
 <script src="secondchance-products.js"></script>
@@ -427,20 +451,116 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var canBuy=!sold&&!p.sample&&p.stripe;
     var buy=canBuy?'<label class="d-ack"><input type="checkbox" id="ack"> I understand all sales are final.</label><a class="btn btn-solid" id="buyBtn" aria-disabled="true" data-href="'+esc(p.stripe)+'" target="_blank" rel="noopener">Buy now, '+money(p.price)+'</a><div class="d-fine">Secure checkout with Stripe. Shipping is added at checkout.</div>'
       :'<button class="btn" disabled>'+(sold?'Sold':(p.sample?'Sample item, not for sale':'Not available yet'))+'</button>';
-    $('dBody').innerHTML='<div class="d-grid"><div class="d-gal"><div class="d-main"><img id="dMain" src="'+esc(im[0])+'" alt="'+esc(p.name)+', photo 1 of '+im.length+'"></div>'+
+    $('dBody').innerHTML='<div class="d-grid"><div class="d-gal"><div class="d-main"><img id="dMain" src="'+esc(im[0])+'" alt="'+esc(p.name)+', photo 1 of '+im.length+'">'+(im.length>1?'<button class="g-btn g-prev" aria-label="Previous photo">&lsaquo;</button><button class="g-btn g-next" aria-label="Next photo">&rsaquo;</button><span class="g-count">1 / '+im.length+'</span>':'')+'<button class="g-btn g-full" aria-label="View photo full screen">&#x26F6;</button></div>'+
       (im.length>1?'<div class="d-thumbs">'+im.map(function(s,i){return '<button class="d-thumb" data-i="'+i+'" aria-label="Show photo '+(i+1)+'" aria-current="'+(i===0)+'"><img src="'+esc(s)+'" alt=""></button>'}).join('')+'</div>':'')+'</div>'+
       '<div class="d-info"><div class="d-brand">'+esc(p.brand||p.category)+'</div><h2 class="d-name" id="dName">'+esc(p.name)+'</h2>'+
-      '<div class="d-price">'+money(p.price)+(p.was?'<span class="m-was">'+money(p.was)+'</span>':'')+'</div>'+
+      '<div class="d-price">'+money(p.price)+(p.was?'<span class="m-was">'+money(p.was)+'</span>':'')+'</div><button class="d-share" id="dShare" type="button">Share this item</button>'+
       '<p class="d-note">One of a kind. Once it sells, it is gone.</p>'+(p.consigned?'<p class="d-cons"><b>Consignment item.</b> Sold and shipped by an independent seller, not by Second Chance or Thrift Scout. The seller is responsible for the item&rsquo;s description, condition, shipping and returns.</p>':'')+
       '<dl class="d-spec">'+spec.map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd></div>'}).join('')+'</dl>'+
       '<p class="d-desc">'+esc(p.description)+'</p><div class="d-buy">'+buy+'</div><p class="d-terms"><b>All sales are final.</b> We do not accept returns for fit or change of mind. If your item never arrives, arrives damaged, or is not as described, contact us within 3 days of delivery with photos. Refunds for damage or loss are made after the item is returned or the carrier approves a claim.</p></div></div>';
     var ack=$('ack'),bb=$('buyBtn');if(ack&&bb){ack.onchange=function(){if(ack.checked){bb.setAttribute('href',bb.getAttribute('data-href'));bb.setAttribute('aria-disabled','false')}else{bb.removeAttribute('href');bb.setAttribute('aria-disabled','true')}}}
-    $('dBody').querySelectorAll('.d-thumb').forEach(function(t){t.onclick=function(){var i=+t.dataset.i;$('dMain').src=im[i];$('dMain').alt=p.name+', photo '+(i+1)+' of '+im.length;$('dBody').querySelectorAll('.d-thumb').forEach(function(x){x.setAttribute('aria-current',String(x===t))})}});
+    gallery(im,p);
     if(p.remote&&!p.full&&window.SC_SHOP.loadPhotos&&!p.loading){p.loading=true;window.SC_SHOP.loadPhotos(p.id).then(function(u){p.full=true;p.loading=false;if(u&&u.length){p.images=u;if(dlg.open&&curId===id)openItem(id,false)}}).catch(function(){p.full=true;p.loading=false})}
     if(!dlg.open)lastFocus=document.activeElement;
     if(!dlg.open)dlg.showModal();
     if(push!==false){try{history.replaceState(null,'','#item='+encodeURIComponent(id))}catch(e){}}
   }
+
+  /* ---- gallery: arrows, swipe, keys, share ---- */
+  var curGal=null;
+  function gallery(im,p){
+    var gi=0,main=$('dMain'),body=$('dBody'),thumbs=[].slice.call(body.querySelectorAll('.d-thumb')),cnt=body.querySelector('.g-count'),tc=body.querySelector('.d-thumbs');
+    function show(i){
+      gi=(i+im.length)%im.length; main.src=im[gi]; main.alt=p.name+', photo '+(gi+1)+' of '+im.length;
+      thumbs.forEach(function(x,k){x.setAttribute('aria-current',String(k===gi))});
+      if(tc&&thumbs[gi])tc.scrollLeft=thumbs[gi].offsetLeft-(tc.clientWidth-thumbs[gi].offsetWidth)/2;
+      if(cnt)cnt.textContent=(gi+1)+' / '+im.length;
+      if(im.length>1){var n=new Image();n.src=im[(gi+1)%im.length]}
+    }
+    curGal=im.length>1?{show:show,get:function(){return gi}}:null;
+    thumbs.forEach(function(t){t.onclick=function(){show(+t.dataset.i)}});
+    var pv=body.querySelector('.g-prev'),nx=body.querySelector('.g-next');
+    if(pv)pv.onclick=function(e){e.stopPropagation();show(gi-1)};
+    if(nx)nx.onclick=function(e){e.stopPropagation();show(gi+1)};
+    function full(){openLb(im,gi,p.name,show)}
+    main.onclick=full; body.querySelector('.g-full').onclick=function(e){e.stopPropagation();full()};
+    var box=body.querySelector('.d-main'),sx=0,sy=0;
+    box.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+    box.addEventListener('touchend',function(e){var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(im.length>1&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)show(dx<0?gi+1:gi-1)},{passive:true});
+    var sh=$('dShare');
+    if(sh)sh.onclick=function(){
+      var url=location.origin+location.pathname+'#item='+encodeURIComponent(p.id),old='Share this item';
+      if(navigator.share){navigator.share({title:p.name,text:p.name+' on Second Chance',url:url}).catch(function(){});return}
+      var done=function(){sh.textContent='Link copied';setTimeout(function(){sh.textContent=old},2000)};
+      try{navigator.clipboard.writeText(url).then(done,function(){sh.textContent=url})}catch(e){sh.textContent=url}
+    };
+  }
+  dlg.addEventListener('keydown',function(e){
+    if(!curGal||lb.open)return;
+    if(e.key==='ArrowLeft'){curGal.show(curGal.get()-1);e.preventDefault()}
+    else if(e.key==='ArrowRight'){curGal.show(curGal.get()+1);e.preventDefault()}
+  });
+
+  /* ---- full screen viewer with zoom ---- */
+  var lb=$('lb'),lbImg=$('lbImg'),lbStage=$('lbStage'),L={ims:[],i:0,s:1,x:0,y:0,sync:null},ptrs={},g0=null,lastTap=0;
+  function lbApply(){
+    var w=lbImg.clientWidth*L.s,h=lbImg.clientHeight*L.s,mx=Math.max(0,(w-lbStage.clientWidth)/2),my=Math.max(0,(h-lbStage.clientHeight)/2);
+    if(L.s<=1.001){L.s=1;L.x=0;L.y=0}
+    L.x=Math.min(mx,Math.max(-mx,L.x));L.y=Math.min(my,Math.max(-my,L.y));
+    lbImg.style.transform='translate('+L.x+'px,'+L.y+'px) scale('+L.s+')';
+    lbStage.style.cursor=L.s>1?'grab':'zoom-in';
+  }
+  function lbZoom(f,cx,cy){
+    var r=lbStage.getBoundingClientRect();if(cx==null){cx=r.left+r.width/2;cy=r.top+r.height/2}
+    var px=cx-r.left-r.width/2,py=cy-r.top-r.height/2,ns=Math.min(5,Math.max(1,L.s*f)),k=ns/L.s;
+    L.x=px-(px-L.x)*k;L.y=py-(py-L.y)*k;L.s=ns;lbApply();
+  }
+  function lbShow(i){
+    var n=L.ims.length;L.i=(i+n)%n;L.s=1;L.x=0;L.y=0;lbImg.src=L.ims[L.i];lbImg.alt=L.alt+', photo '+(L.i+1)+' of '+n;
+    $('lbCount').textContent=n>1?(L.i+1)+' / '+n:'';
+    $('lbPrev').style.display=$('lbNext').style.display=n>1?'':'none';
+    lbApply();if(n>1){var q=new Image();q.src=L.ims[(L.i+1)%n]}
+  }
+  function openLb(ims,i,alt,sync){L.ims=ims;L.alt=alt;L.sync=sync;lb.showModal();lbShow(i);$('lbHint').style.opacity=1;setTimeout(function(){$('lbHint').style.opacity=0},3500)}
+  lb.addEventListener('close',function(){if(L.sync)L.sync(L.i)});
+  $('lbClose').onclick=function(){lb.close()};
+  $('lbPrev').onclick=function(){lbShow(L.i-1)};$('lbNext').onclick=function(){lbShow(L.i+1)};
+  $('lbIn').onclick=function(){lbZoom(1.5)};$('lbOut').onclick=function(){lbZoom(1/1.5)};
+  lb.addEventListener('keydown',function(e){
+    if(e.key==='ArrowLeft'){lbShow(L.i-1);e.preventDefault()}
+    else if(e.key==='ArrowRight'){lbShow(L.i+1);e.preventDefault()}
+    else if(e.key==='+'||e.key==='='){lbZoom(1.5)}
+    else if(e.key==='-'){lbZoom(1/1.5)}
+    else if(e.key==='0'){L.s=1;lbApply()}
+  });
+  lbStage.addEventListener('wheel',function(e){e.preventDefault();lbZoom(e.deltaY<0?1.2:1/1.2,e.clientX,e.clientY)},{passive:false});
+  lbStage.addEventListener('pointerdown',function(e){
+    lbStage.setPointerCapture&&lbStage.setPointerCapture(e.pointerId);
+    ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+    var ids=Object.keys(ptrs);
+    g0={sx:e.clientX,sy:e.clientY,ox:L.x,oy:L.y,t:Date.now(),moved:false,type:e.pointerType};
+    if(ids.length===2){var a=ptrs[ids[0]],b=ptrs[ids[1]];g0.d=Math.hypot(a.x-b.x,a.y-b.y);g0.s=L.s;g0.pinch=true}
+  });
+  lbStage.addEventListener('pointermove',function(e){
+    if(!ptrs[e.pointerId]||!g0)return;ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+    var ids=Object.keys(ptrs);
+    if(ids.length>=2&&g0.d){var a=ptrs[ids[0]],b=ptrs[ids[1]];L.s=Math.min(5,Math.max(1,g0.s*Math.hypot(a.x-b.x,a.y-b.y)/g0.d));g0.moved=true;lbApply();return}
+    var dx=e.clientX-g0.sx,dy=e.clientY-g0.sy;
+    if(Math.abs(dx)>6||Math.abs(dy)>6)g0.moved=true;
+    if(L.s>1&&!g0.pinch){L.x=g0.ox+dx;L.y=g0.oy+dy;lbApply()}
+  });
+  function lbUp(e){
+    if(!ptrs[e.pointerId])return;delete ptrs[e.pointerId];if(!g0)return;
+    if(Object.keys(ptrs).length){return}
+    var dx=e.clientX-g0.sx,dy=e.clientY-g0.sy,quick=Date.now()-g0.t<500;
+    if(!g0.moved&&!g0.pinch){
+      if(g0.type==='mouse'){if(L.s>1){L.s=1;lbApply()}else lbZoom(2.5,e.clientX,e.clientY)}
+      else{var now=Date.now();if(now-lastTap<320){if(L.s>1){L.s=1;lbApply()}else lbZoom(2.5,e.clientX,e.clientY);lastTap=0}else lastTap=now}
+    }else if(L.s<=1&&!g0.pinch&&quick&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5&&L.ims.length>1){lbShow(dx<0?L.i+1:L.i-1)}
+    g0=null;
+  }
+  lbStage.addEventListener('pointerup',lbUp);lbStage.addEventListener('pointercancel',lbUp);
+
   function closeItem(){if(dlg.open)dlg.close()}
   dlg.addEventListener('close',function(){try{history.replaceState(null,'',state.cat==='All'?location.pathname+location.search:'#cat='+encodeURIComponent(state.cat))}catch(e){}if(lastFocus&&lastFocus.focus)lastFocus.focus()});
   dlg.addEventListener('click',function(e){if(e.target===dlg)closeItem()});
