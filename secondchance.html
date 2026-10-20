@@ -140,6 +140,7 @@ select.field{background-image:linear-gradient(45deg,transparent 50%,var(--ink) 5
 .foot-fine{margin-top:36px;padding-top:20px;border-top:1px solid rgba(255,255,255,.18);font-size:.86rem;color:#A9B7AF}
 
 
+.own-find{display:flex;gap:8px;margin:0 0 12px}.own-find .field{flex:1;min-width:0}.own-find select.field{flex:0 0 auto;width:auto}
 /* photo gallery, arrows, full screen viewer, share */
 .d-main img{cursor:zoom-in}
 .g-btn{position:absolute;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--ink);box-shadow:0 1px 6px rgba(0,0,0,.18);padding:0}
@@ -835,7 +836,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 (function () {
   var OWNERS = ['thriftscout.official@gmail.com', 'jennibean007@gmail.com'], CFG = window.SHOP_CONFIG;
   var dlg = document.getElementById('own'), body = document.getElementById('ownBody'), FB = null;
-  var S = { user: null, items: [], orders: [], tab: 'draft', E: null, O: null };
+  var S = { user: null, items: [], orders: [], priv: {}, tab: 'draft', E: null, O: null, find: '', sort: 'new' };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var money = function (n) { return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0 }); };
   var $ = function (id) { return document.getElementById(id); };
@@ -874,9 +875,19 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   /* ---------- list ---------- */
   function load() {
     var F = FB.F;
-    return F.getDocs(F.collection(FB.db, 'shop_items')).then(function (s) {
-      S.items = s.docs.map(function (d) { var v = d.data(); v.id = d.id; return v; });
+    return Promise.all([F.getDocs(F.collection(FB.db, 'shop_items')), F.getDocs(F.collection(FB.db, 'shop_private')).catch(function () { return null; })]).then(function (r) {
+      S.items = r[0].docs.map(function (d) { var v = d.data(); v.id = d.id; return v; });
+      S.priv = {}; if (r[1]) r[1].docs.forEach(function (d) { S.priv[d.id] = d.data(); });
     });
+  }
+  function metaOf(id) { var q = S.priv[id] || {}; return [q.sku, q.loc].filter(Boolean).join(' · '); }
+  function rowAttrs(r) {
+    var q = S.priv[r.id] || {};
+    return ' data-id="' + esc(r.id) + '" data-s="' + esc([r.name, r.brand, r.category, r.size, q.sku, q.loc].filter(Boolean).join(' ')) + '" data-n="' + esc(r.name || '') + '" data-l="' + esc(q.loc || '') + '" data-p="' + (r.price || 0) + '" data-t="' + (r.updatedAt || r.createdAt || 0) + '"';
+  }
+  function nextSku() {
+    var m = 0; Object.keys(S.priv).forEach(function (k) { var x = /^SC-(\d+)$/.exec((S.priv[k] || {}).sku || ''); if (x) m = Math.max(m, parseInt(x[1], 10)); });
+    return 'SC-' + String(m + 1).padStart(4, '0');
   }
   var byTab = function (t) { return S.items.filter(function (x) { return (x.status || 'draft') === t; }).sort(function (a, b) { return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0); }); };
   function viewList() {
@@ -890,18 +901,35 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       var legacy = byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); });
       rowsHtml = (os.length || legacy.length) ? os.map(function (o) {
         var it = S.items.filter(function (x) { return x.id === o.itemId; })[0] || {}, im = (it.thumbs && it.thumbs[0]) || it.cover || '';
-        return '<button class="own-row" data-oid="' + esc(o.id) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(o.itemName) + '</b><span>' + esc(o.buyerName) + ' · ' + esc(statusOf(o)) + '</span></span><span class="p">' + money(num(o.salePrice)) + '</span></button>';
+        return '<button class="own-row" data-oid="' + esc(o.id) + '" data-s="' + esc([o.itemName, o.buyerName, (S.priv[o.itemId] || {}).sku, (S.priv[o.itemId] || {}).loc].filter(Boolean).join(' ')) + '" data-n="' + esc(o.itemName || '') + '" data-l="' + esc((S.priv[o.itemId] || {}).loc || '') + '" data-p="' + num(o.salePrice) + '" data-t="' + (o.soldAt || 0) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(o.itemName) + '</b><span>' + esc(o.buyerName) + ' · ' + esc(statusOf(o)) + '</span></span><span class="p">' + money(num(o.salePrice)) + '</span></button>';
       }).join('') + legacy.map(function (r) { return '<button class="own-row" data-id="' + esc(r.id) + '"><img alt="" src="' + esc((r.thumbs && r.thumbs[0]) || r.cover || '') + '"><span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>Sold, no sale record</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>'; }).join('') : '<div class="own-empty">Nothing sold yet.</div>';
     } else {
       var rows = byTab(S.tab);
       rowsHtml = rows.length ? rows.map(function (r) {
         var im = (r.thumbs && r.thumbs[0]) || r.cover || '';
-        return '<button class="own-row" data-id="' + esc(r.id) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos'].filter(Boolean).join(' · ')) + '</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
+        return '<button class="own-row"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id)].filter(Boolean).join(' · ')) + '</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
       }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
     }
     frame('<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
       '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '</div>' +
+      (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
       '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>');
+    if ($('oFind')) {
+      $('oSortSel').value = S.sort;
+      var applyFind = function () {
+        S.find = $('oFind').value; S.sort = $('oSortSel').value;
+        var q = S.find.toLowerCase().trim(), box = $('oRows'), rows = [].slice.call(box.querySelectorAll('.own-row')), so = S.sort;
+        var cmp = function (a, b) {
+          if (so === 'name') return (a.dataset.n || '').localeCompare(b.dataset.n || '');
+          if (so === 'loc') { var x = a.dataset.l || '\uffff', y = b.dataset.l || '\uffff'; return x.localeCompare(y) || (a.dataset.n || '').localeCompare(b.dataset.n || ''); }
+          if (so === 'price') return parseFloat(b.dataset.p || 0) - parseFloat(a.dataset.p || 0);
+          return parseFloat(b.dataset.t || 0) - parseFloat(a.dataset.t || 0);
+        };
+        rows.forEach(function (r) { r.style.display = (!q || (r.dataset.s || r.textContent).toLowerCase().indexOf(q) >= 0) ? '' : 'none'; });
+        rows.sort(cmp).forEach(function (r) { box.appendChild(r); });
+      };
+      $('oFind').oninput = applyFind; $('oSortSel').onchange = applyFind; applyFind();
+    }
     $('oNew').onclick = function () { openEditor(null); };
     $('oCam').onclick = function () { openEditor(null, 'cam'); };
     body.querySelectorAll('.own-tab').forEach(function (b) { b.onclick = function () { S.tab = b.dataset.t; viewList(); }; });
@@ -912,7 +940,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   /* ---------- editor ---------- */
   function openEditor(id, auto) {
     var F = FB.F, item = id ? S.items.filter(function (x) { return x.id === id; })[0] : null;
-    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, strength: 55, gen: 0, cost: '' };
+    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, strength: 55, gen: 0, cost: '', loc: '', sku: '' };
     frame('<div class="own-empty">Loading...</div>');
     if (!id) { viewEditor(); if (auto === 'cam') cam(); return; }
     var order = E.data.rawOrder || [];
@@ -922,7 +950,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     ]).then(function (r) {
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
       var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0; }));
-      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || '';
+      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || '';
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
   }
@@ -949,6 +977,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       '<div><label for="fWas">Old price (shows a sale)</label><input class="field" id="fWas" type="number" inputmode="decimal" min="0" step="0.01" value="' + (d.was || '') + '"></div>' +
       '<div><label for="fStripe">Stripe payment link</label><input class="field" id="fStripe" value="' + esc(d.stripe) + '" placeholder="https://buy.stripe.com/..."></div>' +
       '<div class="full"><label for="fDesc">Description and condition notes <i>*</i></label><textarea class="field" id="fDesc" placeholder="What it is, how it fits, any flaws. Be specific and honest.">' + esc(d.description) + '</textarea></div>' +
+      '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
       '<div class="own-form" style="margin-top:10px"><div><label for="fSellerName">Seller name</label><input class="field" id="fSellerName" value="' + esc(E.sellerName) + '"></div><div><label for="fSellerEmail">Seller email</label><input class="field" id="fSellerEmail" type="email" value="' + esc(E.sellerEmail) + '"></div></div>' +
@@ -998,7 +1027,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
     d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
-    E.cost = $('fCost').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
+    E.loc = g('fLoc'); E.cost = $('fCost').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
   function check(d, nPhotos) {
     var m = [];
@@ -1048,7 +1077,9 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       say('Saving details...');
       await F.setDoc(ref, up, { merge: true });
       var cost = parseFloat(E.cost);
-      if (cost >= 0 || E.sellerName || E.sellerEmail) await F.setDoc(F.doc(db, 'shop_private', E.id), { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '' }); else { try { await F.deleteDoc(F.doc(db, 'shop_private', E.id)); } catch (e) {} }
+      if (!E.sku) E.sku = nextSku();
+      await F.setDoc(F.doc(db, 'shop_private', E.id), { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku });
+      S.priv[E.id] = { sku: E.sku, loc: E.loc || '' };
       window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
       await load();
       S.tab = status === 'draft' ? 'draft' : status; viewList();
