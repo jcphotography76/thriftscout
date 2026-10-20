@@ -80,12 +80,12 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
       <span class="label">Second Chance</span><span class="tag">Curated secondhand finds</span>
     </button>
   </div>
-  <div class="foot"><a href="home.html">Skip to Thrift Scout</a><a href="secondchance.html">Skip to Second Chance</a></div>
+  <div class="foot"><a href="home.html">Skip to Thrift Scout</a><a href="secondchance.html" id="skipSc">Skip to Second Chance</a></div>
 </main>
 <div class="beta" id="beta" role="dialog" aria-modal="true" aria-labelledby="betaT"><div class="betacard">
 <span class="tag">BETA</span>
 <h1 id="betaT">Welcome. You are early.</h1>
-<p>Thrift Scout and Second Chance are being built right now. Both are free to use while in beta.</p>
+<p id="betaIntro">Thrift Scout is being built right now. It is free to use while in beta.</p>
 <h2>What you get as a beta tester</h2>
 <ul><li>Free full access while we build.</li><li>Your feedback shapes what we make next.</li><li>The first 26 accounts earn a permanent Founding Tester badge.</li></ul>
 <h2>What we collect</h2>
@@ -103,6 +103,8 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
 <div class="fade" id="fade"></div>
 <script>
 (function(){
+  /* LAUNCH SWITCH: false hides the Second Chance door. Change to true when the shop is ready to open. */
+  var SHOP_OPEN=false;
   var stage=document.getElementById('stage'),fade=document.getElementById('fade'),busy=false;
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function enter(el){
@@ -113,7 +115,9 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
     setTimeout(function(){el.classList.add('zoom');fade.classList.add('on');},1100);
     setTimeout(function(){location.href=T;},3000);
   }
-  ['thr','sc'].forEach(function(id){var e=document.getElementById(id);e.addEventListener('click',function(){enter(e)});});
+  if(!SHOP_OPEN){document.getElementById('sc').style.display='none';document.getElementById('skipSc').style.display='none';}
+  (SHOP_OPEN?['thr','sc']:['thr']).forEach(function(id){var e=document.getElementById(id);e.addEventListener('click',function(){enter(e)});});
+  window.TS_SHOP_OPEN=SHOP_OPEN;
   window.addEventListener('pageshow',function(e){if(e.persisted){busy=false;stage.classList.remove('busy');['thr','sc'].forEach(function(i){document.getElementById(i).classList.remove('go','zoom')});fade.className='fade';}});
 })();
 </script>
@@ -122,6 +126,7 @@ html,body{height:100%;background:#0d0f08;color:var(--text);font-family:var(--ser
   var TEXT_NUMBER='';/* e.g. '801-555-0123'. Leave empty to hide. */
   var K='ts_beta_ok_v1',b=document.getElementById('beta'),ok=false;
   try{ok=localStorage.getItem(K)==='1';}catch(e){}
+  if(window.TS_SHOP_OPEN){document.getElementById('betaIntro').textContent='Thrift Scout and Second Chance are being built right now. Both are free to use while in beta.';}
   if(TEXT_NUMBER){document.getElementById('betaTxt').textContent=' or text '+TEXT_NUMBER+' (text only, no calls)';}
   if(!ok){b.classList.add('show');document.getElementById('betaOk').focus({preventScroll:true});b.querySelector('.betacard').scrollTop=0;}
   document.getElementById('betaOk').addEventListener('click',function(){try{localStorage.setItem(K,'1');}catch(e){}b.classList.remove('show');});
