@@ -1846,14 +1846,14 @@ This is a plain-language starting document, not legal advice.</div>
           // quietly try again a few times before bothering the user. Same model every time.
           if (res.status === 503 || res.status === 500 || res.status === 502 || res.status === 504) {
             refund();
-            if (busyTries < 5) {
+            if (busyTries < 12) {
               busyTries++;
-              setProgress(`Google's AI is busy. Trying again (${busyTries}/5)...`, 55);
-              await sleep(2000 * busyTries);
+              setProgress(`Google's AI is busy. Still trying (${busyTries}/12). Keep this screen open...`, 55);
+              await sleep(Math.min(2000 * busyTries, 10000));
               mi--;
               continue;
             }
-            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 6 times over about 30 seconds. No scan was counted. Wait a minute and tap Retry; your photos are kept." };
+            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 13 times over about 2 minutes. No scan was counted. Wait a few minutes and tap Retry, or use Manual Entry. Your photos are kept." };
           }
           if (res.status === 404) continue;
           if (res.status === 429) return { ok: false, error: `Google says you're over the limit (429). ${msg}` };
