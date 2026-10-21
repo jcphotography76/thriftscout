@@ -551,6 +551,27 @@
           <div id="authTrackRow" style="display:none;"><label class="metric-label">Ranks</label>
             <select id="authTrack" class="input-field" style="margin-top:4px;"><option value="enl">Enlisted</option><option value="off">Officer</option></select></div>
           <div id="authSvcRow" style="display:none;"><select id="authSvc" class="input-field"><option value="">Active duty or veteran?</option><option value="active">Active duty</option><option value="vet">Veteran</option></select></div>
+          <details id="authHowBox" style="border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:var(--surface);">
+            <summary style="cursor:pointer; font-weight:800; font-size:.88rem; color:var(--accent);">Read first: how Thrift Scout works and what to expect</summary>
+            <div style="font-size:.8rem; line-height:1.55; color:var(--text); margin-top:10px; max-height:240px; overflow-y:auto; padding-right:6px;">
+              <b>How a scan works</b><br>
+              1. Take a photo of an item (or pick one from your gallery) and type the price the thrift store is asking.<br>
+              2. The app sends the photo to Google's Gemini AI, using your own Google API key. The AI reads any labels or tags it can see, names the item and estimates what it usually sells for secondhand.<br>
+              3. The app subtracts your cost and an estimated 13.25% selling fee from that value to show an estimated profit. It does not include shipping, supplies or your time.<br>
+              4. It gives a verdict from the estimated profit: PASS under $5, MONITOR from $5 to $15, BUY at $15 or more.<br>
+              5. You can save the item to your vault, and add closer photos with Verify to sharpen the answer.<br><br>
+              <b>What to expect</b><br>
+              &bull; <b>The value is an estimate, not a fact.</b> The AI can misread an item, miss a brand or be wrong about demand. A brand is only named if it can be read on a tag, logo or stamp. Check the item yourself before you buy.<br>
+              &bull; <b>You make every buying decision.</b> Thrift Scout is a helper, not financial advice, and it does not guarantee any profit.<br>
+              &bull; <b>Scans can fail or be slow.</b> The AI runs on Google's servers, not ours. Sometimes Google is overloaded and says "busy." The app keeps trying for about two minutes, and a failed scan is not counted. If it keeps failing, use Manual Entry to type the value yourself.<br>
+              &bull; <b>The AI meter</b> at the top shows whether Google's AI is ready, slow or busy, and whether your phone has a signal.<br>
+              &bull; <b>You need your own Google API key.</b> It is saved only on your device. Google sets its own limits and any charges. The "scans left" number in the app is a counter on your device, not Google's real limit.<br>
+              &bull; <b>You need a solid data connection.</b> Weak signal in a store can make a scan slow or fail.<br>
+              &bull; <b>Your account and items</b> are stored in our cloud database under your login. The photo thumbnail, item name and value from a scan may be added to a shared library, without your name or email, to help recognize items.<br>
+              &bull; <b>This is an early beta.</b> It may have bugs, change or be interrupted. It is free during beta and may change after.
+            </div>
+          </details>
+          <label class="auth-check"><input type="checkbox" id="authHow"><span>I have read how Thrift Scout works and what to expect, including that values are estimates and scans can be slow or fail when Google is busy.</span></label>
           <label class="auth-check"><input type="checkbox" id="authLock"><span><b>🔒 I understand my branch and service status are permanent</b> and cannot be changed after signup.</span></label>
           <label class="auth-check"><input type="checkbox" id="authTerms"><span>I have read and agree to the <button type="button" class="auth-link" id="openTermsBtn" style="padding:0;">Terms of Use</button>.</span></label>
           <label class="auth-check"><input type="checkbox" id="authCert"><span>I understand that values are estimates only, that I need my own Gemini key, and that every buying decision is mine.</span></label>
@@ -2891,7 +2912,8 @@ This is a plain-language starting document, not legal advice.</div>
           if (!$a('authBranch').value) { authError('Please pick your branch (or Civilian). It sets your rank ladder.'); return; }
           if (!$a('authLock').checked) { authError('Please confirm your branch choice is permanent.'); return; }
           if ($a('authBranch').value !== 'civ' && !$a('authSvc').value) { authError('Please pick Active duty or Veteran.'); return; }
-          if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all four required boxes to create an account.'); return; }
+          if (!$a('authHow').checked) { authError('Please open and read "how Thrift Scout works and what to expect", then tick its box.'); return; }
+          if (!$a('authTerms').checked || !$a('authCert').checked || !$a('authCov').checked || !$a('authAge').checked) { authError('Please check all the required boxes to create an account.'); return; }
           if (ageBlocked()) { showAgeLock(); return; }
           setAgeOk();
           setBranch($a('authBranch').value, $a('authTrack').value, $a('authSvc').value); grantServiceBonus();
@@ -2899,7 +2921,7 @@ This is a plain-language starting document, not legal advice.</div>
           if (auth.currentUser && auth.currentUser.isAnonymous) cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email, pass));
           else cred = await createUserWithEmailAndPassword(auth, email, pass);
           try {
-            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, certified: true, coverageAck: true, age18: true, branch: BRANCH, track: TRACK, service: SERVICE, svcBonus: SERVICE ? true : false, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
+            await setDoc(doc(db, 'users', cred.user.uid), { email, termsAcceptedAt: Date.now(), termsVersion: TERMS_VERSION, howAck: true, certified: true, coverageAck: true, age18: true, branch: BRANCH, track: TRACK, service: SERVICE, svcBonus: SERVICE ? true : false, newsletter: !!$a('authNews').checked, createdAt: Date.now(), isGuest: false }, { merge: true });
           } catch (e) { console.warn('Profile save failed', e); }
           claimFounder(cred.user.uid);
           if (IS_GUEST) { IS_GUEST = false; CURRENT_EMAIL = email; $a('meEmail').textContent = email; $a('authOverlay').classList.add('hidden'); updateGuestUI(); updatePills(); triggerAlert('Account created. Your scans and items are saved.', false, true); }
