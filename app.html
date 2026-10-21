@@ -219,7 +219,7 @@
 
         <div>
           <label class="metric-label" style="margin-bottom:4px; display:block;">Thrift Store Asking Price / Cost ($)</label>
-          <input type="number" id="itemCostInput" class="input-field" placeholder="0.00" value="0.00" step="0.01" min="0">
+          <input type="number" id="itemCostInput" class="input-field" inputmode="decimal" step="any" min="0" placeholder="0.00" value="" autocomplete="off" onfocus="this.select()">
         </div>
 
         <!-- Coin & MTG recon modes are built but hidden for the v1 launch -->
@@ -695,7 +695,7 @@ This is a plain-language starting document, not legal advice.</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
         <div>
           <label class="metric-label">Acquisition Cost ($)</label>
-          <input type="number" id="manualCostInput" class="input-field" placeholder="0.00" value="0.00" step="0.01">
+          <input type="number" id="manualCostInput" class="input-field" inputmode="decimal" step="any" placeholder="0.00" value="" onfocus="this.select()">
         </div>
         <div>
           <label class="metric-label">Target Resale ($)</label>
@@ -1679,7 +1679,6 @@ This is a plain-language starting document, not legal advice.</div>
 
     const costInput = document.getElementById('itemCostInput');
     costInput.addEventListener('focus', function () { if (this.value === '0.00' || this.value === '0') this.value = ''; });
-    costInput.addEventListener('blur', function () { if (this.value.trim() === '') this.value = '0.00'; });
 
     const coinToggle = document.getElementById('coinModeToggle');
     const mtgToggle = document.getElementById('mtgModeToggle');
@@ -1875,6 +1874,19 @@ This is a plain-language starting document, not legal advice.</div>
       return { ok: false, error: lastError };
     }
 
+    // Reads a price however the AI wrote it: 18, "18.00", "$18", "$18 to $25", "18-25". Ranges become the middle.
+    function parseMoney(v, fallbackText) {
+      const grab = (t) => {
+        const n = String(t == null ? '' : t).replace(/,/g, '').match(/\d+(?:\.\d+)?/g);
+        if (!n) return 0;
+        const a = parseFloat(n[0]), b = n.length > 1 ? parseFloat(n[1]) : NaN;
+        return (isFinite(b) && b > a && /(to|-|\u2013|\u2014)/i.test(String(t))) ? Math.round(((a + b) / 2) * 100) / 100 : a;
+      };
+      let x = typeof v === 'number' ? v : grab(v);
+      if (!(x > 0) && fallbackText) { const m = String(fallbackText).replace(/,/g, '').match(/\$\s*\d+(?:\.\d+)?(?:\s*(?:to|-|\u2013)\s*\$?\s*\d+(?:\.\d+)?)?/i); if (m) x = grab(m[0]); }
+      return isFinite(x) && x > 0 ? x : 0;
+    }
+
     function parseModelJson(text) {
       const cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
       return JSON.parse(cleaned);
@@ -1894,7 +1906,7 @@ This is a plain-language starting document, not legal advice.</div>
       if (res.ok) {
         try {
           const parsed = parseModelJson(res.text);
-          currentAppraisal.resale = parseFloat(parsed.resale) || currentAppraisal.resale;
+          currentAppraisal.resale = parseMoney(parsed.resale, parsed.intel) || currentAppraisal.resale;
           currentAppraisal.intel = parsed.intel || currentAppraisal.intel;
           currentAppraisal.profit = calcProfit(currentAppraisal.resale, currentAppraisal.cost || 0);
           recalculateDisposition(currentAppraisal);
@@ -1920,7 +1932,7 @@ This is a plain-language starting document, not legal advice.</div>
     document.getElementById('openManualEntryBtn').onclick = () => {
       playAudioFeedback('MONITOR', false, false);
       const prefill = parseFloat(document.getElementById('itemCostInput').value) || 0.00;
-      document.getElementById('manualCostInput').value = prefill > 0 ? prefill.toFixed(2) : '0.00';
+      document.getElementById('manualCostInput').value = prefill > 0 ? prefill.toFixed(2) : '';
       manualModal.classList.add('active');
     };
     document.getElementById('closeManualEntryBtn').onclick = () => manualModal.classList.remove('active');
@@ -2296,7 +2308,7 @@ This is a plain-language starting document, not legal advice.</div>
           const parsed = parseModelJson(res.text);
           const newBrand = parsed.brand || item.brand;
           const newItem = parsed.item || item.item;
-          const newResale = parseFloat(parsed.resale);
+          const newResale = parseMoney(parsed.resale, parsed.intel) || NaN;
           const finalResale = isNaN(newResale) ? item.resale : newResale;
           const finalProfit = calcProfit(finalResale, item.cost || 0);
 
@@ -2613,7 +2625,7 @@ This is a plain-language starting document, not legal advice.</div>
       currentPhash = null;
       document.getElementById('imagePreviewContainer').innerHTML = '';
       document.getElementById('imagePreviewContainer').style.display = 'none';
-      document.getElementById('itemCostInput').value = '0.00';
+      document.getElementById('itemCostInput').value = '';
       mobileGalleryInput.value = '';
     }
 
@@ -2682,7 +2694,7 @@ This is a plain-language starting document, not legal advice.</div>
         const parsed = parseModelJson(result.text);
         const parsedBrand = parsed.brand || (isMtgMode ? 'Wizards of the Coast' : (isCoinMode ? 'US Mint' : 'Unbranded'));
         const parsedItem = parsed.item || 'Identified Asset';
-        const estResale = parseFloat(parsed.resale) || 0.00;
+        const estResale = parseMoney(parsed.resale, parsed.intel);
         const estProfit = calcProfit(estResale, itemCost);
 
         let dispText = "BUY (INSTANT FLIP)", verdictType = 'BUY', isJackpot = estProfit >= 50.00;
@@ -2707,7 +2719,7 @@ This is a plain-language starting document, not legal advice.</div>
           status: 'owned', createdAt: Date.now()
         };
 
-        if (!result.cached) {
+        if (!result.cached && estResale > 0) {
           // Log every live scan (kept or not) so the history database keeps growing. Never blocks the UI.
           addDoc(collection(db, 'scout_history'), {
             brand: parsedBrand, item: parsedItem, resale: estResale, cost: itemCost,
@@ -2720,7 +2732,8 @@ This is a plain-language starting document, not legal advice.</div>
 
         renderAppraisal(currentAppraisal);
         resetScanInputs();
-        triggerAlert(result.cached
+        if (estResale <= 0 && !isMtgMode && !isCoinMode) { logScan({ ok: false, err: 'no value in answer: ' + String(result.text).slice(0, 160) }); triggerAlert('The AI looked at it but gave no price. Tap Retry to scan again, or enter the value by hand.', true, true); document.getElementById('smartRetryBtn').style.display = 'block'; }
+        else triggerAlert(result.cached
           ? 'Instant match from your scan history. No AI call used.'
           : `Scan finished in ${result.secs}s (${result.model}).`, false, false);
       } catch (err) {
