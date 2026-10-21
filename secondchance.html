@@ -257,6 +257,12 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 .own-form textarea.field{height:120px;padding:10px 14px;resize:vertical}
 .own-form .priv{background:#F7F4EE;border:1px dashed #CFCAC2;padding:10px 12px}
 .own-form .priv small{display:block;margin-top:4px;color:#6b675f}
+.int-step{display:flex;gap:8px;align-items:center;margin:5px 0;font-size:.92rem}
+.dfrow{border:1px solid #E1DCD3;background:#fff;padding:8px;margin:8px 0;display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;align-items:start}
+.dfrow img,.dfrow .ph0{width:64px;height:64px;object-fit:cover;border:1px solid #E1DCD3;background:#f1eee7;font-size:.62rem;color:#a33;display:flex;align-items:center;text-align:center;justify-content:center}
+.dfrow .btn{min-height:36px;padding:0 12px;font-size:.82rem}
+.pullbox{border:2px solid var(--brass);padding:12px;margin-bottom:14px;background:#fffdf8}
+.music-btn{background:none;border:0;font:inherit;font-size:.9rem;color:var(--soft);cursor:pointer;padding:15px 4px;white-space:nowrap;margin-left:auto;margin-right:14px}.music-btn:hover{color:var(--ink)}
 .own-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
 .own-bar .grow{flex:1}
 .own-err{background:#FBF1F2;border:1px solid #E8C4C9;color:var(--sale);padding:10px 14px;margin-top:14px;font-size:.9rem}
@@ -833,11 +839,99 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 
 </script>
 <script>
+/* Minimal QR code generator (byte mode, error correction M, versions 1 to 6). Written for Thrift Scout. */
+var TSQR=(function(){
+  var EXP=new Array(512),LOG=new Array(256),i,x=1;
+  for(i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11d}
+  for(i=255;i<512;i++)EXP[i]=EXP[i-255];
+  function mul(a,b){return a&&b?EXP[LOG[a]+LOG[b]]:0}
+  function gen(n){var g=[1],k,j;for(k=0;k<n;k++){var ng=new Array(g.length+1).fill(0);for(j=0;j<g.length;j++){ng[j]^=g[j];ng[j+1]^=mul(g[j],EXP[k])}g=ng}return g}
+  function rs(data,n){var g=gen(n),r=new Array(n).fill(0),k,j;for(k=0;k<data.length;k++){var f=data[k]^r[0];r.shift();r.push(0);for(j=0;j<n;j++)r[j]^=mul(g[j+1],f)}return r}
+  /* version: [ecPerBlock, [[count, dataPerBlock], ...]] */
+  var VER={1:[10,[[1,16]]],2:[16,[[1,28]]],3:[26,[[1,44]]],4:[18,[[2,32]]],5:[24,[[2,43]]],6:[16,[[4,27]]]};
+  var ALIGN={1:[],2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34]};
+  function cap(v){var s=0;VER[v][1].forEach(function(b){s+=b[0]*b[1]});return s}
+  function bch(v,poly,hb){var d=v<<(poly.toString(2).length-1);while(d.toString(2).length>=poly.toString(2).length)d^=poly<<(d.toString(2).length-poly.toString(2).length);return d}
+  function fmt(mask){var data=(0<<3)|mask,d=data<<10,g=0x537,k;for(k=14;k>=10;k--)if(d>>k&1)d^=g<<(k-10);return((data<<10)|d)^0x5412}
+  function build(text){
+    var bytes=[],k;for(k=0;k<text.length;k++){var c=text.charCodeAt(k);if(c<128)bytes.push(c);else{var u=unescape(encodeURIComponent(text.charAt(k)));for(var q=0;q<u.length;q++)bytes.push(u.charCodeAt(q))}}
+    var v=1;while(v<=6&&bytes.length>cap(v)-2)v++;
+    if(v>6)throw new Error('QR text too long');
+    var bits=[];function put(val,n){for(var b=n-1;b>=0;b--)bits.push(val>>b&1)}
+    put(4,4);put(bytes.length,8);bytes.forEach(function(b){put(b,8)});
+    var total=cap(v)*8,t=Math.min(4,total-bits.length);put(0,t);while(bits.length%8)bits.push(0);
+    var pad=[0xec,0x11],pi=0;while(bits.length<total){put(pad[pi++%2],8)}
+    var cw=[];for(k=0;k<bits.length;k+=8){var byte=0;for(var b=0;b<8;b++)byte=(byte<<1)|bits[k+b];cw.push(byte)}
+    var ec=VER[v][0],blocks=[],pos=0;
+    VER[v][1].forEach(function(g){for(var n=0;n<g[0];n++){blocks.push(cw.slice(pos,pos+g[1]));pos+=g[1]}});
+    var ecs=blocks.map(function(b){return rs(b,ec)}),out=[],maxd=Math.max.apply(null,blocks.map(function(b){return b.length}));
+    for(k=0;k<maxd;k++)blocks.forEach(function(b){if(k<b.length)out.push(b[k])});
+    for(k=0;k<ec;k++)ecs.forEach(function(e){out.push(e[k])});
+    var fb=[];out.forEach(function(b){for(var z=7;z>=0;z--)fb.push(b>>z&1)});
+    if(v>1)for(k=0;k<7;k++)fb.push(0);
+    return {v:v,bits:fb};
+  }
+  function matrix(text){
+    var r=build(text),v=r.v,N=17+4*v,M=[],F=[],y,xx;
+    for(y=0;y<N;y++){M.push(new Array(N).fill(0));F.push(new Array(N).fill(false))}
+    function set(a,b,val){M[b][a]=val?1:0;F[b][a]=true}
+    function finder(cx,cy){for(var dy=-1;dy<=7;dy++)for(var dx=-1;dx<=7;dx++){var a=cx+dx,b=cy+dy;if(a<0||b<0||a>=N||b>=N)continue;var on=(dx>=0&&dx<=6&&(dy==0||dy==6))||(dy>=0&&dy<=6&&(dx==0||dx==6))||(dx>=2&&dx<=4&&dy>=2&&dy<=4);set(a,b,on)}}
+    finder(0,0);finder(N-7,0);finder(0,N-7);
+    for(var i2=8;i2<N-8;i2++){set(i2,6,i2%2==0);set(6,i2,i2%2==0)}
+    var al=ALIGN[v];al.forEach(function(ay){al.forEach(function(ax){if((ax==6&&ay==6)||(ax==6&&ay==al[al.length-1])||(ax==al[al.length-1]&&ay==6))return;for(var dy=-2;dy<=2;dy++)for(var dx=-2;dx<=2;dx++)set(ax+dx,ay+dy,Math.max(Math.abs(dx),Math.abs(dy))!=1)})});
+    set(8,N-8,1);
+    /* reserve format areas */
+    for(i2=0;i2<9;i2++){if(!F[8][i2])set(i2,8,0);if(!F[i2][8])set(8,i2,0)}
+    for(i2=0;i2<8;i2++){set(N-1-i2,8,0);if(i2<7)set(8,N-1-i2,0)}
+    set(8,N-8,1);
+    /* place data */
+    var bi=0,up=true;
+    for(var col=N-1;col>0;col-=2){if(col==6)col--;for(var n=0;n<N;n++){y=up?N-1-n:n;for(var c2=0;c2<2;c2++){xx=col-c2;if(!F[y][xx]){M[y][xx]=bi<r.bits.length?r.bits[bi]:0;bi++}}}up=!up}
+    var best=null,bestS=1e9;
+    for(var mask=0;mask<8;mask++){
+      var T=M.map(function(row){return row.slice()});
+      for(y=0;y<N;y++)for(xx=0;xx<N;xx++)if(!F[y][xx]){var m;switch(mask){case 0:m=(y+xx)%2==0;break;case 1:m=y%2==0;break;case 2:m=xx%3==0;break;case 3:m=(y+xx)%3==0;break;case 4:m=(Math.floor(y/2)+Math.floor(xx/3))%2==0;break;case 5:m=(y*xx)%2+(y*xx)%3==0;break;case 6:m=((y*xx)%2+(y*xx)%3)%2==0;break;default:m=((y+xx)%2+(y*xx)%3)%2==0}if(m)T[y][xx]^=1}
+      var f=fmt(mask);
+      function sb(px,py,i){T[py][px]=f>>i&1}
+      for(i2=0;i2<=5;i2++)sb(8,i2,i2);
+      sb(8,7,6);sb(8,8,7);sb(7,8,8);
+      for(i2=9;i2<15;i2++)sb(14-i2,8,i2);
+      for(i2=0;i2<8;i2++)sb(N-1-i2,8,i2);
+      for(i2=8;i2<15;i2++)sb(8,N-15+i2,i2);
+      T[N-8][8]=1;
+      var s=penalty(T,N);if(s<bestS){bestS=s;best=T}
+    }
+    return best;
+  }
+  function penalty(T,N){
+    var s=0,y,x,k;
+    for(var pass=0;pass<2;pass++){for(y=0;y<N;y++){var run=1;for(x=1;x<N;x++){var a=pass?T[x][y]:T[y][x],b=pass?T[x-1][y]:T[y][x-1];if(a==b){run++;if(run==5)s+=3;else if(run>5)s++}else run=1}}}
+    for(y=0;y<N-1;y++)for(x=0;x<N-1;x++){var c=T[y][x];if(c==T[y][x+1]&&c==T[y+1][x]&&c==T[y+1][x+1])s+=3}
+    var pat1=[1,0,1,1,1,0,1,0,0,0,0],pat2=[0,0,0,0,1,0,1,1,1,0,1];
+    for(y=0;y<N;y++)for(x=0;x<=N-11;x++){var m1=true,m2=true,m3=true,m4=true;for(k=0;k<11;k++){if(T[y][x+k]!=pat1[k])m1=false;if(T[y][x+k]!=pat2[k])m2=false;if(T[x+k][y]!=pat1[k])m3=false;if(T[x+k][y]!=pat2[k])m4=false}if(m1)s+=40;if(m2)s+=40;if(m3)s+=40;if(m4)s+=40}
+    var dark=0;for(y=0;y<N;y++)for(x=0;x<N;x++)dark+=T[y][x];
+    s+=Math.floor(Math.abs(dark*100/(N*N)-50)/5)*10;
+    return s;
+  }
+  function svg(text,px){
+    var M=matrix(text),N=M.length,q=4,S=N+2*q,d='',y,x;
+    for(y=0;y<N;y++)for(x=0;x<N;x++)if(M[y][x])d+='M'+(x+q)+' '+(y+q)+'h1v1h-1z';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+S+' '+S+'" width="'+px+'" height="'+px+'" shape-rendering="crispEdges"><rect width="'+S+'" height="'+S+'" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>';
+  }
+  return {matrix:matrix,svg:svg};
+})();
+if(typeof module!=='undefined')module.exports=TSQR;
+
+</script>
+<script>
 /* ---- Owner area: sign in, holding pile, evaluate, publish ---- */
 (function () {
   var OWNERS = ['thriftscout.official@gmail.com', 'jennibean007@gmail.com'], CFG = window.SHOP_CONFIG;
   var dlg = document.getElementById('own'), body = document.getElementById('ownBody'), FB = null;
   var S = { user: null, items: [], orders: [], priv: {}, tab: 'draft', E: null, O: null, find: '', sort: 'new' };
+  var INTAKE = [['clean', 'Cleaned and tidied'], ['research', 'Researched (brand, value, history)'], ['photo', 'Photographed'], ['measure', 'Weighed and measured'], ['tag', 'Label printed and attached']];
+  var intakeN = function (q) { return INTAKE.filter(function (k) { return q && q.intake && q.intake[k[0]]; }).length; };
+  var toShip = function () { return S.orders.filter(function (o) { return !o.shippedAt; }); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var money = function (n) { return '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0 }); };
   var $ = function (id) { return document.getElementById(id); };
@@ -881,7 +975,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       S.priv = {}; if (r[1]) r[1].docs.forEach(function (d) { S.priv[d.id] = d.data(); });
     });
   }
-  function metaOf(id) { var q = S.priv[id] || {}; return [q.sku, q.loc].filter(Boolean).join(' · '); }
+  function metaOf(id, showIntake) { var q = S.priv[id] || {}, n = intakeN(q); return [q.sku, q.loc, showIntake && n < INTAKE.length ? 'Intake ' + n + '/' + INTAKE.length : ''].filter(Boolean).join(' · '); }
   function rowAttrs(r) {
     var q = S.priv[r.id] || {};
     return ' data-id="' + esc(r.id) + '" data-s="' + esc([r.name, r.brand, r.category, r.size, q.sku, q.loc].filter(Boolean).join(' ')) + '" data-n="' + esc(r.name || '') + '" data-l="' + esc(q.loc || '') + '" data-p="' + (r.price || 0) + '" data-t="' + (r.updatedAt || r.createdAt || 0) + '"';
@@ -893,25 +987,25 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   var byTab = function (t) { return S.items.filter(function (x) { return (x.status || 'draft') === t; }).sort(function (a, b) { return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0); }); };
   function viewList() {
     S.E = null; S.O = null;
-    var tabs = [['draft', 'Holding pile'], ['available', 'Live'], ['sold', 'Sold'], ['ledger', 'Ledger']];
-    var cnt = function (t) { return t === 'sold' ? (S.orders.length + byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); }).length) : t === 'ledger' ? S.orders.length : byTab(t).length; };
+    var tabs = [['draft', 'Holding pile'], ['available', 'Live'], ['toship', 'To ship'], ['sold', 'Sold'], ['ledger', 'Ledger']];
+    var cnt = function (t) { return t === 'toship' ? toShip().length : t === 'sold' ? (S.orders.length + byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); }).length) : t === 'ledger' ? S.orders.length : byTab(t).length; };
     var rowsHtml;
     if (S.tab === 'ledger') rowsHtml = ledgerHtml();
-    else if (S.tab === 'sold') {
-      var os = S.orders.slice().sort(function (a, b) { return (b.soldAt || 0) - (a.soldAt || 0); });
-      var legacy = byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); });
+    else if (S.tab === 'sold' || S.tab === 'toship') {
+      var os = S.orders.slice().sort(function (a, b) { return (b.soldAt || 0) - (a.soldAt || 0); }); if (S.tab === 'toship') os = os.filter(function (o) { return !o.shippedAt; });
+      var legacy = S.tab === 'toship' ? [] : byTab('sold').filter(function (i) { return !S.orders.some(function (o) { return o.itemId === i.id; }); });
       rowsHtml = (os.length || legacy.length) ? os.map(function (o) {
         var it = S.items.filter(function (x) { return x.id === o.itemId; })[0] || {}, im = (it.thumbs && it.thumbs[0]) || it.cover || '';
-        return '<button class="own-row" data-oid="' + esc(o.id) + '" data-s="' + esc([o.itemName, o.buyerName, (S.priv[o.itemId] || {}).sku, (S.priv[o.itemId] || {}).loc].filter(Boolean).join(' ')) + '" data-n="' + esc(o.itemName || '') + '" data-l="' + esc((S.priv[o.itemId] || {}).loc || '') + '" data-p="' + num(o.salePrice) + '" data-t="' + (o.soldAt || 0) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(o.itemName) + '</b><span>' + esc(o.buyerName) + ' · ' + esc(statusOf(o)) + '</span></span><span class="p">' + money(num(o.salePrice)) + '</span></button>';
-      }).join('') + legacy.map(function (r) { return '<button class="own-row" data-id="' + esc(r.id) + '"><img alt="" src="' + esc((r.thumbs && r.thumbs[0]) || r.cover || '') + '"><span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>Sold, no sale record</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>'; }).join('') : '<div class="own-empty">Nothing sold yet.</div>';
+        return '<button class="own-row" data-oid="' + esc(o.id) + '" data-s="' + esc([o.itemName, o.buyerName, (S.priv[o.itemId] || {}).sku, (S.priv[o.itemId] || {}).loc].filter(Boolean).join(' ')) + '" data-n="' + esc(o.itemName || '') + '" data-l="' + esc((S.priv[o.itemId] || {}).loc || '') + '" data-p="' + num(o.salePrice) + '" data-t="' + (o.soldAt || 0) + '">' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(o.itemName) + '</b><span>' + (S.tab === 'toship' ? 'PULL ' + esc(metaOf(o.itemId) || 'item') + ' · ' : '') + esc(o.buyerName) + ' · ' + esc(statusOf(o)) + '</span></span><span class="p">' + money(num(o.salePrice)) + '</span></button>';
+      }).join('') + legacy.map(function (r) { return '<button class="own-row" data-id="' + esc(r.id) + '"><img alt="" src="' + esc((r.thumbs && r.thumbs[0]) || r.cover || '') + '"><span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>Sold, no sale record</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>'; }).join('') : '<div class="own-empty">' + (S.tab === 'toship' ? 'Nothing is waiting to ship.' : 'Nothing sold yet.') + '</div>';
     } else {
       var rows = byTab(S.tab);
       rowsHtml = rows.length ? rows.map(function (r) {
         var im = (r.thumbs && r.thumbs[0]) || r.cover || '';
-        return '<button class="own-row"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id)].filter(Boolean).join(' · ')) + '</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
+        return '<button class="own-row"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, S.tab === 'draft')].filter(Boolean).join(' · ')) + '</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
       }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
     }
-    frame('<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
+    frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
       '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '</div>' +
       (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
       '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>');
@@ -931,6 +1025,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       };
       $('oFind').oninput = applyFind; $('oSortSel').onchange = applyFind; applyFind();
     }
+    if ($('oTsBan')) $('oTsBan').onclick = function () { S.tab = 'toship'; viewList(); };
     $('oNew').onclick = function () { openEditor(null); };
     $('oCam').onclick = function () { openEditor(null, 'cam'); };
     body.querySelectorAll('.own-tab').forEach(function (b) { b.onclick = function () { S.tab = b.dataset.t; viewList(); }; });
@@ -941,7 +1036,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   /* ---------- editor ---------- */
   function openEditor(id, auto) {
     var F = FB.F, item = id ? S.items.filter(function (x) { return x.id === id; })[0] : null;
-    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, strength: 55, gen: 0, cost: '', loc: '', sku: '' };
+    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, strength: 55, gen: 0, cost: '', loc: '', sku: '', intake: {}, wt: '', dL: '', dW: '', dH: '', res: '', defects: [], dfImg: {}, dfNew: {}, dfGone: [], noDf: false };
     frame('<div class="own-empty">Loading...</div>');
     if (!id) { viewEditor(); if (auto === 'cam') cam(); return; }
     var order = E.data.rawOrder || [];
@@ -950,10 +1045,58 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       F.getDoc(F.doc(FB.db, 'shop_private', id)).catch(function () { return null; })
     ]).then(function (r) {
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
-      var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0; }));
+      var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0 && k.indexOf('df_') !== 0; }));
       var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || '';
+      E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf;
+      E.defects = (pv.defects || []).map(function (x) { return { id: x.id, text: x.text || '' }; }); E.defects.forEach(function (x) { if (map['df_' + x.id]) E.dfImg[x.id] = map['df_' + x.id]; });
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
+  }
+
+  function intakeUi() {
+    var E = S.E, n = 0; body.querySelectorAll('.inS').forEach(function (c) { E.intake[c.dataset.k] = c.checked; if (c.checked) n++; });
+    if ($('inCount')) $('inCount').textContent = n + ' of ' + INTAKE.length + ' done';
+    var w = num($('fWt').value), L = num($('fL').value), W = num($('fW').value), H = num($('fH').value);
+    if ($('boxHint')) $('boxHint').textContent = (L && W && H) ? 'Box to buy: at least ' + (Math.ceil(L) + 2) + ' x ' + (Math.ceil(W) + 2) + ' x ' + (Math.ceil(H) + 2) + ' in (item plus 1 in of padding each side).' + (w ? ' Item weighs ' + Math.floor(w / 16) + ' lb ' + Math.round((w % 16) * 10) / 10 + ' oz before packing.' : '') : 'Enter weight and length, width and height so you know what box to buy.';
+  }
+  function dfSrc(v) { return v && v.getContext ? SC.fit(v, v.width, v.height, 160).toDataURL('image/jpeg', 0.7) : (v || ''); }
+  function renderDefects() {
+    var E = S.E, box = $('dfList'); if (!box) return;
+    box.innerHTML = E.defects.map(function (x) {
+      var img = E.dfImg[x.id];
+      return '<div class="dfrow" data-id="' + x.id + '">' + (img ? '<img alt="Flaw photo" src="' + dfSrc(img) + '">' : '<div class="ph0">Photo needed</div>') +
+        '<div><input class="field dfTxt" placeholder="Describe the flaw (small stain on left cuff)" value="' + esc(x.text) + '"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line dfCam">📷 Photo</button><button type="button" class="btn btn-line dfFile">From device</button><button type="button" class="btn btn-line dfRm">Remove</button></div></div></div>';
+    }).join('');
+    box.querySelectorAll('.dfrow').forEach(function (row) {
+      var id = row.dataset.id, df = E.defects.filter(function (x) { return x.id === id; })[0];
+      row.querySelector('.dfTxt').oninput = function () { df.text = this.value; };
+      var got = function (c) { E.dfImg[id] = c; E.dfNew[id] = c; renderDefects(); };
+      row.querySelector('.dfCam').onclick = function () { SC.camera(got, function () {}, 0); };
+      row.querySelector('.dfFile').onclick = function () { SC.pick(got); };
+      row.querySelector('.dfRm').onclick = function () { E.defects = E.defects.filter(function (x) { return x !== df; }); if (!E.dfNew[id]) E.dfGone.push(id); delete E.dfImg[id]; delete E.dfNew[id]; renderDefects(); };
+    });
+  }
+  function labelUrl(sku) { return base() + '#sku=' + sku; }
+  function labelHtml(kind) {
+    var E = S.E, big = kind === '4x6', nm = ($('fName') ? $('fName').value : E.data.name) || '', loc = ($('fLoc') ? $('fLoc').value : E.loc) || '';
+    var svg = TSQR.svg(labelUrl(E.sku), 300).replace('<svg ', '<svg style="width:100%;height:auto;display:block" ');
+    var W = big ? '4in' : '2in', H = big ? '6in' : '2in', q = big ? '3.3in' : '1.2in', f1 = big ? '40pt' : '13pt', f2 = big ? '18pt' : '6.5pt';
+    return '<div style="box-sizing:border-box;width:' + W + ';height:' + H + ';padding:' + (big ? '.3in' : '.07in') + ';display:flex;flex-direction:column;align-items:center;justify-content:' + (big ? 'flex-start' : 'center') + ';gap:' + (big ? '.2in' : '.02in') + ';font-family:Arial,sans-serif;color:#000;background:#fff;overflow:hidden;text-align:center"><div style="width:' + q + '">' + svg + '</div>' +
+      '<div style="font-size:' + f1 + ';font-weight:700;letter-spacing:.04em;line-height:1">' + esc(E.sku) + '</div>' +
+      '<div style="font-size:' + f2 + ';line-height:1.15;max-width:100%;max-height:' + (big ? '1.2in' : '.32in') + ';overflow:hidden">' + esc(nm.slice(0, big ? 80 : 34)) + '</div>' +
+      (loc ? '<div style="font-size:' + f2 + ';font-weight:700">' + esc(loc.slice(0, big ? 40 : 22)) + '</div>' : '') + '</div>';
+  }
+  function printLabel(kind) {
+    var big = kind === '4x6', f = document.createElement('iframe'); f.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'); document.body.appendChild(f);
+    var doc = f.contentWindow.document; doc.open(); doc.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:' + (big ? '4in 6in' : '2in 2in') + ';margin:0}html,body{margin:0;padding:0}</style></head><body>' + labelHtml(kind) + '</body></html>'); doc.close();
+    setTimeout(function () { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) {} setTimeout(function () { f.remove(); }, 60000); }, 300);
+  }
+  function renderQr() {
+    var E = S.E, box = $('qrBox'); if (!box) return;
+    if (!E.sku) { box.innerHTML = '<small>Save this item once to get its item number. The QR label appears here after that.</small>'; return; }
+    box.innerHTML = '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px"><div style="border:1px solid #CFCAC2;display:inline-block">' + labelHtml('2in') + '</div><div style="display:flex;flex-direction:column;gap:8px"><button type="button" class="btn btn-line" id="qr2">Print 2-inch label</button><button type="button" class="btn btn-line" id="qr4">Print 4 x 6 label</button></div></div>' +
+      '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
+    $('qr2').onclick = function () { printLabel('2in'); }; $('qr4').onclick = function () { printLabel('4x6'); };
   }
   function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length); }
   function addPhoto(c) { var E = S.E; if (E.raw.length >= 8) { say('The limit is 8 photos per item.', 'bad'); return; } E.raw.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), canvas: c, saved: false }); E.dirty = true; renderPhotos(); }
@@ -978,6 +1121,13 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       '<div><label for="fWas">Old price (shows a sale)</label><input class="field" id="fWas" type="number" inputmode="decimal" min="0" step="0.01" value="' + (d.was || '') + '"></div>' +
       '<div><label for="fStripe">Stripe payment link</label><input class="field" id="fStripe" value="' + esc(d.stripe) + '" placeholder="https://buy.stripe.com/..."></div>' +
       '<div class="full"><label for="fDesc">Description and condition notes <i>*</i></label><textarea class="field" id="fDesc" placeholder="What it is, how it fits, any flaws. Be specific and honest.">' + esc(d.description) + '</textarea></div>' +
+      '<div class="full priv"><b>Intake</b> <span id="inCount" style="color:#6b675f"></span><div style="margin-top:6px">' + INTAKE.map(function (k) { return '<label class="int-step"><input type="checkbox" class="inS" data-k="' + k[0] + '"' + (E.intake[k[0]] ? ' checked' : '') + '> ' + esc(k[1]) + '</label>'; }).join('') + '</div>' +
+      '<div class="own-form" style="margin-top:8px;grid-template-columns:repeat(2,minmax(0,1fr))"><div><label for="fWt">Weight, ounces <i>*</i></label><input class="field" id="fWt" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.wt) + '"></div><div></div>' +
+      '<div><label for="fL">Length, inches</label><input class="field" id="fL" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.dL) + '"></div><div><label for="fW">Width, inches</label><input class="field" id="fW" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.dW) + '"></div><div><label for="fH">Height, inches</label><input class="field" id="fH" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.dH) + '"></div></div>' +
+      '<small id="boxHint"></small><label for="fRes" style="margin-top:10px">Research notes (private)</label><textarea class="field" id="fRes" style="height:90px;padding:10px 14px" placeholder="Brand history, comparable sales, what to mention in the description">' + esc(E.res) + '</textarea></div>' +
+      '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
+      '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
+      '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
@@ -991,6 +1141,11 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var sync = function () { var n = CFG.needsSize.indexOf($('fCat').value) >= 0; $('sizeReq').textContent = n ? '*' : ''; $('measReq').textContent = n ? '*' : ''; };
     $('fCat').onchange = sync; sync();
     $('oAddCam').onclick = cam; $('oAddFile').onclick = function () { SC.pick(addPhoto); };
+    body.querySelectorAll('.inS').forEach(function (c) { c.onchange = function () { E.intake[c.dataset.k] = c.checked; intakeUi(); }; });
+    ['fWt', 'fL', 'fW', 'fH'].forEach(function (k) { $(k).oninput = intakeUi; });
+    $('fNoDf').onchange = function () { E.noDf = this.checked; };
+    $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
+    intakeUi(); renderDefects(); renderQr();
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
     $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
     $('oBack').onclick = function () { viewList(); };
@@ -1028,7 +1183,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
     d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
-    E.loc = g('fLoc'); E.cost = $('fCost').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
+    E.loc = g('fLoc'); E.wt = g('fWt'); E.dL = g('fL'); E.dW = g('fW'); E.dH = g('fH'); E.res = g('fRes'); E.noDf = $('fNoDf').checked; intakeUi(); E.cost = $('fCost').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
   function check(d, nPhotos) {
     var m = [];
@@ -1040,6 +1195,14 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     if (nPhotos < CFG.minPhotos) m.push('At least ' + CFG.minPhotos + ' photos (you have ' + nPhotos + ')');
     if (d.was > 0 && d.was <= d.price) m.push('Old price must be higher than the price');
     if (d.stripe && !/^https:\/\//.test(d.stripe)) m.push('Stripe link must start with https://');
+    var E = S.E; if (E) {
+      E.defects.forEach(function (x) { if (!x.text.trim()) m.push('Describe the flaw you added'); if (!E.dfImg[x.id]) m.push('Photo of flaw: ' + (x.text || 'untitled')); });
+      if (!(E.data.status === 'available' || E.data.status === 'sold')) {
+        INTAKE.forEach(function (k) { if (!E.intake[k[0]]) m.push('Intake: ' + k[1]); });
+        if (!(num(E.wt) > 0)) m.push('Weight'); if (!(num(E.dL) > 0 && num(E.dW) > 0 && num(E.dH) > 0)) m.push('Length, width and height');
+        if (!E.defects.length && !E.noDf) m.push('Add the flaws, or tick that you found none');
+      }
+    }
     return m;
   }
 
@@ -1075,16 +1238,22 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
         for (i = 0; i < oldP.length; i++) if (keep.indexOf(oldP[i].id) < 0) await F.deleteDoc(oldP[i].ref);
         up.thumbs = thumbs; up.photoCount = E.raw.length;
       }
+      for (var dk in E.dfNew) { if (E.defects.some(function (x) { return x.id === dk; })) await F.setDoc(F.doc(db, 'shop_items', E.id, 'raw', 'df_' + dk), { data: SC.jpeg(E.dfNew[dk], 230000, 0.82), at: Date.now() }); }
+      E.dfNew = {};
+      for (i = 0; i < E.dfGone.length; i++) { try { await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', 'df_' + E.dfGone[i])); } catch (e2) {} }
+      E.dfGone = [];
       say('Saving details...');
       await F.setDoc(ref, up, { merge: true });
       var cost = parseFloat(E.cost);
       if (!E.sku) E.sku = nextSku();
-      await F.setDoc(F.doc(db, 'shop_private', E.id), { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku });
-      S.priv[E.id] = { sku: E.sku, loc: E.loc || '' };
+      var priv = { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku,
+        intake: E.intake, wt: num(E.wt), dL: num(E.dL), dW: num(E.dW), dH: num(E.dH), res: E.res || '', noDf: !!E.noDf, defects: E.defects.map(function (x) { return { id: x.id, text: x.text.trim() }; }) };
+      await F.setDoc(F.doc(db, 'shop_private', E.id), priv);
+      S.priv[E.id] = priv;
       window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
       await load();
       S.tab = status === 'draft' ? 'draft' : status; viewList();
-      say(status === 'draft' ? 'Saved to the holding pile.' : status === 'sold' ? 'Marked sold.' : 'Live on the shop now.', 'good');
+      say(status === 'draft' ? 'Saved to the holding pile.' + (E.defects.some(function (x) { return !E.dfImg[x.id]; }) ? ' A flaw still needs its photo.' : '') : status === 'sold' ? 'Marked sold.' : 'Live on the shop now.', 'good');
     } catch (e) {
       btns.forEach(function (b) { b.disabled = false; });
       say(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed. The Second Chance security rules still need to be published in Firebase.' : 'Could not save: ' + (e && e.message ? e.message : 'unknown error'), 'bad');
@@ -1189,11 +1358,20 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   }
 
   /* ----- order and shipping proof ----- */
-  function openOrder(oid) {
+  function openOrder(oid, scanned) {
     var F = FB.F, o = (S.orders || []).filter(function (x) { return x.id === oid; })[0]; if (!o) { viewList(); return; }
     S.O = { id: oid, data: JSON.parse(JSON.stringify(o)), ship: [], queue: Promise.resolve(), err: '' };
     frame('<div class="own-empty">Loading...</div>');
-    reloadShip().then(renderOrder).catch(function () { frame('<div class="own-empty">Could not load the order. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
+    reloadShip().then(loadDf).then(function () { renderOrder(); var sk = (S.priv[S.O.data.itemId] || {}).sku; if (scanned && !S.O.data.pulledAt && sk) saveOrder({ pulledAt: Date.now(), pulledSku: sk }, 'Label scanned. Item confirmed in hand.'); }).catch(function () { frame('<div class="own-empty">Could not load the order. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
+  }
+  function loadDf() {
+    var F = FB.F, O = S.O; O.df = {};
+    return F.getDocs(F.collection(FB.db, 'shop_items', O.data.itemId, 'raw')).then(function (s) { s.docs.forEach(function (d) { if (d.id.indexOf('df_') === 0) O.df[d.id.slice(3)] = d.data().data; }); }).catch(function () {});
+  }
+  function stash() {
+    var O = S.O, d = O.data, v = function (id) { return $(id) ? $(id).value : undefined; };
+    if ($('oCarrier') && !$('oCarrier').disabled) { d.carrier = v('oCarrier'); d.tracking = v('oTrack'); d.shipCost = v('oCost'); d.breakable = $('oBreak').checked; d.insured = $('oIns').checked; d.insuredAmt = v('oInsAmt'); }
+    var r = document.querySelector('input[name=oDmg]:checked'); if (r) d.damageCheck = r.value; if ($('oDmgNote')) d.damageNote = v('oDmgNote'); if ($('oNotes')) d.notes = v('oNotes');
   }
   function reloadShip() {
     var F = FB.F, O = S.O;
@@ -1205,6 +1383,8 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   function readyToShip(O) {
     var d = O.data, miss = [];
     STEPS.forEach(function (s) { if (!stepDone(O, s[0])) miss.push('Photo: ' + s[1]); });
+    if (!d.pulledAt) miss.push('Pull the item and confirm it by scanning its label or typing its item number');
+    var dc = document.querySelector('input[name=oDmg]:checked'); if (!dc) miss.push('Damage check: say whether there is any new damage'); else if (dc.value === 'new' && !($('oDmgNote') && $('oDmgNote').value.trim())) miss.push('Describe the new damage');
     if (!($('oCarrier') && $('oCarrier').value)) miss.push('Carrier'); if (!($('oTrack') && $('oTrack').value.trim())) miss.push('Tracking number');
     if ($('oBreak') && $('oBreak').checked && !($('oIns') && $('oIns').checked && num($('oInsAmt').value) > 0)) miss.push('Insurance for the breakable item, with its insured value');
     return miss;
@@ -1215,6 +1395,20 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var h = '<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-family:var(--serif);font-weight:400;margin:0">' + esc(d.itemName) + '</h3><b>' + esc(statusOf(d)) + '</b></div>' +
       '<p class="own-msg" style="margin:4px 0 16px">Sold ' + esc(fmtT(d.soldAt)) + ' to ' + esc(d.buyerName) + (d.buyerEmail ? ' (' + esc(d.buyerEmail) + ')' : '') + (isC ? ' · Consignment from ' + esc(d.sellerName) : ' · Our item') + '</p>';
     h += '<div class="own-ed"><div>';
+    var pq = S.priv[d.itemId] || {}, dfs = pq.defects || [];
+    if (!shipped) {
+      h += '<div class="pullbox"><h4 style="margin:0 0 6px;font-weight:500">Step 1: Pull the item</h4><div>Item <b>' + esc(pq.sku || 'no number on file') + '</b> · Location <b>' + esc(pq.loc || 'not recorded') + '</b></div>' +
+        (pq.wt ? '<div class="own-msg" style="min-height:0">Weighs ' + Math.floor(pq.wt / 16) + ' lb ' + Math.round((pq.wt % 16) * 10) / 10 + ' oz' + (pq.dL ? ' · Box at least ' + (Math.ceil(pq.dL) + 2) + ' x ' + (Math.ceil(pq.dW) + 2) + ' x ' + (Math.ceil(pq.dH) + 2) + ' in' : '') + '</div>' : '') +
+        '<div style="margin:8px 0"><b style="font-weight:500">Known flaws</b>' + (dfs.length ? dfs.map(function (x) { return '<div style="display:flex;gap:8px;align-items:center;margin-top:6px">' + (O.df && O.df[x.id] ? '<img data-big2="' + x.id + '" alt="Flaw" src="' + O.df[x.id] + '" style="width:56px;height:56px;object-fit:cover;cursor:zoom-in;border:1px solid #E1DCD3">' : '') + '<span>' + esc(x.text) + '</span></div>'; }).join('') : '<div class="own-msg" style="min-height:0">' + (pq.noDf ? 'None recorded. It was inspected and listed as flawless.' : 'None recorded.') + '</div>') + '</div>' +
+        (d.pulledAt ? '<div style="color:#2d6a3e"><b>✓ Item in hand</b> · confirmed ' + esc(fmtT(d.pulledAt)) + (d.pulledSku ? ' (' + esc(d.pulledSku) + ')' : '') + '</div>' :
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="field" id="oSkuIn" placeholder="' + (pq.sku ? 'Scan the QR label, or type ' + esc(pq.sku) : 'No number on file') + '" style="max-width:260px"><button class="btn btn-line" id="oPullOk" style="min-height:44px">Confirm item in hand</button></div>') +
+        '<div style="margin-top:12px"><b style="font-weight:500">Check it against the photos above. Any new damage? <i>*</i></b>' +
+        '<label class="int-step"><input type="radio" name="oDmg" value="none"' + (d.damageCheck === 'none' ? ' checked' : '') + '> No new damage. It matches the listing and the known flaws.</label>' +
+        '<label class="int-step"><input type="radio" name="oDmg" value="new"' + (d.damageCheck === 'new' ? ' checked' : '') + '> New damage found</label>' +
+        '<textarea class="field" id="oDmgNote" style="height:70px;padding:10px 14px" placeholder="Describe the new damage. Take it in the first photo step below.">' + esc(d.damageNote) + '</textarea></div></div>';
+    } else {
+      h += '<p class="own-msg" style="margin:0 0 12px">Pulled ' + esc(fmtT(d.pulledAt)) + ' · Damage check: ' + (d.damageCheck === 'new' ? 'NEW DAMAGE. ' + esc(d.damageNote) : d.damageCheck === 'none' ? 'no new damage' : 'not recorded (shipped before this check existed)') + '</p>';
+    }
     h += '<h4 style="margin:0 0 8px;font-weight:500">Shipping proof <span style="color:#6b675f;font-weight:400">(' + done + ' of ' + STEPS.length + ' steps)</span></h4>';
     h += '<p class="own-msg" style="margin:0 0 10px">Live camera only. Each photo is stamped with the server time and cannot be edited or deleted afterward.</p>';
     STEPS.forEach(function (s) {
@@ -1245,28 +1439,34 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     frame(h);
     body.querySelectorAll('[data-shoot]').forEach(function (b) { b.onclick = function () { shoot(b.dataset.shoot); }; });
     body.querySelectorAll('[data-big]').forEach(function (im) { im.onclick = function () { lightbox(im.src); }; });
+    body.querySelectorAll('[data-big2]').forEach(function (im) { im.onclick = function () { lightbox(im.src); }; });
+    if ($('oPullOk')) $('oPullOk').onclick = function () {
+      var want = pq.sku || '', got = $('oSkuIn').value.trim().toUpperCase().replace(/^.*#SKU=/, '');
+      if (want && got !== want) { say('That does not match. This sale is item ' + want + '.', 'bad'); return; }
+      stash(); saveOrder({ pulledAt: Date.now(), pulledSku: want }, 'Item confirmed in hand.');
+    };
     var sync = function () { var br = $('oBreak').checked; $('oInsRow').style.display = br ? '' : 'none'; };
     $('oBreak').onchange = sync; sync();
     $('oBackL').onclick = function () { S.tab = 'sold'; viewList(); };
     $('oLink').onclick = function (e) { e.preventDefault(); try { navigator.clipboard.writeText(base() + '#order=' + O.id); say('Link copied. Only signed-in owners can open it.', 'good'); } catch (x) { say(base() + '#order=' + O.id); } };
-    $('oSaveN').onclick = function () { saveOrder({ notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Saved.'); };
+    $('oSaveN').onclick = function () { stash(); saveOrder({ notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Saved.'); };
     if ($('oShip')) $('oShip').onclick = function () {
       var miss = readyToShip(O);
       if (miss.length) { $('oErr').innerHTML = '<div class="own-err"><b>This cannot be marked shipped yet. Still needed:</b><ul>' + miss.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'; return; }
-      saveOrder({ carrier: $('oCarrier').value, tracking: $('oTrack').value.trim(), shipCost: num($('oCost').value), breakable: $('oBreak').checked, insured: $('oBreak').checked && $('oIns').checked, insuredAmt: $('oBreak').checked ? num($('oInsAmt').value) : 0, shippedAt: Date.now(), notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Marked shipped.');
+      saveOrder({ pulledAt: d.pulledAt, damageCheck: document.querySelector('input[name=oDmg]:checked').value, damageNote: $('oDmgNote').value.trim(), carrier: $('oCarrier').value, tracking: $('oTrack').value.trim(), shipCost: num($('oCost').value), breakable: $('oBreak').checked, insured: $('oBreak').checked && $('oIns').checked, insuredAmt: $('oBreak').checked ? num($('oInsAmt').value) : 0, shippedAt: Date.now(), notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Marked shipped.');
     };
     if ($('oDeliv')) $('oDeliv').onclick = function () { saveOrder({ deliveredAt: Date.now(), notes: $('oNotes').value.trim(), dispute: $('oDisp').checked }, 'Marked delivered.'); };
     if ($('oPay')) $('oPay').onclick = function () { if (confirm('Confirm you have sent ' + money(c.payout) + ' to ' + d.sellerName + '?')) saveOrder({ payoutReleasedAt: Date.now() }, 'Payout recorded.'); };
   }
   function saveOrder(fields, msg) {
-    var F = FB.F, O = S.O;
+    var F = FB.F, O = S.O; stash();
     return F.setDoc(F.doc(FB.db, 'shop_orders', O.id), fields, { merge: true }).then(function () {
       Object.assign(O.data, fields); var i = S.orders.findIndex(function (x) { return x.id === O.id; }); if (i >= 0) Object.assign(S.orders[i], fields);
       O.err = ''; renderOrder(); say(msg, 'good');
     }).catch(function () { say('Could not save. Check your connection.', 'bad'); });
   }
   function shoot(step) {
-    var F = FB.F, O = S.O, n = 0;
+    var F = FB.F, O = S.O, n = 0; stash();
     SC.camera(function (c) {
       n++;
       O.queue = O.queue.then(function () {
@@ -1311,7 +1511,11 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       fb.U.onAuthStateChanged(fb.auth, function (u) {
         if (!u) { S.user = null; viewLogin(S.deny); S.deny = ''; return; }
         if (!isOwner(u)) { S.deny = 'This area is for the shop owner only.'; fb.U.signOut(fb.auth); return; }
-        S.user = u; load().then(loadOrders).then(function () { var m = location.hash.match(/^#order=(.+)$/); if (m && S.orders.some(function (o) { return o.id === m[1]; })) { openOrder(m[1]); return; } if (!S.E && !S.O) viewList(); }).catch(function () { frame('<div class="own-empty">Signed in, but the shop data could not be read. The Second Chance security rules still need to be published in Firebase.</div>'); });
+        S.user = u; load().then(loadOrders).then(function () { var sm = location.hash.match(/^#sku=(.+)$/i);
+          if (sm) { var want = decodeURIComponent(sm[1]).toUpperCase(), iid = Object.keys(S.priv).filter(function (k) { return (S.priv[k] || {}).sku === want; })[0];
+            if (iid) { var ord = S.orders.filter(function (o) { return o.itemId === iid && !o.shippedAt; })[0]; if (ord) { openOrder(ord.id, true); return; } openEditor(iid); return; }
+            viewList(); say('No item is numbered ' + want + '.', 'bad'); return; }
+          var m = location.hash.match(/^#order=(.+)$/); if (m && S.orders.some(function (o) { return o.id === m[1]; })) { openOrder(m[1]); return; } if (!S.E && !S.O) viewList(); }).catch(function () { frame('<div class="own-empty">Signed in, but the shop data could not be read. The Second Chance security rules still need to be published in Firebase.</div>'); });
       });
     }).catch(function () { body.innerHTML = '<div class="own-in"><div class="own-empty">Could not reach the server. Check your connection.</div></div>'; });
   };
@@ -1319,9 +1523,91 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 
 (function(){function go(){window.SC_OWNER_OPEN&&window.SC_OWNER_OPEN()}
   document.getElementById('ownLink').addEventListener('click',function(e){e.preventDefault();try{history.replaceState(null,'',location.pathname+location.search+'#owner')}catch(x){}go()});
-  document.getElementById('own').addEventListener('close',function(){try{if(location.hash==='#owner'||/^#order=/.test(location.hash))history.replaceState(null,'',location.pathname+location.search)}catch(x){}});
-  if(location.hash==='#owner'||/^#order=/.test(location.hash))go();
+  document.getElementById('own').addEventListener('close',function(){try{if(location.hash==='#owner'||/^#(order|sku)=/i.test(location.hash))history.replaceState(null,'',location.pathname+location.search)}catch(x){}});
+  if(location.hash==='#owner'||/^#(order|sku)=/i.test(location.hash))go();
   window.SC_LOAD_LIVE();})();
+</script>
+<script>
+(function () {
+  var KEY = 'sc_music_v1', st = null, ctx = null, on = false, held = false, timer = null, btn = null;
+  var CH = [[130.81, 164.81, 196, 246.94], [110, 164.81, 196, 246.94], [87.31, 130.81, 164.81, 220], [98, 146.83, 164.81, 220]];
+  var PENT = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+  function impulse(c) {
+    var len = Math.floor(c.sampleRate * 3.6), b = c.createBuffer(2, len, c.sampleRate);
+    for (var ch = 0; ch < 2; ch++) { var d = b.getChannelData(ch); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+    return b;
+  }
+  function build(c, dest) {
+    var master = c.createGain(); master.gain.value = 0.0001;
+    var bus = c.createGain(), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1300;
+    var dry = c.createGain(); dry.gain.value = 0.55;
+    var conv = c.createConvolver(); conv.buffer = impulse(c); var wet = c.createGain(); wet.gain.value = 0.9;
+    bus.connect(lp); lp.connect(dry); lp.connect(conv); conv.connect(wet); dry.connect(master); wet.connect(master); master.connect(dest);
+    return { c: c, bus: bus, master: master, ci: 0, nextChord: c.currentTime + 0.1, nextNote: c.currentTime + 6 };
+  }
+  function chord(s, t) {
+    var c = s.c, f = CH[s.ci++ % CH.length];
+    f.forEach(function (fr, k) {
+      [-4, 4].forEach(function (det) {
+        var o = c.createOscillator(), g = c.createGain();
+        o.type = k % 2 ? 'sine' : 'triangle'; o.frequency.value = fr; o.detune.value = det;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.035, t + 5); g.gain.setValueAtTime(0.035, t + 11); g.gain.linearRampToValueAtTime(0, t + 17);
+        o.connect(g); g.connect(s.bus); o.start(t); o.stop(t + 17.5);
+      });
+    });
+  }
+  function pluck(s, t) {
+    var c = s.c, o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = PENT[Math.floor(Math.random() * PENT.length)];
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 3.5);
+    o.connect(g); g.connect(s.bus); o.start(t); o.stop(t + 3.6);
+  }
+  function schedule(s, upTo) {
+    while (s.nextChord < upTo) { chord(s, s.nextChord); s.nextChord += 14; }
+    while (s.nextNote < upTo) { pluck(s, s.nextNote); s.nextNote += 3.5 + Math.random() * 5.5; }
+  }
+  var LEVEL = 0.45;
+  window.SC_MUSIC_RENDER = function (sec) {
+    var O = window.OfflineAudioContext, c = new O(2, 44100 * sec, 44100), s = build(c, c.destination);
+    s.master.gain.value = LEVEL; schedule(s, sec);
+    return c.startRendering().then(function (buf) {
+      var a = buf.getChannelData(0), sum = 0, pk = 0; for (var i = 44100 * 10; i < a.length; i++) { sum += a[i] * a[i]; pk = Math.max(pk, Math.abs(a[i])); }
+      return { rmsDb: 20 * Math.log10(Math.sqrt(sum / (a.length - 44100 * 10))), peakDb: 20 * Math.log10(pk) };
+    });
+  };
+  function label() { if (!btn) return; btn.textContent = '♪ Music: ' + (on ? 'on' : 'off'); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  function start() {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    if (!ctx) { ctx = new AC(); st = build(ctx, ctx.destination); }
+    ctx.resume();
+    st.nextChord = Math.max(st.nextChord, ctx.currentTime + 0.1); st.nextNote = Math.max(st.nextNote, ctx.currentTime + 5);
+    schedule(st, ctx.currentTime + 30); clearInterval(timer); timer = setInterval(function () { if (ctx && ctx.state === 'running') schedule(st, ctx.currentTime + 30); }, 5000);
+    st.master.gain.cancelScheduledValues(ctx.currentTime); st.master.gain.setValueAtTime(Math.max(st.master.gain.value, 0.0001), ctx.currentTime);
+    st.master.gain.linearRampToValueAtTime(LEVEL, ctx.currentTime + 3);
+  }
+  function stop(quick) {
+    if (!ctx) return; var t = ctx.currentTime;
+    st.master.gain.cancelScheduledValues(t); st.master.gain.setValueAtTime(Math.max(st.master.gain.value, 0.0001), t); st.master.gain.linearRampToValueAtTime(0.0001, t + (quick ? 0.6 : 1.5));
+    clearInterval(timer); setTimeout(function () { if (!on || held) { try { ctx.suspend(); } catch (e) {} } }, quick ? 700 : 1600);
+  }
+  function setOn(v) { on = v; try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) {} label(); if (v && !held) start(); else if (!v) stop(); }
+  function hold(v) { held = v; if (v) stop(true); else if (on) start(); }
+  function init() {
+    var bar = document.querySelector('.bar-in'); if (!bar) return;
+    btn = document.createElement('button'); btn.type = 'button'; btn.className = 'music-btn'; btn.title = 'Quiet background music'; bar.insertBefore(btn, bar.querySelector('.bar-link'));
+    btn.onclick = function () { setOn(!on); }; label();
+    var pref = false; try { pref = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    if (pref) {
+      on = true; label();
+      var go = function () { document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true); if (on && !held) start(); };
+      document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true);
+    }
+    document.addEventListener('visibilitychange', function () { if (!ctx || !on) return; if (document.hidden) { try { ctx.suspend(); } catch (e) {} } else if (!held) ctx.resume(); });
+    var dlg = document.getElementById('own');
+    if (dlg) { dlg.addEventListener('close', function () { hold(false); }); var o = window.SC_OWNER_OPEN; if (o) window.SC_OWNER_OPEN = function () { hold(true); return o.apply(this, arguments); }; }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
 </script>
 </body>
 </html>
