@@ -80,7 +80,7 @@
     .brand svg { width:1.5rem; height:1.5rem; }
     .brand-accent { color:var(--accent); }
     .beta-chip { font-size:.5rem; font-weight:800; letter-spacing:.12em; color:var(--text-muted); border:1px solid var(--border); border-radius:5px; padding:2px 5px; align-self:flex-start; margin-top:4px; }
-    .header-pills { display:flex; gap:8px; align-items:center; justify-content:center; }
+    .header-pills { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; }
     .header-pills .badge-accent { font-size:.8rem; padding:4px 12px; }
     .beta-chip { background:#9f2f2a !important; color:#fff !important; border-color:#c0443d !important; }
     #quotaPill { background:#f2efe4 !important; color:#1a1f12 !important; border-color:#fff !important; }
@@ -205,6 +205,7 @@
     </div>
     <div class="header-pills">
       <span class="badge-accent" id="quotaPill" title="Scans left on this device's counter">100 left</span>
+      <button class="badge-accent" id="aiMeter" title="Checking Google's AI..." style="cursor:pointer; border:none;">⏳ Checking AI...</button>
       <button class="badge-accent" id="sigBtn" title="Report your signal here" style="cursor:pointer; border:none;">📶 Signal</button>
     </div>
   </header>
@@ -1758,6 +1759,7 @@ This is a plain-language starting document, not legal advice.</div>
       try {
         const a = JSON.parse(localStorage.getItem('ts_scanlog') || '[]');
         a.push(Object.assign({ t: new Date().toISOString() }, rec));
+        if (typeof meterSet === 'function' && !rec.meter) { if (rec.ok) meterSet('ready'); else if (/HTTP 50[0234]/.test(rec.err || '')) meterSet('busy'); }
         localStorage.setItem('ts_scanlog', JSON.stringify(a.slice(-40)));
       } catch (e) {}
     }
@@ -1886,6 +1888,58 @@ This is a plain-language starting document, not legal advice.</div>
       if (!(x > 0) && fallbackText) { const m = String(fallbackText).replace(/,/g, '').match(/\$\s*\d+(?:\.\d+)?(?:\s*(?:to|-|\u2013)\s*\$?\s*\d+(?:\.\d+)?)?/i); if (m) x = grab(m[0]); }
       return isFinite(x) && x > 0 ? x : 0;
     }
+
+    // ================= AI METER: tells you if Google's AI is up before you scan =================
+    let meterBusy = false;
+    function meterSet(state) {
+      const b = document.getElementById('aiMeter'); if (!b) return;
+      const map = {
+        ready:  ['🟢 AI ready', "Google's AI answered quickly. Scans should work."],
+        slow:   ['🟡 AI slow', "Google's AI answered, but slowly. Scans may take a while."],
+        busy:   ['🔴 Google busy', "Google's AI is overloaded right now. That is on Google's side, not this app or your signal. Use Manual Entry, or try again in a few minutes."],
+        offline:['📵 No signal', "This phone can't reach Google. Check your signal or Wi-Fi."],
+        limit:  ['🟡 Limit hit', "Google says this key is over its limit for now. Wait a bit, or check the key's limits in Google AI Studio."],
+        key:    ['⚠️ Key problem', "Google did not accept the API key. Open Config and check it."],
+        nokey:  ['⚪ AI: no key', 'Add your Google API key in Config to use the scanner.'],
+        check:  ['⏳ Checking AI...', 'Checking Google’s AI...']
+      };
+      const m = map[state] || map.check;
+      b.textContent = m[0]; b.dataset.state = state; b.title = m[1] + ' Tap to check again.'; b.dataset.msg = m[1];
+    }
+    async function checkAiMeter(userTapped) {
+      if (meterBusy) return; meterBusy = true;
+      try {
+        if (!hasKey()) { meterSet('nokey'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
+        if (navigator.onLine === false) { meterSet('offline'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
+        meterSet('check');
+        const controller = new AbortController(); const to = setTimeout(() => controller.abort(), 9000); const t0 = performance.now();
+        let state;
+        try {
+          const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[0] + ':generateContent', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': activeKey() },
+            body: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with the word OK.' }] }], generationConfig: { maxOutputTokens: 16, temperature: 0 } }),
+            signal: controller.signal
+          });
+          clearTimeout(to); const secs = (performance.now() - t0) / 1000;
+          if (res.ok) state = secs > 4 ? 'slow' : 'ready';
+          else if ([500, 502, 503, 504].includes(res.status)) state = 'busy';
+          else if (res.status === 429) state = 'limit';
+          else if ([400, 401, 403].includes(res.status)) state = 'key';
+          else state = 'busy';
+        } catch (e) {
+          clearTimeout(to); state = e.name === 'AbortError' ? 'slow' : 'offline';
+        }
+        meterSet(state);
+        try { logScan({ ok: state === 'ready' || state === 'slow', meter: state }); } catch (e) {}
+        if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, state === 'busy' || state === 'offline' || state === 'key');
+      } finally { meterBusy = false; }
+    }
+    (function () {
+      const b = document.getElementById('aiMeter'); if (!b) return;
+      b.onclick = () => checkAiMeter(true);
+      meterSet(hasKey() ? 'check' : 'nokey');
+      setTimeout(() => { if (hasKey()) checkAiMeter(false); }, 1500);
+    })();
 
     function parseModelJson(text) {
       const cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
