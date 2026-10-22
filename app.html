@@ -288,6 +288,8 @@
 
         <div id="resEra" style="display:none; font-size:.82rem; color:var(--text); line-height:1.4; border-left:3px solid var(--border); padding-left:8px;"></div>
         <div style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="resIntel"></div>
+        <button id="deepBtn" class="btn btn-outline" style="display:none; font-size:.8rem; padding:10px;">🔬 DEEP RESEARCH (check real sold prices)</button>
+        <div id="deepOut"></div>
 
         <div>
           <label class="metric-label" style="margin-bottom:4px; display:block;">Inventory Disposition Strategy</label>
@@ -798,6 +800,8 @@ This is a plain-language starting document, not legal advice.</div>
       </div>
       <div style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="vDetailIntel"></div>
       <button class="btn btn-amber" id="vDetailVerifyBtn" style="font-size:.85rem; padding:12px;">🔎 VERIFY THIS ITEM (Careful Re-check)</button>
+      <button class="btn btn-outline" id="vDeepBtn" style="font-size:.8rem; padding:10px;">🔬 DEEP RESEARCH (check real sold prices)</button>
+      <div id="vDeepOut"></div>
       <button class="btn btn-outline" id="vDetailVerifyRetakeBtn" style="display:none; font-size:.8rem; padding:8px;">📷 Retake close-up photos instead</button>
       <div id="vVerifyProgress" style="display:none; flex-direction:column; gap:6px; margin-top:2px;">
         <div style="display:flex; justify-content:space-between; font-size:.75rem; color:var(--accent); font-weight:700;">
@@ -1802,8 +1806,9 @@ This is a plain-language starting document, not legal advice.</div>
       try { thinkingOk = localStorage.getItem('ts_no_think') !== '1'; } catch (e) {}
       const buildBody = () => JSON.stringify({
         contents: [{ parts }],
+        ...((opts && opts.tools) ? { tools: opts.tools } : {}),
         generationConfig: Object.assign(
-          { temperature: 0.1, maxOutputTokens: maxTokens, responseMimeType: 'application/json' },
+          { temperature: 0.1, maxOutputTokens: maxTokens }, (opts && opts.noJson) ? {} : { responseMimeType: 'application/json' },
           thinkingOk ? { thinkingConfig: { thinkingLevel: 'minimal' } } : {}
         )
       });
@@ -1849,7 +1854,7 @@ This is a plain-language starting document, not legal advice.</div>
             }
             logScan({ ok: true, secs: +secs, kb: bodyKb, imgs: parts.length - 1, model, tries: slowTries + 1 });
             if (guestCall) countGuestScan();
-            return { ok: true, text, model, secs };
+            return { ok: true, text, model, secs, grounding: cand?.groundingMetadata };
           }
 
           const errJson = await res.json().catch(() => ({}));
@@ -1960,6 +1965,70 @@ This is a plain-language starting document, not legal advice.</div>
       b.onclick = () => checkAiMeter(true);
       meterSet(hasKey() ? 'check' : 'nokey');
       setTimeout(() => { if (hasKey()) checkAiMeter(false); }, 1500);
+    })();
+
+    // ================= DEEP RESEARCH: same model, plus Google Search, for items that may be collectible =================
+    function parseLooseJson(text) {
+      const t = String(text || '').replace(/```(?:json)?/gi, '').trim();
+      const a = t.indexOf('{'), b = t.lastIndexOf('}');
+      if (a < 0 || b <= a) throw new Error('no JSON in answer');
+      return JSON.parse(t.slice(a, b + 1));
+    }
+    async function deepResearch(item) {
+      const parts = [{ text:
+        'You are pricing a secondhand item for a reseller. Item: ' + (item.brand || '') + ' - ' + (item.item || '') + '. Earlier notes: ' + String(item.intel || '').slice(0, 300) + '\n' +
+        'Use Google Search to find what this exact item (same brand, model, edition and size) has recently SOLD for (eBay sold or completed listings, Mercari, Poshmark, Etsy, collector sites) and what active listings ask. ' +
+        'Check whether it is a limited, seasonal, city-exclusive or collectible edition. Collectors can pay much more than the usual used price, so do not guess from the brand alone. ' +
+        'Reply with ONLY one JSON object and no other text: {"low": number, "typical": number, "high": number, "confidence": "low or medium or high", "collectible": true or false, "why": "one or two plain sentences", "evidence": ["up to 4 short items like eBay sold: $38"]}. ' +
+        'All prices are US dollars for one item in used-good condition unless the photo shows otherwise.' }];
+      if (typeof item.imageThumb === 'string' && item.imageThumb.startsWith('data:image')) parts.push({ inlineData: { mimeType: 'image/jpeg', data: item.imageThumb.split(',')[1] } });
+      const res = await callGemini(parts, { maxTokens: 2048, timeoutMs: 45000, tools: [{ google_search: {} }], noJson: true });
+      if (!res.ok) return { ok: false, error: res.error };
+      try {
+        const p = parseLooseJson(res.text);
+        const low = parseMoney(p.low), typical = parseMoney(p.typical), high = parseMoney(p.high);
+        if (!(typical > 0)) return { ok: false, error: 'The AI answered but gave no price. Tap Deep Research again.' };
+        const g = res.grounding || {};
+        const sources = (g.groundingChunks || []).map(c => c.web).filter(w => w && /^https?:/.test(w.uri || '')).slice(0, 5);
+        return { ok: true, low: low || typical, typical, high: high || typical, confidence: String(p.confidence || 'low').toLowerCase(), collectible: !!p.collectible, why: String(p.why || ''), evidence: Array.isArray(p.evidence) ? p.evidence.slice(0, 4).map(String) : [], sources, widget: (g.searchEntryPoint && g.searchEntryPoint.renderedContent) || '', secs: res.secs };
+      } catch (e) { return { ok: false, error: 'Could not read the research answer (' + e.message + '). Tap Deep Research again.' }; }
+    }
+    function deepHtml(r) {
+      const rng = r.low === r.high ? '$' + r.typical.toFixed(2) : '$' + r.low.toFixed(2) + ' to $' + r.high.toFixed(2);
+      return '<div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-top:8px; font-size:.82rem; line-height:1.45;">' +
+        '<div style="font-weight:800; color:var(--accent);">🔬 Deep research: ' + esc(rng) + ' <span style="font-weight:600; color:var(--text-muted);">(typical $' + r.typical.toFixed(2) + ', ' + esc(r.confidence) + ' confidence' + (r.collectible ? ', collectible' : '') + ')</span></div>' +
+        (r.why ? '<div style="margin-top:4px;">' + esc(r.why) + '</div>' : '') +
+        (r.evidence.length ? '<ul style="margin:6px 0 0 18px; padding:0;">' + r.evidence.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : '') +
+        (r.sources.length ? '<div style="margin-top:6px; color:var(--text-muted);">Sources: ' + r.sources.map(s => '<a href="' + esc(s.uri) + '" target="_blank" rel="noopener" style="color:var(--accent);">' + esc((s.title || 'link').slice(0, 40)) + '</a>').join(' &middot; ') + '</div>' : '') +
+        (r.widget ? '<iframe sandbox="" srcdoc="' + esc(r.widget) + '" style="width:100%; height:48px; border:0; margin-top:6px; background:transparent;" title="Google Search suggestions"></iframe>' : '') +
+        '<div style="margin-top:6px; color:var(--text-muted); font-size:.74rem;">Still an estimate from what the AI found online. Check the sold listings yourself before you pay a lot.</div>' +
+        '<button class="btn btn-amber" data-deep-apply="1" style="font-size:.8rem; padding:10px; margin-top:8px; width:100%;">Use $' + r.typical.toFixed(2) + ' as my target resale</button></div>';
+    }
+    async function runDeep(btn, out, getItem, apply) {
+      const item = getItem(); if (!item || isBusy) return;
+      isBusy = true; const orig = btn.textContent; btn.textContent = '🔬 Researching sold prices...'; btn.classList.add('disabled'); out.innerHTML = '';
+      try {
+        const r = await deepResearch(item);
+        if (!r.ok) { out.innerHTML = '<div style="margin-top:8px; font-size:.82rem; color:var(--coral);">' + esc(r.error) + '</div>'; }
+        else {
+          out.innerHTML = deepHtml(r);
+          const ab = out.querySelector('[data-deep-apply]'); if (ab) ab.onclick = () => { ab.disabled = true; ab.textContent = 'Saving...'; Promise.resolve(apply(r.typical)).then(() => { ab.textContent = 'Target resale updated to $' + r.typical.toFixed(2); }).catch(e => { ab.disabled = false; ab.textContent = 'Could not update: ' + e.message; }); };
+          triggerAlert('Deep research finished in ' + r.secs + 's.', false, false);
+        }
+      } finally { btn.textContent = orig; btn.classList.remove('disabled'); isBusy = false; }
+    }
+    (function () {
+      const b1 = document.getElementById('deepBtn'), o1 = document.getElementById('deepOut');
+      if (b1) b1.onclick = () => runDeep(b1, o1, () => currentAppraisal, (x) => {
+        currentAppraisal.resale = x; currentAppraisal.profit = calcProfit(x, currentAppraisal.cost || 0); recalculateDisposition(currentAppraisal); window.__keepDeep = true; renderAppraisal(currentAppraisal);
+      });
+      const b2 = document.getElementById('vDeepBtn'), o2 = document.getElementById('vDeepOut');
+      if (b2) b2.onclick = () => runDeep(b2, o2, () => currentlyOpenedVaultItem, async (x) => {
+        const it = currentlyOpenedVaultItem, pr = calcProfit(x, it.cost || 0);
+        await updateDoc(vDoc(it.id), { resale: x, profit: pr });
+        currentlyOpenedVaultItem = { ...it, resale: x, profit: pr };
+        document.getElementById('vDetailResale').textContent = '$' + x.toFixed(2); document.getElementById('vDetailProfit').textContent = '$' + pr.toFixed(2); renderVault();
+      });
     })();
 
     function parseModelJson(text) {
@@ -2797,7 +2866,7 @@ This is a plain-language starting document, not legal advice.</div>
         if (!result.cached && estResale > 0) {
           // Log every live scan (kept or not) so the history database keeps growing. Never blocks the UI.
           addDoc(collection(db, 'scout_history'), {
-            brand: parsedBrand, item: parsedItem, resale: estResale, cost: itemCost,
+            brand: parsedBrand, item: parsedItem, resale: estResale,
             platform: currentAppraisal.platform, shipping: currentAppraisal.shipping,
             intel: currentAppraisal.intel, query: currentAppraisal.query,
             category: currentAppraisal.category, phash: scanPhash || null,
@@ -2825,6 +2894,7 @@ This is a plain-language starting document, not legal advice.</div>
       document.getElementById('resBrand').textContent = `${item.brand} ✏️`;
       document.getElementById('resCostBasis').textContent = '$' + (item.cost || 0).toFixed(2);
       document.getElementById('resIntel').textContent = item.intel;
+      { const db = document.getElementById('deepBtn'); if (db) db.style.display = ''; const dq = document.getElementById('deepOut'); if (dq && !window.__keepDeep) dq.innerHTML = ''; window.__keepDeep = false; }
       const eraEl = document.getElementById('resEra');
       if (item.era) { eraEl.textContent = '🕰️ Made: ' + item.era + (item.eraWhy ? ' (' + item.eraWhy + ')' : ''); eraEl.style.display = 'block'; } else { eraEl.style.display = 'none'; }
       document.getElementById('assetStrategySelect').value = item.strategy || 'selling';
@@ -3349,6 +3419,7 @@ This is a plain-language starting document, not legal advice.</div>
         compBtn.onclick = null;
       }
       refreshVerifyBtn();
+      { const vo = document.getElementById('vDeepOut'); if (vo) vo.innerHTML = ''; }
       document.getElementById('vaultDetailModal').classList.add('active');
     }
 
