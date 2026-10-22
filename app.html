@@ -867,6 +867,11 @@ This is a plain-language starting document, not legal advice.</div>
       <div>
         <label class="metric-label">Gemini API Key</label>
         <input type="password" id="geminiApiKey" class="input-field" placeholder="AIzaSy..." style="margin-top:4px;">
+        <label class="metric-label" style="display:block; margin-top:12px;">Backup AI key (optional, free Mistral key)</label>
+        <input type="password" id="mistralApiKey" class="input-field" placeholder="Paste a Mistral key" autocomplete="off" style="margin-top:4px;">
+        <div style="font-size:.72rem; color:var(--text-muted); line-height:1.35; margin-top:4px;">Used only when Google is busy. Stays on this device. Get one free at console.mistral.ai.</div>
+        <button type="button" id="mistralTestBtn" class="btn btn-outline" style="font-size:.78rem; padding:8px; margin-top:6px;">Test the backup key</button>
+        <div id="mistralTestMsg" style="font-size:.78rem; margin-top:4px;"></div>
       </div>
       <div>
         <label class="metric-label">Scans left on this device's counter</label>
@@ -1808,6 +1813,39 @@ This is a plain-language starting document, not legal advice.</div>
       } catch (e) {}
     }
 
+    // Backup AI: Mistral (free plan). Only used when Google keeps saying "busy" and a Mistral key is saved in Config.
+    const MISTRAL_MODEL = 'mistral-small-latest';
+    const mistralKey = () => { try { return localStorage.getItem('ts_mistral_key') || ''; } catch (e) { return ''; } };
+    async function callMistral(parts, opts) {
+      const key = mistralKey(); if (!key) return { ok: false, error: 'No Mistral key saved.' };
+      const content = parts.map(p => p.inlineData
+        ? { type: 'image_url', image_url: 'data:' + p.inlineData.mimeType + ';base64,' + p.inlineData.data }
+        : { type: 'text', text: p.text || '' });
+      const controller = new AbortController(), t0 = performance.now();
+      const to = setTimeout(() => controller.abort(), 60000);
+      try {
+        const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+          body: JSON.stringify(Object.assign({ model: MISTRAL_MODEL, temperature: 0.1, max_tokens: (opts && opts.maxTokens) || SCAN_MAX_TOKENS, messages: [{ role: 'user', content }] },
+            (opts && opts.noJson) ? {} : { response_format: { type: 'json_object' } }))
+        });
+        clearTimeout(to);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { const m = (data.message || (data.error && data.error.message) || ('HTTP ' + res.status)); logScan({ ok: false, err: 'mistral ' + res.status + ': ' + String(m).slice(0, 100) }); return { ok: false, error: 'Mistral: ' + (typeof m === 'string' ? m : JSON.stringify(m)).slice(0, 160) }; }
+        let text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (Array.isArray(text)) text = text.map(c => c.text || '').join('');
+        text = String(text || '').trim();
+        if (!text) return { ok: false, error: 'Mistral gave an empty answer.' };
+        const secs = ((performance.now() - t0) / 1000).toFixed(1);
+        logScan({ ok: true, secs: +secs, model: MISTRAL_MODEL + ' (backup)' });
+        return { ok: true, text, model: MISTRAL_MODEL + ' (backup AI)', secs, backup: true };
+      } catch (err) {
+        clearTimeout(to);
+        return { ok: false, error: err.name === 'AbortError' ? 'Mistral did not answer in 60 seconds.' : 'Mistral could not be reached (' + err.message + '). The browser may be blocking it.' };
+      }
+    }
+
     async function callGemini(parts, opts) {
       const maxTokens = (opts && opts.maxTokens) || SCAN_MAX_TOKENS;
       const timeoutMs = (opts && opts.timeoutMs) || REQUEST_TIMEOUT_MS;
@@ -1835,7 +1873,7 @@ This is a plain-language starting document, not legal advice.</div>
 
       let lastError = 'Unknown error';
       let busyTries = 0;
-      let slowTries = 0;
+      let slowTries = 0, mistralTries = 0, mistralErr = '';
       const refund = () => { if (guestCall) return; STATE.dailyScans += 1; updatePills(); };
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       for (let mi = 0; mi < MODELS.length; mi++) {
@@ -1893,6 +1931,12 @@ This is a plain-language starting document, not legal advice.</div>
           // quietly try again a few times before bothering the user. Same model every time.
           if (res.status === 503 || res.status === 500 || res.status === 502 || res.status === 504) {
             refund();
+            if ((busyTries === 3 || busyTries === 12) && mistralTries < 2 && mistralKey() && !(opts && opts.tools)) {
+              mistralTries++; setProgress("Google's AI is busy. Trying the backup AI (Mistral)...", 60);
+              const mr = await callMistral(parts, opts);
+              if (mr.ok) return mr;
+              mistralErr = mr.error;
+            }
             if (busyTries < 12) {
               busyTries++;
               setProgress(`Google's AI is busy. Still trying (${busyTries}/12). Keep this screen open...`, 55);
@@ -1900,7 +1944,7 @@ This is a plain-language starting document, not legal advice.</div>
               mi--;
               continue;
             }
-            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 13 times over about 2 minutes. No scan was counted. Wait a few minutes and tap Retry, or use Manual Entry. Your photos are kept." };
+            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 13 times over about 2 minutes. No scan was counted. Wait a few minutes and tap Retry, or use Manual Entry. Your photos are kept." + (mistralErr ? " The backup AI also failed: " + mistralErr : "") };
           }
           if (res.status === 404) continue;
           if (res.status === 429) return { ok: false, error: `Google says you're over the limit (429). ${msg}` };
@@ -2153,7 +2197,7 @@ This is a plain-language starting document, not legal advice.</div>
       else { f.style.width = '100%'; nx.textContent = topRankText(); }
     }
     document.getElementById('meHandbookBtn').onclick = () => { playAudioFeedback('MONITOR', false, false); openLevelModal(); };
-    document.getElementById('meConfigBtn').onclick = () => { document.getElementById('geminiApiKey').value = STATE.geminiKey; configModal.classList.add('active'); };
+    document.getElementById('meConfigBtn').onclick = () => { document.getElementById('geminiApiKey').value = STATE.geminiKey; document.getElementById('mistralApiKey').value = mistralKey(); configModal.classList.add('active'); };
     document.getElementById('themeSelect').onchange = (e) => {
       const picked = e.target.value;
       if (themeUnlocked(picked)) { STATE.currentTheme = picked; try { localStorage.setItem('ts_theme', picked); } catch (er) {} applyTheme(picked); playAudioFeedback('BUY', false, false); }
@@ -2171,7 +2215,7 @@ This is a plain-language starting document, not legal advice.</div>
     const configModal = document.getElementById('configModal');
     document.getElementById('openConfigFromDrawerBtn').onclick = () => {
       levelModal.classList.remove('active');
-      document.getElementById('geminiApiKey').value = STATE.geminiKey;
+      document.getElementById('geminiApiKey').value = STATE.geminiKey; document.getElementById('mistralApiKey').value = mistralKey();
       configModal.classList.add('active');
     };
     document.getElementById('closeConfigBtn').onclick = () => configModal.classList.remove('active');
@@ -2179,8 +2223,19 @@ This is a plain-language starting document, not legal advice.</div>
       playAudioFeedback('BUY', false, false);
       STATE.geminiKey = document.getElementById('geminiApiKey').value.trim();
       localStorage.setItem('ts_gemini_key', STATE.geminiKey);
+      try { localStorage.setItem('ts_mistral_key', document.getElementById('mistralApiKey').value.trim()); } catch (e) {}
       configModal.classList.remove('active');
       triggerAlert('API key saved.', false, true);
+    };
+
+    document.getElementById('mistralTestBtn').onclick = async () => {
+      const k = document.getElementById('mistralApiKey').value.trim(), msg = document.getElementById('mistralTestMsg');
+      if (!k) { msg.style.color = 'var(--coral)'; msg.textContent = 'Paste a key first.'; return; }
+      try { localStorage.setItem('ts_mistral_key', k); } catch (e) {}
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Testing...';
+      const r = await callMistral([{ text: 'Reply with only this JSON: {"ok":true}' }], { maxTokens: 30 });
+      msg.style.color = r.ok ? 'var(--accent)' : 'var(--coral)';
+      msg.textContent = r.ok ? 'Works. The backup AI answered in ' + r.secs + 's.' : r.error;
     };
 
     document.getElementById('resetXpBtn').onclick = () => {
@@ -2883,7 +2938,7 @@ This is a plain-language starting document, not legal advice.</div>
           aiResale: estResale, low: est.low, high: est.high, confidence: est.confidence, collectible: est.collectible, store: currentStore()
         };
 
-        if (!result.cached && estResale > 0) {
+        if (!result.cached && !result.backup && estResale > 0) {
           // Log every live scan (kept or not) so the history database keeps growing. Never blocks the UI.
           addDoc(collection(db, 'scout_history'), {
             brand: parsedBrand, item: parsedItem, resale: estResale,
