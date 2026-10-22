@@ -233,6 +233,9 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
 .own-tab[aria-current="true"]{color:var(--ink);border-color:var(--brass);font-weight:500}
 .own-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:1px solid #E1DCD3;background:#fff;padding:10px;margin-bottom:8px;cursor:pointer;font:inherit;color:inherit}
 .own-row:hover{border-color:var(--brass)}
+.own-row.ready{border-color:#2E8B57;background:#EAF6EE;box-shadow:inset 4px 0 0 #2E8B57}
+.own-row .ok{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2E8B57;color:#fff;font-size:14px;font-weight:700;flex:none}
+.own-row .ready-t{color:#1E6B40;font-weight:500}
 .own-row img{width:56px;height:70px;object-fit:cover;background:var(--stone);flex:none;mix-blend-mode:multiply}
 .own-row .t{flex:1;min-width:0}
 .own-row .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1003,7 +1006,10 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var rows = byTab(S.tab);
       rowsHtml = rows.length ? rows.map(function (r) {
         var im = (r.thumbs && r.thumbs[0]) || r.cover || '';
-        return '<button class="own-row"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, S.tab === 'draft')].filter(Boolean).join(' · ')) + '</span></span><span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
+        var isDraft = S.tab === 'draft', nDone = intakeN(S.priv[r.id]), hasStripe = !!(r.stripe && /^https:\/\//.test(r.stripe));
+        var ready = isDraft && hasStripe && nDone === INTAKE.length;
+        var need = isDraft && !ready ? (hasStripe ? '' : 'Needs Stripe link') : '';
+        return '<button class="own-row' + (ready ? ' ready' : '') + '"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + (ready ? '<span class="ready-t">Ready: Stripe link and all 5 steps done</span> · ' : '') + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, isDraft && !ready), need].filter(Boolean).join(' · ')) + '</span></span>' + (ready ? '<span class="ok" aria-label="Ready to publish">\u2713</span> ' : '') + '<span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
       }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
     }
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
