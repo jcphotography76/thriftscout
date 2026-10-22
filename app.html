@@ -669,7 +669,7 @@
 
 1. Estimates only. Thrift Scout uses AI to estimate what secondhand items may be worth. Values are estimates for guidance, not appraisals, quotes or guarantees. Prices change with demand, condition and season. You are responsible for every buying and selling decision you make.
 
-2. Your own Gemini key. Thrift Scout asks you to supply your own Google Gemini API key. The key is stored only on your own device. You are responsible for keeping it private and for any limits, charges or terms that Google applies to your key.
+2. Your own Gemini key. Thrift Scout asks you to supply your own Google Gemini API key. The key is stored only on your own device. You are responsible for keeping it private and for any limits, charges or terms that Google applies to your key. If Google's AI is busy, or you have not added a key, your scan photo and item details are sent through the Thrift Scout server to Mistral AI, a third-party AI provider, only to produce the appraisal. Thrift Scout has turned off Mistral's use of this data for training.
 
 3. Your account and your items. You sign in with an email address and password. Your saved items, photos and notes are stored in our cloud database under your account. Keep your password private. Do not store sensitive personal information in item notes.
 
@@ -1662,12 +1662,15 @@ This is a plain-language starting document, not legal advice.</div>
     // Guests get a few free scans on the shared Thrift Scout key (set GUEST_KEY below; empty = guest mode off).
     // The key is locked in Google so it only works from thriftscout.shop.
     const GUEST_KEY = '';
+    // Shared AI server (Cloudflare Worker). When set, signed-in users with no Google key scan through it.
+    const WORKER_URL = 'https://aged-mountain-ea7b.thriftscout-official.workers.dev/';
     const GUEST_LIMIT = 10;
     let IS_GUEST = false;
     function guestUsed() { try { return parseInt(localStorage.getItem('ts_guest_used') || '0', 10) || 0; } catch (e) { return 0; } }
     function guestLeft() { return Math.max(0, GUEST_LIMIT - guestUsed()); }
     function usingGuestKey() { return !STATE.geminiKey && IS_GUEST && !!GUEST_KEY && guestLeft() > 0; }
-    function hasKey() { return !!STATE.geminiKey || usingGuestKey(); }
+    function workerOk() { try { const u = auth.currentUser; return !!WORKER_URL && !!u && !u.isAnonymous; } catch (e) { return false; } }
+    function hasKey() { return !!STATE.geminiKey || usingGuestKey() || workerOk(); }
     function activeKey() { return STATE.geminiKey || (usingGuestKey() ? GUEST_KEY : ''); }
 
     let currentAppraisal = null;
@@ -1817,22 +1820,26 @@ This is a plain-language starting document, not legal advice.</div>
     const MISTRAL_MODEL = 'mistral-small-latest';
     const mistralKey = () => { try { return localStorage.getItem('ts_mistral_key') || ''; } catch (e) { return ''; } };
     async function callMistral(parts, opts) {
-      const key = mistralKey(); if (!key) return { ok: false, error: 'No Mistral key saved.' };
+      const localKey = mistralKey(), viaWorker = !localKey && workerOk();
+      if (!localKey && !viaWorker) return { ok: false, error: 'No Mistral key saved.' };
+      let bearer = localKey;
+      if (viaWorker) { try { bearer = await auth.currentUser.getIdToken(); } catch (e) { return { ok: false, error: 'Please sign in again.' }; } }
       const content = parts.map(p => p.inlineData
         ? { type: 'image_url', image_url: 'data:' + p.inlineData.mimeType + ';base64,' + p.inlineData.data }
         : { type: 'text', text: p.text || '' });
       const controller = new AbortController(), t0 = performance.now();
       const to = setTimeout(() => controller.abort(), 60000);
       try {
-        const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        const maxTok = (opts && opts.maxTokens) || SCAN_MAX_TOKENS, wantJson = !(opts && opts.noJson);
+        const res = await fetch(viaWorker ? WORKER_URL : 'https://api.mistral.ai/v1/chat/completions', {
           method: 'POST', signal: controller.signal,
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-          body: JSON.stringify(Object.assign({ model: MISTRAL_MODEL, temperature: 0.1, max_tokens: (opts && opts.maxTokens) || SCAN_MAX_TOKENS, messages: [{ role: 'user', content }] },
-            (opts && opts.noJson) ? {} : { response_format: { type: 'json_object' } }))
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bearer },
+          body: JSON.stringify(viaWorker ? { messages: [{ role: 'user', content }], max_tokens: maxTok, json: wantJson }
+            : Object.assign({ model: MISTRAL_MODEL, temperature: 0.1, max_tokens: maxTok, messages: [{ role: 'user', content }] }, wantJson ? { response_format: { type: 'json_object' } } : {}))
         });
         clearTimeout(to);
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { const m = (data.message || (data.error && data.error.message) || ('HTTP ' + res.status)); logScan({ ok: false, err: 'mistral ' + res.status + ': ' + String(m).slice(0, 100) }); return { ok: false, error: 'Mistral: ' + (typeof m === 'string' ? m : JSON.stringify(m)).slice(0, 160) }; }
+        if (!res.ok) { if (viaWorker && res.status === 429) { /* shared limit message comes from the server */ } const m = (data.message || (typeof data.error === 'string' ? data.error : (data.error && data.error.message)) || ('HTTP ' + res.status)); logScan({ ok: false, err: 'mistral ' + res.status + ': ' + String(m).slice(0, 100) }); return { ok: false, error: 'Mistral: ' + (typeof m === 'string' ? m : JSON.stringify(m)).slice(0, 160) }; }
         let text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
         if (Array.isArray(text)) text = text.map(c => c.text || '').join('');
         text = String(text || '').trim();
@@ -1849,6 +1856,11 @@ This is a plain-language starting document, not legal advice.</div>
     async function callGemini(parts, opts) {
       const maxTokens = (opts && opts.maxTokens) || SCAN_MAX_TOKENS;
       const timeoutMs = (opts && opts.timeoutMs) || REQUEST_TIMEOUT_MS;
+      if (!STATE.geminiKey && !usingGuestKey() && workerOk()) {
+        if (opts && opts.tools) return { ok: false, error: 'Deep Research uses Google Search, so it needs your own Google key. Add one in Config.' };
+        setProgress('Asking the shared Thrift Scout AI...', 55);
+        return await callMistral(parts, opts);
+      }
       if (!hasKey()) {
         if (IS_GUEST && GUEST_KEY) { showGuestWall(); return { ok: false, error: 'Your free scans are used up. Create a free account or add your own Google key to keep going.' }; }
         return { ok: false, error: 'No API key saved. Open your profile and tap Config API Key.' };
@@ -1931,7 +1943,7 @@ This is a plain-language starting document, not legal advice.</div>
           // quietly try again a few times before bothering the user. Same model every time.
           if (res.status === 503 || res.status === 500 || res.status === 502 || res.status === 504) {
             refund();
-            if ((busyTries === 3 || busyTries === 12) && mistralTries < 2 && mistralKey() && !(opts && opts.tools)) {
+            if ((busyTries === 3 || busyTries === 12) && mistralTries < 2 && (mistralKey() || workerOk()) && !(opts && opts.tools)) {
               mistralTries++; setProgress("Google's AI is busy. Trying the backup AI (Mistral)...", 60);
               const mr = await callMistral(parts, opts);
               if (mr.ok) return mr;
@@ -1990,6 +2002,7 @@ This is a plain-language starting document, not legal advice.</div>
         limit:  ['🟡 Limit hit', "Google says this key is over its limit for now. Wait a bit, or check the key's limits in Google AI Studio."],
         key:    ['⚠️ Key problem', "Google did not accept the API key. Open Config and check it."],
         nokey:  ['⚪ AI: no key', 'Add your Google API key in Config to use the scanner.'],
+        worker: ['🟢 Shared AI', 'Scans run through the shared Thrift Scout AI. No key needed.'],
         check:  ['⏳ Checking AI...', 'Checking Google’s AI...']
       };
       const m = map[state] || map.check;
@@ -1998,6 +2011,7 @@ This is a plain-language starting document, not legal advice.</div>
     async function checkAiMeter(userTapped) {
       if (meterBusy) return; meterBusy = true;
       try {
+        if (!activeKey() && workerOk()) { meterSet('worker'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, false); return; }
         if (!hasKey()) { meterSet('nokey'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
         if (navigator.onLine === false) { meterSet('offline'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
         meterSet('check');
@@ -3234,6 +3248,7 @@ This is a plain-language starting document, not legal advice.</div>
     onAuthStateChanged(auth, (user) => {
       if (user) {
         CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || ''; showStatsIfOwner();
+        try { if (!activeKey()) meterSet(workerOk() ? 'worker' : 'nokey'); } catch (e) {}
         IS_GUEST = !!user.isAnonymous;
         checkAgeGate();
         syncBranch();
