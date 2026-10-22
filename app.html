@@ -222,6 +222,16 @@
           <label class="metric-label" style="margin-bottom:4px; display:block;">Thrift Store Asking Price / Cost ($)</label>
           <input type="number" id="itemCostInput" class="input-field" inputmode="decimal" step="any" min="0" placeholder="0.00" value="" autocomplete="off" onfocus="this.select()">
         </div>
+        <div>
+          <label class="metric-label" style="margin-bottom:4px; display:block;">Store (optional)</label>
+          <div style="display:flex; gap:6px;"><input type="text" id="storeInput" class="input-field" list="storeList" maxlength="40" placeholder="e.g. Goodwill Main St" autocomplete="off"><button type="button" id="storeNoteBtn" class="btn btn-outline" style="display:none; width:auto; padding:0 12px; font-size:.8rem;">📝 Note</button></div>
+          <datalist id="storeList"></datalist>
+          <div id="storeNote" style="display:none; font-size:.78rem; color:var(--amber); margin-top:4px;"></div>
+        </div>
+        <div id="queueBar" class="card" style="display:none; padding:10px; font-size:.82rem; line-height:1.4;">
+          <div id="queueText"></div>
+          <div style="display:flex; gap:6px; margin-top:6px;"><button type="button" id="queueRunBtn" class="btn btn-accent" style="font-size:.8rem; padding:8px;">Scan saved items now</button><button type="button" id="queueClearBtn" class="btn btn-outline" style="font-size:.8rem; padding:8px; width:auto;">Clear</button></div>
+        </div>
 
         <!-- Coin & MTG recon modes are built but hidden for the v1 launch -->
         <input type="checkbox" id="coinModeToggle" style="display:none;">
@@ -237,6 +247,7 @@
         <button class="btn btn-outline" id="openManualEntryBtn" style="border-style:dashed; color:var(--accent); border-color:var(--accent);">✍️ MANUAL RECON (NO CAMERA)</button>
 
         <button class="btn btn-amber" id="smartRetryBtn" style="display:none; margin-top:4px;">⚡ RETRY (NO RETAKE)</button>
+        <button class="btn btn-outline" id="queueSaveBtn" style="display:none; margin-top:4px;">💾 SAVE FOR LATER (scan when signal is better)</button>
 
         <div id="imagePreviewContainer" style="display:none; grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:8px; margin-top:8px;"></div>
 
@@ -282,6 +293,9 @@
           </div>
         </div>
 
+        <div id="resRange" style="display:none; font-size:.82rem; line-height:1.4;"></div>
+        <div id="resMaxPay" style="display:none; font-size:.85rem; line-height:1.4; padding:8px; border:1px solid var(--border); border-radius:8px;"></div>
+        <div id="resCalib" style="display:none; font-size:.78rem; color:var(--amber); line-height:1.4;"></div>
         <button id="reEvalEditsBtn" class="btn btn-amber" style="display:none; font-size:.8rem; padding:10px; margin-top:2px;">
           ⚡ RE-EVALUATE WITH CORRECTIONS
         </button>
@@ -358,6 +372,7 @@
 
     <!-- TAB 3: TRI-VAULT -->
     <section id="tab-vault" class="tab-view">
+      <div id="vaultInsights" class="card" style="display:none; font-size:.82rem; line-height:1.45;"></div>
       <div class="card">
         <div class="vault-subtoggle" style="grid-template-columns:1fr; display:none;">
           <button id="vTabGeneral" class="vault-subbtn active">📦 General</button>
@@ -798,10 +813,14 @@ This is a plain-language starting document, not legal advice.</div>
           <span class="metric-val" id="vDetailStrategy" style="font-size:.9rem; color:var(--accent);">Selling</span>
         </div>
       </div>
+      <div id="vDetailRange" style="display:none; font-size:.82rem; line-height:1.4;"></div>
+      <div id="vDetailMaxPay" style="display:none; font-size:.85rem; line-height:1.4; padding:8px; border:1px solid var(--border); border-radius:8px;"></div>
+      <div id="vDetailCalib" style="display:none; font-size:.78rem; color:var(--amber); line-height:1.4;"></div>
       <div style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="vDetailIntel"></div>
       <button class="btn btn-amber" id="vDetailVerifyBtn" style="font-size:.85rem; padding:12px;">🔎 VERIFY THIS ITEM (Careful Re-check)</button>
       <button class="btn btn-outline" id="vDeepBtn" style="font-size:.8rem; padding:10px;">🔬 DEEP RESEARCH (check real sold prices)</button>
       <div id="vDeepOut"></div>
+      <button class="btn btn-outline" id="vShopBtn" style="display:none; font-size:.8rem; padding:10px;">🛒 SEND TO SECOND CHANCE</button>
       <button class="btn btn-outline" id="vDetailVerifyRetakeBtn" style="display:none; font-size:.8rem; padding:8px;">📷 Retake close-up photos instead</button>
       <div id="vVerifyProgress" style="display:none; flex-direction:column; gap:6px; margin-top:2px;">
         <div style="display:flex; justify-content:space-between; font-size:.75rem; color:var(--accent); font-weight:700;">
@@ -2107,7 +2126,7 @@ This is a plain-language starting document, not legal advice.</div>
         shipping: 'Standard Ground', disposition: dispText, intel,
         query: `${brand} ${itemDesc}`, imageThumb: manualSvg, category,
         strategy: document.getElementById('assetStrategySelect').value || 'selling',
-        status: 'owned', createdAt: Date.now()
+        status: 'owned', createdAt: Date.now(), store: currentStore()
       };
 
       manualModal.classList.remove('active');
@@ -2622,7 +2641,7 @@ This is a plain-language starting document, not legal advice.</div>
       if (!files || files.length === 0 || isBusy) return;
       playAudioFeedback('BUY', false, false);
       selectedImagesBase64 = [];
-      document.getElementById('smartRetryBtn').style.display = 'none';
+      document.getElementById('smartRetryBtn').style.display = 'none'; { const q=document.getElementById('queueSaveBtn'); if(q) q.style.display='none'; }
       const toProcess = Array.from(files).slice(0, coinToggle.checked ? 2 : 1);
       const previews = [];
       try {
@@ -2759,7 +2778,7 @@ This is a plain-language starting document, not legal advice.</div>
 
     document.getElementById('smartRetryBtn').onclick = () => {
       playAudioFeedback('BUY', false, false);
-      document.getElementById('smartRetryBtn').style.display = 'none';
+      document.getElementById('smartRetryBtn').style.display = 'none'; { const q=document.getElementById('queueSaveBtn'); if(q) q.style.display='none'; }
       runScanWorkflow();
     };
 
@@ -2791,7 +2810,7 @@ This is a plain-language starting document, not legal advice.</div>
 
       setProgress(isMtgMode ? 'Scryfall MTG Recon...' : (isCoinMode ? 'Numismatic Scan...' : 'Checking Market Comps...'), 25);
       document.getElementById('evalEngineStatus').textContent = 'AI Vision Engine';
-      document.getElementById('smartRetryBtn').style.display = 'none';
+      document.getElementById('smartRetryBtn').style.display = 'none'; { const q=document.getElementById('queueSaveBtn'); if(q) q.style.display='none'; }
 
       let promptText = "";
       if (isMtgMode) {
@@ -2801,8 +2820,7 @@ This is a plain-language starting document, not legal advice.</div>
         promptText = "Examine both sides (obverse/reverse) of this coin or currency. Identify country, year, mint mark, metal content, and realistic collector value in USD. Return ONLY valid JSON matching this schema:\n" +
           '{"brand":"Issuing Mint / Country","item":"Denomination & Year","resale":35.00,"platform":"Numismatic","shipping":"Insured Mail","intel":"Mint mark verification and metal composition.","query":"coin year mint mark"}';
       } else {
-        promptText = "Identify this exact secondhand item. FIRST read any visible printed text: labels, stickers, model numbers, part numbers, tags and logos. If a model number or label is readable, use EXACTLY that text to name the item and do NOT substitute a similar-looking model. Only guess from shape or appearance when no readable text exists. BRAND RULE: only name a brand if a logo, tag, stamp or engraved hardware is clearly readable in the photos. Never guess a brand from style or shape alone. If no brand is readable, set brand to 'Unbranded or unclear', price the item as an unbranded item from what you can see (construction, materials, hardware, stitching, condition), and start intel with 'No brand mark visible. Check inside, the lining tag and the hardware.' followed by a realistic price range, for example 'Likely $18 to $25.' Set resale to the middle of that range. Return a conservative median secondary market SOLD price in USD for that exact model. Do NOT return MSRP or multipack values for single items. Put the model number you read (if any) in the item name. Also give the approximate year or era it was made, but ONLY if you can tell from a date code, model number, maker mark or distinctive style; otherwise use empty strings. Keep era and eraWhy under 12 words each. Return ONLY valid JSON matching this schema:\n" +
-          '{"brand":"Manufacturer or Studio","item":"Exact Model or Single Item Descriptor","resale":18.00,"platform":"eBay","shipping":"USPS Ground Advantage","intel":"Short appraisal rationale.","era":"c. 1975 or 1970s, or empty if unsure","eraWhy":"short evidence, e.g. date code on the base","query":"brand item descriptor keywords"}';
+        promptText = generalPrompt();
       }
 
       const parts = [{ text: promptText }];
@@ -2830,6 +2848,7 @@ This is a plain-language starting document, not legal advice.</div>
       if (!result.ok) {
         triggerAlert('⚠️ Scan failed: ' + result.error, true, true);
         document.getElementById('smartRetryBtn').style.display = 'block';
+        if (!isMtgMode && !isCoinMode) document.getElementById('queueSaveBtn').style.display = 'block';
         isBusy = false;
         return;
       }
@@ -2838,7 +2857,7 @@ This is a plain-language starting document, not legal advice.</div>
         const parsed = parseModelJson(result.text);
         const parsedBrand = parsed.brand || (isMtgMode ? 'Wizards of the Coast' : (isCoinMode ? 'US Mint' : 'Unbranded'));
         const parsedItem = parsed.item || 'Identified Asset';
-        const estResale = parseMoney(parsed.resale, parsed.intel);
+        const est = readEstimate(parsed), estResale = est.resale;
         const estProfit = calcProfit(estResale, itemCost);
 
         let dispText = "BUY (INSTANT FLIP)", verdictType = 'BUY', isJackpot = estProfit >= 50.00;
@@ -2860,7 +2879,8 @@ This is a plain-language starting document, not legal advice.</div>
           imageThumb: compressedThumbDataUrl || ("data:image/jpeg;base64," + selectedImagesBase64[0]),
           category: isMtgMode ? 'mtg' : (isCoinMode ? 'coins' : 'general'),
           strategy: document.getElementById('assetStrategySelect').value || 'selling',
-          status: 'owned', createdAt: Date.now()
+          status: 'owned', createdAt: Date.now(),
+          aiResale: estResale, low: est.low, high: est.high, confidence: est.confidence, collectible: est.collectible, store: currentStore()
         };
 
         if (!result.cached && estResale > 0) {
@@ -2887,7 +2907,160 @@ This is a plain-language starting document, not legal advice.</div>
       isBusy = false;
     }
 
+    function generalPrompt() {
+      return "Identify this exact secondhand item. FIRST read any visible printed text: labels, stickers, model numbers, part numbers, tags and logos. If a model number or label is readable, use EXACTLY that text to name the item and do NOT substitute a similar-looking model. Only guess from shape or appearance when no readable text exists. BRAND RULE: only name a brand if a logo, tag, stamp or engraved hardware is clearly readable in the photos. Never guess a brand from style or shape alone. If no brand is readable, set brand to 'Unbranded or unclear', price the item as an unbranded item from what you can see (construction, materials, hardware, stitching, condition), and start intel with 'No brand mark visible. Check inside, the lining tag and the hardware.' followed by a realistic price range, for example 'Likely $18 to $25.' Set resale to the middle of that range. Return a conservative median secondary market SOLD price in USD for that exact model. Do NOT return MSRP or multipack values for single items. Put the model number you read (if any) in the item name. Also give the approximate year or era it was made, but ONLY if you can tell from a date code, model number, maker mark or distinctive style; otherwise use empty strings. Keep era and eraWhy under 12 words each. Also give low and high: the realistic range sold prices fall in (low under or equal to resale, high over or equal). Give confidence: \"high\" only if a readable model number or label confirms the exact item, \"medium\" for a known brand and type, \"low\" if the brand or model is unclear or comps vary widely. Set collectible to true if the item could be rare, vintage or collector-driven so that the price might be far above a normal used item. Return ONLY valid JSON matching this schema:\n" +
+          '{"brand":"Manufacturer or Studio","item":"Exact Model or Single Item Descriptor","resale":18.00,"low":14.00,"high":24.00,"confidence":"medium","collectible":false,"platform":"eBay","shipping":"USPS Ground Advantage","intel":"Short appraisal rationale.","era":"c. 1975 or 1970s, or empty if unsure","eraWhy":"short evidence, e.g. date code on the base","query":"brand item descriptor keywords"}';
+    }
+    // ================= SIX FEATURES: max-pay, confidence, sold-price learning, store notes, offline queue =================
+    const MAX_FEE = 0.1325;
+    const targetProfit = () => { const v = parseFloat(localStorage.getItem('ts_target_profit')); return v > 0 ? v : 15; };
+    window.setTargetProfit = () => {
+      const v = prompt('How much profit do you want on each item, in dollars?', targetProfit());
+      if (v === null) return; const n = parseFloat(v);
+      if (!(n > 0 && n < 1000)) { alert('Enter a number above 0.'); return; }
+      localStorage.setItem('ts_target_profit', String(n));
+      if (currentAppraisal && document.getElementById('resMaxPay')) renderEstimateNotes(currentAppraisal, 'res');
+      if (currentlyOpenedVaultItem && document.getElementById('vaultDetailModal').classList.contains('active')) renderEstimateNotes(currentlyOpenedVaultItem, 'vDetail');
+    };
+    function maxPayFor(resale) { return Math.floor(((resale * (1 - MAX_FEE)) - targetProfit()) * 100) / 100; }
+    function readEstimate(p) {
+      let resale = parseMoney(p.resale, p.intel), low = parseMoney(p.low), high = parseMoney(p.high);
+      if (low > high && high > 0) { const t = low; low = high; high = t; }
+      if (resale <= 0 && low > 0 && high > 0) resale = Math.round(((low + high) / 2) * 100) / 100;
+      if (resale > 0 && low > 0 && high > 0) { low = Math.min(low, resale); high = Math.max(high, resale); } else { low = 0; high = 0; }
+      const c = String(p.confidence || '').toLowerCase();
+      return { resale, low, high, confidence: ['high', 'medium', 'low'].includes(c) ? c : '', collectible: p.collectible === true || String(p.collectible).toLowerCase() === 'true' };
+    }
+    // What your own past sales say about the estimates
+    function soldStats() {
+      const rows = (STATE.vaultItems || []).filter(i => i.status === 'sold' && Number(i.finalSoldPrice) > 0)
+        .map(i => ({ brand: String(i.brand || '').toLowerCase(), est: Number(i.aiResale || i.estAtSale || i.resale || 0), got: Number(i.finalSoldPrice) })).filter(r => r.est > 0);
+      const med = (a) => { const s = a.slice().sort((x, y) => x - y), m = Math.floor(s.length / 2); return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; };
+      const ratios = rows.map(r => r.got / r.est);
+      const byBrand = {}; rows.forEach(r => { if (r.brand && !/unbranded|unclear|unknown/.test(r.brand)) (byBrand[r.brand] = byBrand[r.brand] || []).push(r.got / r.est); });
+      return { n: rows.length, med: med(ratios), within: ratios.filter(x => Math.abs(x - 1) <= 0.25).length, byBrand: Object.entries(byBrand).filter(e => e[1].length >= 2).map(e => ({ brand: e[0], n: e[1].length, med: med(e[1]) })).sort((a, b) => b.n - a.n) };
+    }
+    function calibNote(item) {
+      const st = soldStats(), b = st.byBrand.find(x => x.brand === String(item.brand || '').toLowerCase());
+      const use = b ? { n: b.n, med: b.med, what: item.brand + ' items' } : (st.n >= 3 ? { n: st.n, med: st.med, what: 'items' } : null);
+      if (!use || Math.abs(use.med - 1) < 0.15) return '';
+      const pct = Math.round(Math.abs(use.med - 1) * 100);
+      return 'Your past sales of ' + use.what + ' (' + use.n + ' sold) ran ' + pct + '% ' + (use.med > 1 ? 'ABOVE' : 'BELOW') + ' the AI estimate.';
+    }
+    function renderEstimateNotes(item, pre) {
+      const g = (s) => document.getElementById(pre + s); if (!g('MaxPay')) return;
+      const cost = Number(item.cost || 0), resale = Number(item.resale || 0), max = maxPayFor(resale);
+      let h;
+      if (!(resale > 0)) h = '';
+      else if (max <= 0) h = '<span style="color:var(--coral); font-weight:800;">At $' + resale.toFixed(2) + ', no price gets you a $' + targetProfit().toFixed(0) + ' profit.</span>';
+      else {
+        const over = cost > 0 && cost > max;
+        h = '<b>Max to pay: $' + max.toFixed(2) + '</b> for a $' + targetProfit().toFixed(0) + ' profit' + (cost > 0 ? ' &middot; <span style="color:' + (over ? 'var(--coral)' : 'var(--accent)') + '; font-weight:800;">' + (over ? 'asking $' + cost.toFixed(2) + ' is over your max' : 'asking $' + cost.toFixed(2) + ' is under your max') + '</span>' : '');
+      }
+      g('MaxPay').innerHTML = h ? h + ' <a href="#" onclick="setTargetProfit();return false;" style="color:var(--text-muted); font-size:.74rem;">change goal</a>' : '';
+      g('MaxPay').style.display = h ? 'block' : 'none';
+      const r = g('Range');
+      if (item.low > 0 && item.high > 0) {
+        const conf = item.confidence ? item.confidence.toUpperCase() : '';
+        r.innerHTML = 'Likely sells $' + Number(item.low).toFixed(0) + ' to $' + Number(item.high).toFixed(0) + (conf ? ' &middot; confidence <b style="color:' + (item.confidence === 'high' ? 'var(--accent)' : item.confidence === 'low' ? 'var(--coral)' : 'var(--amber)') + ';">' + conf + '</b>' : '') +
+          (item.confidence === 'low' || item.collectible ? '<br><span style="color:var(--amber); font-weight:800;">' + (item.collectible ? '⭐ Could be collectible.' : 'Low confidence.') + ' Run Deep Research before you buy.</span>' : '');
+        r.style.display = 'block';
+      } else { r.style.display = 'none'; }
+      const c = g('Calib'); if (c) { const t = calibNote(item); c.textContent = t; c.style.display = t ? 'block' : 'none'; }
+    }
+    // Insights card at the top of the Sell Vault: accuracy and stores
+    function renderInsights() {
+      const el = document.getElementById('vaultInsights'); if (!el) return;
+      const st = soldStats(), items = STATE.vaultItems || [], stores = {};
+      items.forEach(i => { const s = String(i.store || '').trim(); if (!s) return; const o = stores[s] = stores[s] || { n: 0, sold: 0, profit: 0 }; o.n++; if (i.status === 'sold') { o.sold++; o.profit += Number(i.profit || 0); } });
+      const rows = Object.entries(stores).sort((a, b) => b[1].n - a[1].n).slice(0, 4);
+      let h = '';
+      if (st.n) h += '<div><b>📈 Your accuracy:</b> ' + st.n + ' sold. Items sold for about <b>' + Math.round(st.med * 100) + '%</b> of the estimate (middle value). ' + st.within + ' of ' + st.n + ' landed within 25%.' + (st.n < 3 ? ' Needs 3 sales before the app starts adjusting its advice.' : '') + '</div>';
+      if (rows.length) h += '<div style="margin-top:' + (h ? '6' : '0') + 'px;"><b>🏪 Your stores:</b> ' + rows.map(r => esc(r[0]) + ': ' + r[1].n + ' item' + (r[1].n === 1 ? '' : 's') + ', ' + r[1].sold + ' sold' + (r[1].sold ? ', $' + r[1].profit.toFixed(0) + ' profit' : '')).join(' &middot; ') + '</div>';
+      el.innerHTML = h; el.style.display = h ? 'block' : 'none';
+    }
+    // Store tagging and notes (notes stay on this device)
+    const readJson = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+    const STORE_NOTES = readJson('ts_store_notes', {});
+    const currentStore = () => { const e = document.getElementById('storeInput'); return e ? e.value.trim().slice(0, 40) : ''; };
+    function refreshStoreUi() {
+      const dl = document.getElementById('storeList'); if (!dl) return;
+      const set = new Set(Object.keys(STORE_NOTES)); (STATE.vaultItems || []).forEach(i => { if (i.store) set.add(String(i.store)); }); const last = localStorage.getItem('ts_last_store'); if (last) set.add(last);
+      dl.innerHTML = [...set].sort().map(s => '<option value="' + esc(s) + '">').join('');
+      const n = document.getElementById('storeNote'), s = currentStore();
+      n.textContent = s && STORE_NOTES[s] ? '📝 ' + STORE_NOTES[s] : ''; n.style.display = n.textContent ? 'block' : 'none';
+      document.getElementById('storeNoteBtn').style.display = s ? 'inline-block' : 'none';
+    }
+    (function () {
+      const si = document.getElementById('storeInput'); if (!si) return;
+      si.value = localStorage.getItem('ts_last_store') || '';
+      si.addEventListener('input', () => { try { localStorage.setItem('ts_last_store', currentStore()); } catch (e) {} refreshStoreUi(); });
+      document.getElementById('storeNoteBtn').onclick = () => {
+        const s = currentStore(); if (!s) return;
+        const v = prompt('Note for ' + s + ' (hours, sale days, what they price high or low). Saved on this device.', STORE_NOTES[s] || '');
+        if (v === null) return; if (v.trim()) STORE_NOTES[s] = v.trim().slice(0, 300); else delete STORE_NOTES[s];
+        try { localStorage.setItem('ts_store_notes', JSON.stringify(STORE_NOTES)); } catch (e) {} refreshStoreUi();
+      };
+      refreshStoreUi();
+    })();
+
+    // Save a scan for later when there is no signal or Google is down
+    const QKEY = 'ts_queue_v1';
+    const queueGet = () => readJson(QKEY, []);
+    function queueSet(a) { try { localStorage.setItem(QKEY, JSON.stringify(a)); return true; } catch (e) { return false; } }
+    function queueBarUpdate(msg) {
+      const q = queueGet(), bar = document.getElementById('queueBar'); if (!bar) return;
+      bar.style.display = q.length || msg ? 'block' : 'none';
+      document.getElementById('queueText').textContent = msg || ('💾 ' + q.length + ' saved scan' + (q.length === 1 ? '' : 's') + ' waiting for a good connection.');
+      document.getElementById('queueRunBtn').style.display = q.length ? 'inline-block' : 'none';
+      document.getElementById('queueClearBtn').style.display = q.length ? 'inline-block' : 'none';
+    }
+    function appraisalFrom(p, ctx) {
+      const est = readEstimate(p), cost = Number(ctx.cost || 0), resale = est.resale, profit = calcProfit(resale, cost);
+      let disp = 'BUY (INSTANT FLIP)'; if (resale <= 0 || profit < 5) disp = 'PASS (INSUFFICIENT MARGIN)'; else if (profit < 15) disp = 'MONITOR (SLIM MARGIN)';
+      const brand = p.brand || 'Unbranded', item = p.item || 'Identified Asset';
+      return { id: ctx.id, brand, item, name: brand + ' - ' + item, cost, resale, profit, platform: p.platform || 'eBay', shipping: p.shipping || 'Standard Ground', disposition: disp, intel: p.intel || 'Secondary market appraisal.',
+        era: String(p.era || '').slice(0, 40), eraWhy: String(p.eraWhy || '').slice(0, 90), query: p.query || (brand + ' ' + item), imageThumb: ctx.thumb, category: 'general', strategy: ctx.strategy || 'selling', status: 'owned', createdAt: Date.now(),
+        aiResale: resale, low: est.low, high: est.high, confidence: est.confidence, collectible: est.collectible, store: ctx.store || '', queued: true };
+    }
+    async function runQueue() {
+      if (isBusy) return; let q = queueGet(); if (!q.length) return;
+      if (!navigator.onLine) { queueBarUpdate('No signal yet. Try again when your phone has a connection.'); return; }
+      isBusy = true; let done = 0, stopped = '';
+      try {
+        for (const e of q.slice()) {
+          queueBarUpdate('Scanning saved item ' + (done + 1) + ' of ' + q.length + '...');
+          const res = await callGemini([{ text: generalPrompt() }, { inlineData: { mimeType: 'image/jpeg', data: e.b64 } }]);
+          if (!res.ok) { stopped = res.error; break; }
+          let p; try { p = parseModelJson(res.text); } catch (er) { stopped = 'One answer could not be read. It stays saved.'; break; }
+          const a = appraisalFrom(p, { id: 'item_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7), cost: e.cost, thumb: e.thumb, store: e.store, strategy: e.strategy });
+          await setDoc(vDoc(a.id), a);
+          q = queueGet().filter(x => x.id !== e.id); queueSet(q); done++; awardXp(10);
+        }
+      } catch (er) { stopped = er.message || 'Something went wrong.'; }
+      isBusy = false;
+      const left = queueGet().length;
+      queueBarUpdate((done ? done + ' scanned and saved to your vault. ' : '') + (left ? left + ' still waiting. ' : 'All done. ') + (stopped ? stopped : ''));
+      if (!left) setTimeout(() => queueBarUpdate(), 6000);
+    }
+    (function () {
+      const sb = document.getElementById('queueSaveBtn'), rb = document.getElementById('queueRunBtn'), cb = document.getElementById('queueClearBtn');
+      if (sb) sb.onclick = () => {
+        if (!selectedImagesBase64.length) return;
+        const q = queueGet(); if (q.length >= 12) { triggerAlert('The saved list is full (12). Scan some of them first.', true, true); return; }
+        q.push({ id: 'q' + Date.now().toString(36), b64: selectedImagesBase64[0], thumb: compressedThumbDataUrl || '', cost: parseFloat(document.getElementById('itemCostInput').value) || 0, store: currentStore(), strategy: document.getElementById('assetStrategySelect').value || 'selling', t: Date.now() });
+        if (!queueSet(q)) { triggerAlert('This phone has no room left to save it. Scan the saved ones first.', true, true); return; }
+        sb.style.display = 'none'; document.getElementById('smartRetryBtn').style.display = 'none'; { const q=document.getElementById('queueSaveBtn'); if(q) q.style.display='none'; } resetScanInputs(); dismissAlert(); queueBarUpdate();
+        triggerAlert('Saved. It will scan when you tap "Scan saved items" with a good connection.', false, true);
+      };
+      if (rb) rb.onclick = runQueue;
+      if (cb) cb.onclick = () => { if (confirm('Throw away all saved scans?')) { queueSet([]); queueBarUpdate(); } };
+      window.addEventListener('online', () => queueBarUpdate());
+      queueBarUpdate();
+    })();
+
     function renderAppraisal(item) {
+      renderEstimateNotes(item, 'res');
       document.getElementById('resItemTitle').textContent = `${item.item} ✏️`;
       document.getElementById('resEstResale').textContent = '$' + item.resale.toFixed(2);
       document.getElementById('resEstProfit').textContent = '$' + item.profit.toFixed(2);
@@ -3188,6 +3361,20 @@ This is a plain-language starting document, not legal advice.</div>
         shMsg(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed yet. The Second Chance security rules still need to be published in Firebase.' : 'Could not save. Check your connection and try again.', true);
       } finally { btn.classList.remove('disabled'); }
     };
+
+    // Vault item -> Second Chance holding pile (owner only)
+    $a('vShopBtn').onclick = async () => {
+      const it = currentlyOpenedVaultItem; if (!it || !isOwnerUser(auth.currentUser)) return;
+      const btn = $a('vShopBtn'); if (it.shopId) { btn.textContent = 'Already in the holding pile'; return; }
+      btn.classList.add('disabled'); btn.textContent = 'Sending...';
+      try {
+        const id = shNewId(), cover = /^data:image\/jpeg/.test(it.imageThumb || '') ? it.imageThumb : '';
+        await setDoc(doc(db, 'shop_items', id), { status: 'draft', name: it.item || it.name || 'Item', brand: (/unbranded|unclear/i.test(it.brand || '') ? '' : (it.brand || '')), description: it.intel || '', aiDraft: true, price: Math.max(0, Math.round(Number(it.resale || 0))), rawOrder: [], rawCount: 0, cover, createdAt: Date.now(), updatedAt: Date.now(), ownerUid: CURRENT_UID });
+        await setDoc(doc(db, 'shop_private', id), { cost: Number(it.cost || 0) });
+        await updateDoc(vDoc(it.id), { shopId: id }); it.shopId = id;
+        btn.textContent = '✅ In the holding pile. Add photos on the shop page.'; shLoadPile();
+      } catch (e) { btn.classList.remove('disabled'); btn.textContent = '🛒 SEND TO SECOND CHANCE'; triggerAlert('Could not send it. Check your connection and try again.', true, true); }
+    };
     async function shLoadPile() {
       try {
         const snap = await getDocs(query(collection(db, 'shop_items'), where('status', '==', 'draft')));
@@ -3353,7 +3540,7 @@ This is a plain-language starting document, not legal advice.</div>
             <img class="item-thumb" src="${esc(item.imageThumb || '')}" alt="Asset">
             <div class="item-content">
               <div class="item-title">${esc(item.brand)} - ${esc(item.item)}${item.verified ? '<span class="verified-pill">VERIFIED</span>' : ''}</div>
-              <div class="item-meta">Paid: $${cost.toFixed(2)} • Worth: $${resale.toFixed(2)} • ${strat}</div>
+              <div class="item-meta">Paid: $${cost.toFixed(2)} • Worth: $${resale.toFixed(2)} • ${strat}${item.store ? ' • ' + esc(item.store) : ''}</div>
               <div class="item-actions" onclick="event.stopPropagation();">
                 ${actions}
                 <button class="btn btn-outline" style="padding:6px 10px; font-size:.78rem; width:auto; color:var(--coral);" onclick="armBtn(this,'YES, DELETE',()=>deleteVaultItem('${id}'))">DELETE</button>
@@ -3368,6 +3555,7 @@ This is a plain-language starting document, not legal advice.</div>
     }
     function renderVault() {
       const scrollPos = window.scrollY;
+      renderInsights(); refreshStoreUi();
       const all = STATE.vaultItems.filter(item => (item.category || 'general') === STATE.vaultCategory);
       const sellItems = all.filter(i => !isKeeping(i)), keepItems = all.filter(isKeeping);
       const fill = (container, items, inColl) => {
@@ -3420,6 +3608,8 @@ This is a plain-language starting document, not legal advice.</div>
       }
       refreshVerifyBtn();
       { const vo = document.getElementById('vDeepOut'); if (vo) vo.innerHTML = ''; }
+      renderEstimateNotes(item, 'vDetail');
+      { const sb = document.getElementById('vShopBtn'); sb.style.display = isOwnerUser(auth.currentUser) ? 'block' : 'none'; sb.classList.remove('disabled'); sb.textContent = item.shopId ? '\u2705 Already in the holding pile' : '\U0001F6D2 SEND TO SECOND CHANCE'; }
       document.getElementById('vaultDetailModal').classList.add('active');
     }
 
@@ -3439,7 +3629,7 @@ This is a plain-language starting document, not legal advice.</div>
       const finalPrice = parseFloat(soldInput) || (target.resale || 35.00);
       const realized = calcProfit(finalPrice, target.cost || 0);
       try {
-        await updateDoc(vDoc(id), { status: 'sold', finalSoldPrice: finalPrice, profit: realized });
+        await updateDoc(vDoc(id), { status: 'sold', finalSoldPrice: finalPrice, profit: realized, soldAt: Date.now(), estAtSale: Number(target.aiResale || target.resale || 0) });
         playAudioFeedback('BUY', realized >= 50, false);
         triggerAlert('Asset marked as sold. Profit locked in.', false, false);
       } catch (err) { alert('Action failed: ' + err.message); }
