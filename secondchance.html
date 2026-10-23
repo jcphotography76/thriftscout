@@ -1064,7 +1064,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var E = S.E, n = 0; body.querySelectorAll('.inS').forEach(function (c) { E.intake[c.dataset.k] = c.checked; if (c.checked) n++; });
     if ($('inCount')) $('inCount').textContent = n + ' of ' + INTAKE.length + ' done';
     var w = num($('fWt').value), L = num($('fL').value), W = num($('fW').value), H = num($('fH').value);
-    if ($('boxHint')) $('boxHint').textContent = (L && W && H) ? 'Box to buy: at least ' + (Math.ceil(L) + 2) + ' x ' + (Math.ceil(W) + 2) + ' x ' + (Math.ceil(H) + 2) + ' in (item plus 1 in of padding each side).' + (w ? ' Item weighs ' + Math.floor(w / 16) + ' lb ' + Math.round((w % 16) * 10) / 10 + ' oz before packing.' : '') : 'Enter weight and length, width and height so you know what box to buy.';
+    if ($('boxHint')) $('boxHint').textContent = (L && W && H) ? 'Package size: at least ' + (Math.ceil(L) + 2) + ' x ' + (Math.ceil(W) + 2) + ' x ' + (Math.ceil(H) + 2) + ' in (item plus 1 in of padding each side). Small flat items like earrings and shirts can go in a padded or poly mailer instead of a box.' + (w ? ' Item weighs ' + Math.floor(w / 16) + ' lb ' + Math.round((w % 16) * 10) / 10 + ' oz before packing.' : '') : 'Enter weight and length, width and height so you know what package to buy.';
   }
   function dfSrc(v) { return v && v.getContext ? SC.fit(v, v.width, v.height, 160).toDataURL('image/jpeg', 0.7) : (v || ''); }
   function renderDefects() {
