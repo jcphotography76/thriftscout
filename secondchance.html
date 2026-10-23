@@ -652,8 +652,8 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
   SC.SOLID_MIN = 0.55; /* ragged or see-through cutouts (glass, clear plastic) fall back to the plain photo */
   SC.OUT_W = 880; SC.OUT_H = 1100;
   function med(a) { a.sort(function (x, y) { return x - y; }); return a[a.length >> 1]; }
-  SC.clean = function (src, strength) {
-    strength = strength == null ? 40 : strength;
+  SC.clean = function (src, strength, cutout) {
+    strength = strength == null ? 40 : strength; cutout = !!cutout;
     var k = Math.min(1, 900 / Math.max(src.width, src.height));
     var w = Math.max(2, Math.round(src.width * k)), h = Math.max(2, Math.round(src.height * k));
     var wc = document.createElement('canvas'); wc.width = w; wc.height = h;
@@ -676,7 +676,7 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     var bgw = [Math.min(255, bg[0] * gain[0]), Math.min(255, bg[1] * gain[1]), Math.min(255, bg[2] * gain[2])];
 
     var fgA = new Uint8Array(N).fill(255), mode = 'balanced', bx0 = 0, by0 = 0, bx1 = w - 1, by1 = h - 1;
-    if (uniform) {
+    if (uniform && cutout) {
       /* 3. flood the background in from the edges */
       var tol = 12 + strength * 0.9, step = 4 + strength * 0.085, tol2 = tol * tol, step2 = step * step;
       var seen = new Uint8Array(N), q = new Int32Array(N), qh = 0, qt = 0;
@@ -724,6 +724,25 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       if (frac > 0.04 && frac < 0.9 && bx1 > bx0 && by1 > by0 && solid > SC.SOLID_MIN) mode = 'cutout';
       else { fgA.fill(255); bx0 = 0; by0 = 0; bx1 = w - 1; by1 = h - 1; }
     }
+    /* 5b. one tone formula for every photo, so the whole shop matches: white point from the backdrop, a touch brighter, a touch crisper */
+    (function () {
+      var hist = new Uint32Array(256), n = 0, k2, lum;
+      for (k2 = 0; k2 < N * 4; k2 += 16) { lum = (0.299 * d[k2] + 0.587 * d[k2 + 1] + 0.114 * d[k2 + 2]) | 0; hist[lum]++; n++; }
+      var acc = 0, lo = 0; for (k2 = 0; k2 < 256; k2++) { acc += hist[k2]; if (acc >= n * 0.005) { lo = k2; break; } }
+      lo = Math.min(lo, 28);
+      var lut = new Uint8Array(256);
+      for (k2 = 0; k2 < 256; k2++) { var v = Math.max(0, (k2 - lo) / (255 - lo)); lut[k2] = Math.min(255, Math.round(255 * Math.pow(v, 0.93))); }
+      for (k2 = 0; k2 < N * 4; k2 += 4) { d[k2] = lut[d[k2]]; d[k2 + 1] = lut[d[k2 + 1]]; d[k2 + 2] = lut[d[k2 + 2]]; }
+      var cp = new Uint8ClampedArray(d), amt = 0.55, yy2, xx2, c3, o2;
+      for (yy2 = 1; yy2 < h - 1; yy2++) for (xx2 = 1; xx2 < w - 1; xx2++) {
+        o2 = (yy2 * w + xx2) * 4;
+        for (c3 = 0; c3 < 3; c3++) {
+          var bl = (cp[o2 + c3 - 4] + cp[o2 + c3 + 4] + cp[o2 + c3 - w * 4] + cp[o2 + c3 + w * 4] + cp[o2 + c3]) / 5;
+          d[o2 + c3] = Math.max(0, Math.min(255, cp[o2 + c3] + amt * (cp[o2 + c3] - bl)));
+        }
+      }
+    })();
+
     /* 6. composite over white */
     for (i = 0; i < N; i++) { var a = fgA[i] / 255, o4 = i * 4; d[o4] = 255 + (d[o4] - 255) * a; d[o4 + 1] = 255 + (d[o4 + 1] - 255) * a; d[o4 + 2] = 255 + (d[o4 + 2] - 255) * a; d[o4 + 3] = 255; }
     x.putImageData(id, 0, 0);
@@ -1044,7 +1063,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
   /* ---------- editor ---------- */
   function openEditor(id, auto) {
     var F = FB.F, item = id ? S.items.filter(function (x) { return x.id === id; })[0] : null;
-    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, strength: 40, gen: 0, cost: '', loc: '', sku: '', intake: {}, wt: '', dL: '', dW: '', dH: '', res: '', defects: [], dfImg: {}, dfNew: {}, dfGone: [], noDf: false };
+    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, cutout: false, strength: 40, gen: 0, cost: '', loc: '', sku: '', intake: {}, wt: '', dL: '', dW: '', dH: '', res: '', defects: [], dfImg: {}, dfNew: {}, dfGone: [], noDf: false };
     frame('<div class="own-empty">Loading...</div>');
     if (!id) { viewEditor(); if (auto === 'cam') cam(); return; }
     var order = E.data.rawOrder || [];
@@ -1114,8 +1133,9 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var opt = function (arr, v, ph) { return '<option value="">' + ph + '</option>' + arr.map(function (x) { return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); };
     frame('<div class="own-ed"><div><div class="own-acts"><button class="btn btn-line" id="oAddCam">📷 Camera</button><button class="btn btn-line" id="oAddFile">Add from this device</button></div>' +
       '<div class="own-photos" id="oPhotos"></div>' +
-      '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Clean up backgrounds</label>' +
-      '<label>Strength <input type="range" id="oStr" min="5" max="100" value="' + E.strength + '"></label></div>' +
+      '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Tidy photos (same color, brightness and sharpness)</label>' +
+      '<label><input type="checkbox" id="oCut"' + (E.cutout ? ' checked' : '') + '> Also cut out the background</label>' +
+      '<label' + (E.cutout ? '' : ' style="display:none"') + ' id="oStrL">Strength <input type="range" id="oStr" min="5" max="100" value="' + E.strength + '"></label></div>' +
       '<div class="own-msg" id="oNote">Photo rules: clean the camera lens (no smudges or streaks), shoot in good light, and keep the photo sharp. Blurry or dark photos are not allowed. Every photo is centered and placed on the shop backdrop. Raise Strength if a shadow or edge is left behind. A plain, light surface works best.</div></div>' +
       '<div><div class="own-form">' +
       '<div class="full"><label for="fName">Item name <i>*</i></label><input class="field" id="fName" value="' + esc(d.name) + '" placeholder="Levi’s straight-leg jeans, vintage wash"></div>' +
@@ -1155,6 +1175,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
     intakeUi(); renderDefects(); renderQr();
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
+    $('oCut').onchange = function () { E.cutout = this.checked; $('oStrL').style.display = this.checked ? '' : 'none'; E.dirty = true; renderPhotos(); };
     $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
     $('oBack').onclick = function () { viewList(); };
     $('oPub').onclick = function () { save(live ? d.status : 'available'); };
@@ -1179,7 +1200,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var cv = cell.querySelector('[data-a=cover]'); if (cv) cv.onclick = function () { E.raw.splice(i, 1); E.raw.unshift(r); E.dirty = true; renderPhotos(); };
       chain = chain.then(function () { return new Promise(function (res) { setTimeout(function () {
         if (gen !== E.gen) return res();
-        var out = E.clean ? SC.clean(r.canvas, E.strength) : { canvas: SC.fit(r.canvas, r.canvas.width, r.canvas.height, 700), mode: 'raw' };
+        var out = E.clean ? SC.clean(r.canvas, E.strength, E.cutout) : { canvas: SC.fit(r.canvas, r.canvas.width, r.canvas.height, 700), mode: 'raw' };
         r.out = out; cell.querySelector('img').src = SC.fit(out.canvas, out.canvas.width, out.canvas.height, 360).toDataURL('image/jpeg', 0.8);
         if (out.mode === 'balanced') { var n = document.createElement('div'); n.className = 'nt'; n.textContent = 'Background not removed'; cell.insertBefore(n, cell.querySelector('.row')); }
         res();
@@ -1237,7 +1258,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
         var oldP = (await F.getDocs(F.collection(db, 'shop_items', E.id, 'photos'))).docs, keep = [], thumbs = [], stamp = Date.now().toString(36);
         for (i = 0; i < E.raw.length; i++) {
           say('Preparing photo ' + (i + 1) + ' of ' + E.raw.length + '...');
-          var out = E.clean ? SC.clean(E.raw[i].canvas, E.strength).canvas : (function (c) { var o = document.createElement('canvas'); o.width = SC.OUT_W; o.height = SC.OUT_H; var x = o.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, o.width, o.height); var s = Math.min(o.width / c.width, o.height / c.height); x.drawImage(c, (o.width - c.width * s) / 2, (o.height - c.height * s) / 2, c.width * s, c.height * s); return o; })(E.raw[i].canvas);
+          var out = E.clean ? SC.clean(E.raw[i].canvas, E.strength, E.cutout).canvas : (function (c) { var o = document.createElement('canvas'); o.width = SC.OUT_W; o.height = SC.OUT_H; var x = o.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, o.width, o.height); var s = Math.min(o.width / c.width, o.height / c.height); x.drawImage(c, (o.width - c.width * s) / 2, (o.height - c.height * s) / 2, c.width * s, c.height * s); return o; })(E.raw[i].canvas);
           var pid = 'p' + stamp + i;
           await F.setDoc(F.doc(db, 'shop_items', E.id, 'photos', pid), { i: i, data: SC.jpeg(out, 190000, 0.84) });
           keep.push(pid);
