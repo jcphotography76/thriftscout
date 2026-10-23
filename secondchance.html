@@ -1121,7 +1121,11 @@ if(typeof module!=='undefined')module.exports=TSQR;
   }
   function renderQr() {
     var E = S.E, box = $('qrBox'); if (!box) return;
-    if (!E.sku) { box.innerHTML = '<small>Save this item once to get its item number. The QR label appears here after that.</small>'; return; }
+    if (!E.sku) {
+      box.innerHTML = '<div style="margin-top:6px"><button type="button" class="btn btn-line" id="qrMake">Make label</button></div><small>Saves this item to the holding pile, gives it its item number and shows the label. You stay on this screen.</small>';
+      $('qrMake').onclick = function () { if (!$('fName').value.trim()) { say('Add the item name first, then tap Make label.', 'bad'); $('fName').focus(); return; } this.disabled = true; var me = this; save('draft', true).then(function () { me.disabled = false; }); };
+      return;
+    }
     box.innerHTML = '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px"><div style="border:1px solid #CFCAC2;display:inline-block">' + labelHtml('2in') + '</div><div style="display:flex;flex-direction:column;gap:8px"><button type="button" class="btn btn-line" id="qr2">Print 2-inch label</button><button type="button" class="btn btn-line" id="qr4">Print 4 x 6 label</button></div></div>' +
       '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
     $('qr2').onclick = function () { printLabel('2in'); }; $('qr4').onclick = function () { printLabel('4x6'); };
@@ -1157,7 +1161,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
       '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
-      '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
+      '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b id="skuTxt">' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
       '<div class="own-form" style="margin-top:10px"><div><label for="fSellerName">Seller name</label><input class="field" id="fSellerName" value="' + esc(E.sellerName) + '"></div><div><label for="fSellerEmail">Seller email</label><input class="field" id="fSellerEmail" type="email" value="' + esc(E.sellerEmail) + '"></div></div>' +
@@ -1236,7 +1240,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     return m;
   }
 
-  async function save(status) {
+  async function save(status, stay) {
     var E = S.E, F = FB.F, d = collect(), pub = status !== 'draft';
     $('oErr').innerHTML = '';
     if (pub) { var miss = check(d, E.raw.length); if (miss.length) { $('oErr').innerHTML = '<div class="own-err"><b>Not ready to publish. Still needed:</b><ul>' + miss.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'; return; } }
@@ -1282,6 +1286,14 @@ if(typeof module!=='undefined')module.exports=TSQR;
       S.priv[E.id] = priv;
       window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
       await load();
+      if (stay) {
+        E.data.status = status; E.isNew = false; if (up.createdAt) E.data.createdAt = up.createdAt;
+        btns.forEach(function (b) { b.disabled = false; });
+        renderQr(); if ($('skuTxt')) $('skuTxt').textContent = E.sku;
+        say('Saved to the holding pile as ' + E.sku + '. Label is ready to print.', 'good');
+        var qb = $('qrBox'); if (qb && qb.scrollIntoView) qb.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
       S.tab = status === 'draft' ? 'draft' : status; viewList();
       say(status === 'draft' ? 'Saved to the holding pile.' + (E.defects.some(function (x) { return !E.dfImg[x.id]; }) ? ' A flaw still needs its photo.' : '') : status === 'sold' ? 'Marked sold.' : 'Live on the shop now.', 'good');
     } catch (e) {
