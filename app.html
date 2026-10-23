@@ -2096,8 +2096,20 @@ This is a plain-language starting document, not legal advice.</div>
     })();
 
     function parseModelJson(text) {
-      const cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-      return JSON.parse(cleaned);
+      let cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+      try { return JSON.parse(cleaned); } catch (e0) {
+        const a = cleaned.indexOf('{');
+        if (a < 0) throw e0;
+        cleaned = cleaned.slice(a);
+        const b = cleaned.lastIndexOf('}');
+        if (b > 0) { try { return JSON.parse(cleaned.slice(0, b + 1)); } catch (e1) {} }
+        // cut-off answer: drop the broken last field and close it
+        let t = cleaned.replace(/,\s*"[^"]*"?\s*:?\s*("[^"]*)?$/, '').replace(/,\s*$/, '');
+        let open = (t.match(/\[/g) || []).length - (t.match(/\]/g) || []).length;
+        let braces = (t.match(/\{/g) || []).length - (t.match(/\}/g) || []).length;
+        t += ']'.repeat(Math.max(open, 0)) + '}'.repeat(Math.max(braces, 0));
+        return JSON.parse(t);
+      }
     }
 
     document.getElementById('reEvalEditsBtn').onclick = async () => {
