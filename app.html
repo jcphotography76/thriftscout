@@ -669,7 +669,7 @@
 
 1. Estimates only. Thrift Scout uses AI to estimate what secondhand items may be worth. Values are estimates for guidance, not appraisals, quotes or guarantees. Prices change with demand, condition and season. You are responsible for every buying and selling decision you make.
 
-2. Your own Gemini key. Thrift Scout asks you to supply your own Google Gemini API key. The key is stored only on your own device. You are responsible for keeping it private and for any limits, charges or terms that Google applies to your key.
+2. Your own Gemini key. Thrift Scout asks you to supply your own Google Gemini API key. The key is stored only on your own device. You are responsible for keeping it private and for any limits, charges or terms that Google applies to your key. If Google's AI is busy, or you have not added a key, your scan photo and item details are sent through the Thrift Scout server to an AI model hosted by Cloudflare, a third-party provider, only to produce the appraisal.
 
 3. Your account and your items. You sign in with an email address and password. Your saved items, photos and notes are stored in our cloud database under your account. Keep your password private. Do not store sensitive personal information in item notes.
 
@@ -1657,12 +1657,15 @@ This is a plain-language starting document, not legal advice.</div>
     // Guests get a few free scans on the shared Thrift Scout key (set GUEST_KEY below; empty = guest mode off).
     // The key is locked in Google so it only works from thriftscout.shop.
     const GUEST_KEY = '';
+    // Shared AI server (Cloudflare Worker running Cloudflare's free Workers AI). Signed-in users with no Google key scan through it.
+    const WORKER_URL = 'https://aged-mountain-ea7b.thriftscout-official.workers.dev/';
     const GUEST_LIMIT = 10;
     let IS_GUEST = false;
     function guestUsed() { try { return parseInt(localStorage.getItem('ts_guest_used') || '0', 10) || 0; } catch (e) { return 0; } }
     function guestLeft() { return Math.max(0, GUEST_LIMIT - guestUsed()); }
     function usingGuestKey() { return !STATE.geminiKey && IS_GUEST && !!GUEST_KEY && guestLeft() > 0; }
-    function hasKey() { return !!STATE.geminiKey || usingGuestKey(); }
+    function workerOk() { try { const u = auth.currentUser; return !!WORKER_URL && !!u && !u.isAnonymous; } catch (e) { return false; } }
+    function hasKey() { return !!STATE.geminiKey || usingGuestKey() || workerOk(); }
     function activeKey() { return STATE.geminiKey || (usingGuestKey() ? GUEST_KEY : ''); }
 
     let currentAppraisal = null;
@@ -1808,9 +1811,43 @@ This is a plain-language starting document, not legal advice.</div>
       } catch (e) {}
     }
 
+    // Shared AI: the Thrift Scout Worker (Cloudflare Workers AI). Used when there is no Google key, or when Google stays busy.
+    async function callShared(parts, opts) {
+      if (!workerOk()) return { ok: false, error: 'Sign in to use the shared AI.' };
+      let token; try { token = await auth.currentUser.getIdToken(); } catch (e) { return { ok: false, error: 'Please sign in again.' }; }
+      const content = parts.map(p => p.inlineData
+        ? { type: 'image_url', image_url: 'data:' + p.inlineData.mimeType + ';base64,' + p.inlineData.data }
+        : { type: 'text', text: p.text || '' });
+      const controller = new AbortController(), t0 = performance.now();
+      const to = setTimeout(() => controller.abort(), 90000);
+      try {
+        const res = await fetch(WORKER_URL, {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ messages: [{ role: 'user', content }], max_tokens: (opts && opts.maxTokens) || SCAN_MAX_TOKENS, json: !(opts && opts.noJson) })
+        });
+        clearTimeout(to);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { const m = typeof data.error === 'string' ? data.error : ('HTTP ' + res.status); logScan({ ok: false, err: 'shared ' + res.status + ': ' + String(m).slice(0, 100) }); return { ok: false, error: m }; }
+        const text = String(data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '').trim();
+        if (!text) return { ok: false, error: 'The shared AI gave an empty answer.' };
+        const secs = ((performance.now() - t0) / 1000).toFixed(1), name = String(data.model || 'shared AI').split('/').pop();
+        logScan({ ok: true, secs: +secs, model: name + ' (shared)' });
+        return { ok: true, text, model: name + ' (shared AI)', secs, backup: true };
+      } catch (err) {
+        clearTimeout(to);
+        return { ok: false, error: err.name === 'AbortError' ? 'The shared AI did not answer in 90 seconds.' : 'The shared AI could not be reached (' + err.message + ').' };
+      }
+    }
+
     async function callGemini(parts, opts) {
       const maxTokens = (opts && opts.maxTokens) || SCAN_MAX_TOKENS;
       const timeoutMs = (opts && opts.timeoutMs) || REQUEST_TIMEOUT_MS;
+      if (!STATE.geminiKey && !usingGuestKey() && workerOk()) {
+        if (opts && opts.tools) return { ok: false, error: 'Deep Research uses Google Search, so it needs your own Google key. Add one in Config.' };
+        setProgress('Asking the shared Thrift Scout AI...', 55);
+        return await callShared(parts, opts);
+      }
       if (!hasKey()) {
         if (IS_GUEST && GUEST_KEY) { showGuestWall(); return { ok: false, error: 'Your free scans are used up. Create a free account or add your own Google key to keep going.' }; }
         return { ok: false, error: 'No API key saved. Open your profile and tap Config API Key.' };
@@ -1835,7 +1872,7 @@ This is a plain-language starting document, not legal advice.</div>
 
       let lastError = 'Unknown error';
       let busyTries = 0;
-      let slowTries = 0;
+      let slowTries = 0, sharedTries = 0, sharedErr = '';
       const refund = () => { if (guestCall) return; STATE.dailyScans += 1; updatePills(); };
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       for (let mi = 0; mi < MODELS.length; mi++) {
@@ -1893,6 +1930,12 @@ This is a plain-language starting document, not legal advice.</div>
           // quietly try again a few times before bothering the user. Same model every time.
           if (res.status === 503 || res.status === 500 || res.status === 502 || res.status === 504) {
             refund();
+            if ((busyTries === 3 || busyTries === 12) && sharedTries < 2 && workerOk() && !(opts && opts.tools)) {
+              sharedTries++; setProgress("Google's AI is busy. Trying the shared backup AI...", 60);
+              const sr = await callShared(parts, opts);
+              if (sr.ok) return sr;
+              sharedErr = sr.error;
+            }
             if (busyTries < 12) {
               busyTries++;
               setProgress(`Google's AI is busy. Still trying (${busyTries}/12). Keep this screen open...`, 55);
@@ -1900,7 +1943,7 @@ This is a plain-language starting document, not legal advice.</div>
               mi--;
               continue;
             }
-            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 13 times over about 2 minutes. No scan was counted. Wait a few minutes and tap Retry, or use Manual Entry. Your photos are kept." };
+            return { ok: false, error: "Google's AI is busy right now (high demand). We tried 13 times over about 2 minutes. No scan was counted. Wait a few minutes and tap Retry, or use Manual Entry. Your photos are kept." + (sharedErr ? " The backup AI also failed: " + sharedErr : "") };
           }
           if (res.status === 404) continue;
           if (res.status === 429) return { ok: false, error: `Google says you're over the limit (429). ${msg}` };
@@ -1946,6 +1989,7 @@ This is a plain-language starting document, not legal advice.</div>
         limit:  ['🟡 Limit hit', "Google says this key is over its limit for now. Wait a bit, or check the key's limits in Google AI Studio."],
         key:    ['⚠️ Key problem', "Google did not accept the API key. Open Config and check it."],
         nokey:  ['⚪ AI: no key', 'Add your Google API key in Config to use the scanner.'],
+        worker: ['🟢 Shared AI', 'Scans run through the shared Thrift Scout AI. No key needed.'],
         check:  ['⏳ Checking AI...', 'Checking Google’s AI...']
       };
       const m = map[state] || map.check;
@@ -1954,6 +1998,7 @@ This is a plain-language starting document, not legal advice.</div>
     async function checkAiMeter(userTapped) {
       if (meterBusy) return; meterBusy = true;
       try {
+        if (!activeKey() && workerOk()) { meterSet('worker'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, false); return; }
         if (!hasKey()) { meterSet('nokey'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
         if (navigator.onLine === false) { meterSet('offline'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
         meterSet('check');
@@ -2883,7 +2928,7 @@ This is a plain-language starting document, not legal advice.</div>
           aiResale: estResale, low: est.low, high: est.high, confidence: est.confidence, collectible: est.collectible, store: currentStore()
         };
 
-        if (!result.cached && estResale > 0) {
+        if (!result.cached && !result.backup && estResale > 0) {
           // Log every live scan (kept or not) so the history database keeps growing. Never blocks the UI.
           addDoc(collection(db, 'scout_history'), {
             brand: parsedBrand, item: parsedItem, resale: estResale,
@@ -3179,6 +3224,7 @@ This is a plain-language starting document, not legal advice.</div>
     onAuthStateChanged(auth, (user) => {
       if (user) {
         CURRENT_UID = user.uid; CURRENT_EMAIL = user.email || ''; showStatsIfOwner();
+        try { if (!activeKey()) meterSet(workerOk() ? 'worker' : 'nokey'); } catch (e) {}
         IS_GUEST = !!user.isAnonymous;
         checkAgeGate();
         syncBranch();
