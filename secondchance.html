@@ -786,16 +786,17 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     f.onchange = function () { var fs = Array.prototype.slice.call(f.files || []); f.remove(); fs.reduce(function (p, file) { return p.then(function () { return SC.fromFile(file).then(cb).catch(function () {}); }); }, Promise.resolve()); };
     document.body.appendChild(f); f.click();
   };
-  SC.camera = function (onShot, onDone, countStart, strict) {
+  SC.camera = function (onShot, onDone, countStart, strict, need) {
+    var cntTxt = function (k) { return need ? (k >= need ? '\u2713 ' + k + ' taken' : k + ' of ' + need) : k + ' taken'; };
     var ov = document.createElement('div'), n = countStart || 0, stream = null;
     ov.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:system-ui,sans-serif;color:#fff');
-    ov.innerHTML = '<div data-a="tip" style="padding:10px 14px;background:#111;font-size:14px;line-height:1.35;text-align:center">Wipe your lens first. Use good light. Hold steady until it is sharp.</div>' +
+    ov.innerHTML = '<div data-a="tip" style="padding:10px 14px;background:#111;font-size:14px;line-height:1.35;text-align:center">' + (need ? 'Take at least ' + need + ' photos. ' : '') + 'Wipe your lens first. Use good light. Hold steady until it is sharp.</div>' +
       '<div data-a="warn" style="display:none;padding:10px 14px;background:#8A1F2B;font-size:15px;text-align:center"></div>' +
       '<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:#111">' +
       '<button type="button" data-a="done" style="min-width:92px;padding:14px 16px;border-radius:10px;border:1px solid #444;background:#222;color:#fff;font-size:16px">Done</button>' +
       '<button type="button" data-a="snap" aria-label="Take photo" style="width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#d8d8d8"></button>' +
-      '<div data-a="count" style="min-width:92px;text-align:right;font-size:16px">' + n + ' taken</div></div>';
+      '<div data-a="count" style="min-width:92px;text-align:right;font-size:16px">' + cntTxt(n) + '</div></div>';
     document.body.appendChild(ov);
     var v = ov.querySelector('video'), cnt = ov.querySelector('[data-a=count]');
     function stop() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); ov.remove(); }
@@ -807,11 +808,11 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       if (qc.blurry || qc.dark) {
         warn.style.display = 'block';
         warn.innerHTML = (qc.dark ? 'Too dark. Move to better light and retake.' : 'That looks blurry. Wipe the lens, hold steady, and retake.') + ' <button type="button" data-a="keep" style="margin-left:8px;padding:6px 10px;border-radius:8px;border:1px solid #fff;background:transparent;color:#fff;font-size:13px">Keep anyway</button>';
-        warn.querySelector('[data-a=keep]').onclick = function () { warn.style.display = 'none'; n++; cnt.textContent = n + ' taken'; onShot(c); };
+        warn.querySelector('[data-a=keep]').onclick = function () { warn.style.display = 'none'; n++; cnt.textContent = cntTxt(n); onShot(c); };
         return;
       }
       warn.style.display = 'none';
-      n++; cnt.textContent = n + ' taken';
+      n++; cnt.textContent = cntTxt(n);
       ov.style.outline = '6px solid #fff'; setTimeout(function () { ov.style.outline = 'none'; }, 120);
       onShot(c);
     };
@@ -1081,7 +1082,18 @@ if(typeof module!=='undefined')module.exports=TSQR;
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
   }
 
+  function minPh() { return (CFG && CFG.minPhotos) || 3; }
+  function photoGate() {
+    var E = S.E; if (!E) return; var have = E.raw.length, need = minPh(), ok = have >= need;
+    var pc = $('phCount'); if (pc) { pc.textContent = ok ? '\u2713 ' + have + ' photos. Minimum of ' + need + ' met.' : have + ' of ' + need + ' photos. Take at least ' + need + '.'; pc.style.color = ok ? '#1e6b3a' : 'var(--sale)'; }
+    var ph = body.querySelector('.inS[data-k=photo]'); if (!ph) return;
+    if (!ok) { ph.checked = false; ph.disabled = true; E.intake.photo = false; } else ph.disabled = false;
+    var lb = ph.parentNode, nt = lb.querySelector('.phNeed');
+    if (!ok && !nt) { nt = document.createElement('span'); nt.className = 'phNeed'; nt.style.color = 'var(--sale)'; lb.appendChild(nt); }
+    if (nt) { if (ok) nt.remove(); else nt.textContent = ' (needs ' + need + ' photos first)'; }
+  }
   function intakeUi() {
+    photoGate();
     var E = S.E, n = 0; body.querySelectorAll('.inS').forEach(function (c) { E.intake[c.dataset.k] = c.checked; if (c.checked) n++; });
     if ($('inCount')) $('inCount').textContent = n + ' of ' + INTAKE.length + ' done';
     var w = num($('fWt').value), L = num($('fL').value), W = num($('fW').value), H = num($('fH').value);
@@ -1130,14 +1142,14 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
     $('qr2').onclick = function () { printLabel('2in'); }; $('qr4').onclick = function () { printLabel('4x6'); };
   }
-  function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length); }
+  function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length, false, minPh()); }
   function addPhoto(c) { var E = S.E; if (E.raw.length >= 8) { say('The limit is 8 photos per item.', 'bad'); return; } E.raw.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), canvas: c, saved: false }); E.dirty = true; renderPhotos(); }
 
   function viewEditor() {
     var E = S.E, d = E.data, live = d.status === 'available' || d.status === 'sold';
     var opt = function (arr, v, ph) { return '<option value="">' + ph + '</option>' + arr.map(function (x) { return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); };
     frame('<div class="own-ed"><div><div class="own-acts"><button class="btn btn-line" id="oAddCam">📷 Camera</button><button class="btn btn-line" id="oAddFile">Add from this device</button></div>' +
-      '<div class="own-photos" id="oPhotos"></div>' +
+      '<div class="own-photos" id="oPhotos"></div><div id="phCount" style="margin:8px 0 4px;font-weight:600"></div>' +
       '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Tidy photos (same color, brightness and sharpness)</label>' +
       '<label><input type="checkbox" id="oCut"' + (E.cutout ? ' checked' : '') + '> Also cut out the background</label>' +
       '<label' + (E.cutout ? '' : ' style="display:none"') + ' id="oStrL">Strength <input type="range" id="oStr" min="5" max="100" value="' + E.strength + '"></label></div>' +
@@ -1193,7 +1205,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
   }
 
   function renderPhotos() {
-    var E = S.E, box = $('oPhotos'); if (!box) return; var gen = ++E.gen;
+    var E = S.E, box = $('oPhotos'); if (!box) return; var gen = ++E.gen; if ($('fWt')) intakeUi(); else photoGate();
     box.innerHTML = E.raw.length ? '' : '<div class="own-empty" style="grid-column:1/-1">No photos yet. Use Camera or Add from this device.</div>';
     var chain = Promise.resolve();
     E.raw.forEach(function (r, i) {
