@@ -270,7 +270,7 @@
         </div>
 
         <div style="background:var(--surface); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border);">
-          <span class="metric-label" id="tierLabelTitle">AI Estimate • Verify with Sold Comps</span>
+          <span class="metric-label" id="tierLabelTitle">AI Estimate • Check Sold Prices Yourself</span>
           <span id="resRarityBadge" style="font-weight:900; font-size:.9rem; text-transform:uppercase; letter-spacing:.05em;">--</span>
         </div>
 
@@ -302,8 +302,6 @@
 
         <div id="resEra" style="display:none; font-size:.82rem; color:var(--text); line-height:1.4; border-left:3px solid var(--border); padding-left:8px;"></div>
         <div style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="resIntel"></div>
-        <button id="deepBtn" class="btn btn-outline" style="display:none; font-size:.8rem; padding:10px;">🔬 DEEP RESEARCH (check real sold prices)</button>
-        <div id="deepOut"></div>
 
         <div>
           <label class="metric-label" style="margin-bottom:4px; display:block;">Inventory Disposition Strategy</label>
@@ -314,8 +312,9 @@
         </div>
 
         <div style="display:flex; gap:8px; margin-top:4px;">
-          <button id="resDirectCompsBtn" class="btn btn-outline" style="flex:1; font-size:.85rem; border-color:var(--amber); color:var(--amber);">📊 VIEW SOLD COMPS</button>
+          <button id="resDirectCompsBtn" class="btn btn-outline" style="flex:1; font-size:.85rem; border-color:var(--amber); color:var(--amber);">📋 COPY NAME TO SEARCH</button>
         </div>
+        <p style="font-size:.72rem; color:var(--text-muted); line-height:1.35; margin:0;">Before you buy, check recent sold prices with your favorite search engine or an image search.</p>
         <div style="display:flex; gap:8px;">
           <button id="shareEvaluationBtn" class="btn btn-outline" style="flex:1; font-size:.8rem;">📤 SHARE REPORT</button>
           <button class="btn btn-accent" id="saveVaultBtn" style="flex:1; font-size:.8rem;">SEND TO VAULT</button>
@@ -332,7 +331,7 @@
         <p style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="scoutMissionDesc"></p>
         <p style="font-size:.72rem; color:var(--text-muted); margin:0; opacity:.8;">Just for fun. You can scan anything you like with Snap Photo above.</p>
         <div style="display:flex; gap:8px; margin-top:2px;">
-          <button id="scoutMissionCompsBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📊 View Target Comps</button>
+          <button id="scoutMissionCompsBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📋 Copy Target Name</button>
           <button id="scoutMissionScanBtn" class="btn btn-outline" style="font-size:.78rem; padding:10px 12px; flex:1;">📸 Hunt For This</button>
         </div>
       </div>
@@ -708,7 +707,7 @@ This is a plain-language starting document, not legal advice.</div>
         <div style="font-size:.78rem; color:var(--text-muted); line-height:1.35; margin-top:2px;" id="welcomeMissionDesc"></div>
       </div>
 
-      <p style="font-size:.7rem; color:var(--text-muted); line-height:1.35;">Prices are AI estimates. Always confirm with the sold comps button before you buy big.</p>
+      <p style="font-size:.7rem; color:var(--text-muted); line-height:1.35;">Prices are AI estimates. Before you buy big, check recent sold prices with your favorite search engine or an image search.</p>
       <div style="display:flex; gap:8px;">
         <button class="btn btn-outline" id="welcomeMissionScanBtn" style="flex:1; font-size:.8rem;">🎯 Scan the Mission</button>
         <button class="btn btn-accent" id="enterHQBtn" style="flex:1; cursor:pointer; font-size:.8rem;">LET'S GO SCOUTING</button>
@@ -818,8 +817,6 @@ This is a plain-language starting document, not legal advice.</div>
       <div id="vDetailCalib" style="display:none; font-size:.78rem; color:var(--amber); line-height:1.4;"></div>
       <div style="font-size:.82rem; color:var(--text-muted); line-height:1.4;" id="vDetailIntel"></div>
       <button class="btn btn-amber" id="vDetailVerifyBtn" style="font-size:.85rem; padding:12px;">🔎 VERIFY THIS ITEM (Careful Re-check)</button>
-      <button class="btn btn-outline" id="vDeepBtn" style="font-size:.8rem; padding:10px;">🔬 DEEP RESEARCH (check real sold prices)</button>
-      <div id="vDeepOut"></div>
       <button class="btn btn-outline" id="vShopBtn" style="display:none; font-size:.8rem; padding:10px;">🛒 SEND TO SECOND CHANCE</button>
       <button class="btn btn-outline" id="vDetailVerifyRetakeBtn" style="display:none; font-size:.8rem; padding:8px;">📷 Retake close-up photos instead</button>
       <div id="vVerifyProgress" style="display:none; flex-direction:column; gap:6px; margin-top:2px;">
@@ -833,7 +830,7 @@ This is a plain-language starting document, not legal advice.</div>
       </div>
       <div style="display:flex; gap:8px; margin-top:4px;">
         <button class="btn btn-accent" id="quickToggleSellBtn" style="flex:1; font-size:.8rem;">🔒 MOVE TO COLLECTION</button>
-        <button id="vDetailCompsActionBtn" class="btn btn-outline" style="flex:1; font-size:.8rem;">VIEW COMPS</button>
+        <button id="vDetailCompsActionBtn" class="btn btn-outline" style="flex:1; font-size:.8rem;">📋 COPY NAME</button>
       </div>
     </div>
   </div>
@@ -1136,6 +1133,18 @@ This is a plain-language starting document, not legal advice.</div>
       document.body.removeChild(link);
     }
 
+    function searchName(item) {
+      if (!item) return '';
+      const q = (typeof item.query === 'string' && item.query.trim()) ? item.query.trim() : [item.brand, item.item].filter(Boolean).join(' ').trim();
+      return q;
+    }
+    function copySearch(text, btn) {
+      if (!text) return;
+      const orig = btn.textContent;
+      const shown = () => { btn.textContent = '✓ COPIED. PASTE IT IN YOUR SEARCH'; setTimeout(() => { btn.textContent = orig; }, 3000); };
+      const fallback = () => { try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); shown(); } catch (e) { btn.textContent = text; } };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(shown, fallback); else fallback();
+    }
     function generateCompUrl(item) {
       if (!item || !item.query || typeof item.query !== 'string' || item.query.trim() === '') return null;
       const encoded = encodeURIComponent(item.query.trim());
@@ -2316,7 +2325,7 @@ This is a plain-language starting document, not legal advice.</div>
       closeWelcomeModal();
       document.getElementById('openWebcamBtn').scrollIntoView({ behavior: 'smooth' });
     }
-    document.getElementById('scoutMissionCompsBtn').onclick = () => openExternalUrl(missionCompsUrl());
+    document.getElementById('scoutMissionCompsBtn').onclick = function () { copySearch(currentMission && currentMission.query, this); };
     document.getElementById('scoutMissionScanBtn').onclick = primeMissionScan;
     document.getElementById('welcomeMissionScanBtn').onclick = primeMissionScan;
     renderWelcome();
@@ -3020,7 +3029,7 @@ This is a plain-language starting document, not legal advice.</div>
       if (item.low > 0 && item.high > 0) {
         const conf = item.confidence ? item.confidence.toUpperCase() : '';
         r.innerHTML = 'Likely sells $' + Number(item.low).toFixed(0) + ' to $' + Number(item.high).toFixed(0) + (conf ? ' &middot; confidence <b style="color:' + (item.confidence === 'high' ? 'var(--accent)' : item.confidence === 'low' ? 'var(--coral)' : 'var(--amber)') + ';">' + conf + '</b>' : '') +
-          (item.confidence === 'low' || item.collectible ? '<br><span style="color:var(--amber); font-weight:800;">' + (item.collectible ? '⭐ Could be collectible.' : 'Low confidence.') + ' Run Deep Research before you buy.</span>' : '');
+          (item.confidence === 'low' || item.collectible ? '<br><span style="color:var(--amber); font-weight:800;">' + (item.collectible ? '⭐ Could be collectible.' : 'Low confidence.') + ' Search recent sold prices before you buy.</span>' : '');
         r.style.display = 'block';
       } else { r.style.display = 'none'; }
       const c = g('Calib'); if (c) { const t = calibNote(item); c.textContent = t; c.style.display = t ? 'block' : 'none'; }
@@ -3134,14 +3143,18 @@ This is a plain-language starting document, not legal advice.</div>
       pill.className = item.disposition.includes('BUY') ? 'disposition-pill disp-flip' : (item.disposition.includes('MONITOR') ? 'disposition-pill disp-monitor' : 'disposition-pill disp-pass');
 
       const compsBtn = document.getElementById('resDirectCompsBtn');
-      const targetUrl = generateCompUrl(item);
-      if (targetUrl && item.resale > 0) {
+      const targetUrl = generateCompUrl(item), nm = searchName(item);
+      if (item.category === 'mtg' && targetUrl && item.resale > 0) {
         compsBtn.classList.remove('disabled');
-        compsBtn.textContent = item.category === 'mtg' ? '📊 VIEW SCRYFALL COMPS' : '📊 VIEW SOLD COMPS';
+        compsBtn.textContent = '📊 VIEW SCRYFALL PRICES';
         compsBtn.onclick = () => openExternalUrl(targetUrl);
+      } else if (nm) {
+        compsBtn.classList.remove('disabled');
+        compsBtn.textContent = '📋 COPY NAME TO SEARCH';
+        compsBtn.onclick = () => copySearch(nm, compsBtn);
       } else {
         compsBtn.classList.add('disabled');
-        compsBtn.textContent = 'NO COMPS AVAILABLE';
+        compsBtn.textContent = 'NO NAME TO SEARCH';
         compsBtn.onclick = null;
       }
 
@@ -3654,14 +3667,18 @@ This is a plain-language starting document, not legal advice.</div>
       document.getElementById('vDetailIntel').textContent = (item.verified ? '✅ Verified • ' : '') + (item.intel || 'No extra intelligence notes logged.');
 
       const compBtn = document.getElementById('vDetailCompsActionBtn');
-      const targetUrl = generateCompUrl(item);
-      if (targetUrl && item.resale > 0) {
+      const targetUrl = generateCompUrl(item), nm = searchName(item);
+      if (item.category === 'mtg' && targetUrl && item.resale > 0) {
         compBtn.classList.remove('disabled');
-        compBtn.textContent = 'VIEW COMPS';
+        compBtn.textContent = 'SCRYFALL PRICES';
         compBtn.onclick = () => openExternalUrl(targetUrl);
+      } else if (nm) {
+        compBtn.classList.remove('disabled');
+        compBtn.textContent = '📋 COPY NAME';
+        compBtn.onclick = () => copySearch(nm, compBtn);
       } else {
         compBtn.classList.add('disabled');
-        compBtn.textContent = 'NO COMPS AVAILABLE';
+        compBtn.textContent = 'NO NAME TO SEARCH';
         compBtn.onclick = null;
       }
       refreshVerifyBtn();
