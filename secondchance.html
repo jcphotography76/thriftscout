@@ -1671,69 +1671,26 @@ if(typeof module!=='undefined')module.exports=TSQR;
 </script>
 <script>
 (function () {
-  var KEY = 'sc_music_v1', st = null, ctx = null, on = false, held = false, timer = null, btn = null;
-  /* plucked-lute folk loop in A minor (original arrangement, 8 bars, slow 6/8) */
-  var BARS = [
-    { b: 110, a: [220, 261.63, 329.63], m: [523.25, 659.25] },
-    { b: 98, a: [196, 246.94, 293.66], m: [587.33, 493.88] },
-    { b: 87.31, a: [174.61, 220, 261.63], m: [440, 523.25] },
-    { b: 82.41, a: [164.81, 207.65, 246.94], m: [493.88, 415.3] },
-    { b: 110, a: [220, 261.63, 329.63], m: [523.25, 659.25] },
-    { b: 98, a: [196, 246.94, 293.66], m: [587.33, 783.99] },
-    { b: 82.41, a: [164.81, 207.65, 246.94], m: [493.88, 415.3] },
-    { b: 110, a: [220, 261.63, 329.63], m: [440, 0] }
-  ];
-  var STEP = 0.5;
-  function impulse(c) {
-    var len = Math.floor(c.sampleRate * 1.8), b = c.createBuffer(2, len, c.sampleRate);
-    for (var ch = 0; ch < 2; ch++) { var d = b.getChannelData(ch); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-    return b;
-  }
-  function build(c, dest) {
-    var master = c.createGain(); master.gain.value = 0.0001;
-    var bus = c.createGain(), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
-    var dry = c.createGain(); dry.gain.value = 0.8;
-    var conv = c.createConvolver(); conv.buffer = impulse(c); var wet = c.createGain(); wet.gain.value = 0.35;
-    bus.connect(lp); lp.connect(dry); lp.connect(conv); conv.connect(wet); dry.connect(master); wet.connect(master); master.connect(dest);
-    return { c: c, bus: bus, master: master, bar: 0, nextBar: c.currentTime + 0.3 };
-  }
-  function lute(s, t, f, vol, dur) {
-    var c = s.c, g = c.createGain(), o1 = c.createOscillator(), o2 = c.createOscillator(), g2 = c.createGain();
-    o1.type = 'triangle'; o1.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2; g2.gain.value = 0.35;
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(s.bus);
-    o1.start(t); o2.start(t); o1.stop(t + dur + 0.1); o2.stop(t + dur + 0.1);
-  }
-  function playBar(s, t) {
-    var B = BARS[s.bar++ % BARS.length], seq = [B.b, B.a[0], B.a[1], B.a[2], B.a[1], B.a[0]];
-    seq.forEach(function (f, k) { lute(s, t + k * STEP + (Math.random() * 0.012), f, k === 0 ? 0.11 : 0.06, k === 0 ? 2.2 : 1.3); });
-    if (B.m[0]) lute(s, t + 0.012, B.m[0], 0.1, 2.0);
-    if (B.m[1]) lute(s, t + 3 * STEP + 0.01, B.m[1], 0.09, 1.8);
-  }
-  function schedule(s, upTo) { while (s.nextBar < upTo) { playBar(s, s.nextBar); s.nextBar += STEP * 6; } }
-  var LEVEL = 0.95;
-  window.SC_MUSIC_RENDER = function (sec) {
-    var O = window.OfflineAudioContext, c = new O(2, 44100 * sec, 44100), s = build(c, c.destination);
-    s.master.gain.value = LEVEL; schedule(s, sec);
-    return c.startRendering().then(function (buf) {
-      var a = buf.getChannelData(0), sum = 0, pk = 0; for (var i = 44100 * 10; i < a.length; i++) { sum += a[i] * a[i]; pk = Math.max(pk, Math.abs(a[i])); }
-      return { rmsDb: 20 * Math.log10(Math.sqrt(sum / (a.length - 44100 * 10))), peakDb: 20 * Math.log10(pk) };
-    });
-  };
+  /* background music: "The Britons" by Kevin MacLeod (freepd.com, public domain) */
+  var KEY = 'sc_music_v1', SRC = 'second-chance-music.mp3', LEVEL = 0.35;
+  var au = null, on = false, held = false, btn = null, fade = null;
   function label() { if (!btn) return; btn.textContent = '♪ Music: ' + (on ? 'on' : 'off'); btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  function ramp(to, ms, done) {
+    clearInterval(fade); if (!au) return;
+    var from = au.volume, t0 = Date.now();
+    fade = setInterval(function () {
+      var k = Math.min(1, (Date.now() - t0) / ms); au.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+      if (k >= 1) { clearInterval(fade); if (done) done(); }
+    }, 50);
+  }
   function start() {
-    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    if (!ctx) { ctx = new AC(); st = build(ctx, ctx.destination); }
-    ctx.resume();
-    st.nextBar = Math.max(st.nextBar, ctx.currentTime + 0.1);
-    schedule(st, ctx.currentTime + 30); clearInterval(timer); timer = setInterval(function () { if (ctx && ctx.state === 'running') schedule(st, ctx.currentTime + 30); }, 5000);
-    st.master.gain.cancelScheduledValues(ctx.currentTime); st.master.gain.setValueAtTime(Math.max(st.master.gain.value, 0.0001), ctx.currentTime);
-    st.master.gain.linearRampToValueAtTime(LEVEL, ctx.currentTime + 3);
+    if (!au) { au = new Audio(SRC); au.loop = true; au.preload = 'auto'; au.volume = 0; }
+    var pr = au.play(); if (pr && pr.catch) pr.catch(function () {});
+    ramp(LEVEL, 2500);
   }
   function stop(quick) {
-    if (!ctx) return; var t = ctx.currentTime;
-    st.master.gain.cancelScheduledValues(t); st.master.gain.setValueAtTime(Math.max(st.master.gain.value, 0.0001), t); st.master.gain.linearRampToValueAtTime(0.0001, t + (quick ? 0.6 : 1.5));
-    clearInterval(timer); setTimeout(function () { if (!on || held) { try { ctx.suspend(); } catch (e) {} } }, quick ? 700 : 1600);
+    if (!au) return;
+    ramp(0, quick ? 400 : 1200, function () { if (!on || held) { try { au.pause(); } catch (e) {} } });
   }
   function setOn(v) { on = v; try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) {} label(); if (v && !held) start(); else if (!v) stop(); }
   function hold(v) { held = v; if (v) stop(true); else if (on) start(); }
@@ -1747,7 +1704,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var go = function () { document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true); if (on && !held) start(); };
       document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true);
     }
-    document.addEventListener('visibilitychange', function () { if (!ctx || !on) return; if (document.hidden) { try { ctx.suspend(); } catch (e) {} } else if (!held) ctx.resume(); });
+    document.addEventListener('visibilitychange', function () { if (!au || !on) return; if (document.hidden) { try { au.pause(); } catch (e) {} } else if (!held) start(); });
     var dlg = document.getElementById('own');
     if (dlg) { dlg.addEventListener('close', function () { hold(false); }); var o = window.SC_OWNER_OPEN; if (o) window.SC_OWNER_OPEN = function () { hold(true); return o.apply(this, arguments); }; }
   }
