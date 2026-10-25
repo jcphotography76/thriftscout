@@ -786,17 +786,16 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
     f.onchange = function () { var fs = Array.prototype.slice.call(f.files || []); f.remove(); fs.reduce(function (p, file) { return p.then(function () { return SC.fromFile(file).then(cb).catch(function () {}); }); }, Promise.resolve()); };
     document.body.appendChild(f); f.click();
   };
-  SC.camera = function (onShot, onDone, countStart, strict, need) {
-    var cntTxt = function (k) { return need ? (k >= need ? '\u2713 ' + k + ' taken' : k + ' of ' + need) : k + ' taken'; };
+  SC.camera = function (onShot, onDone, countStart, strict) {
     var ov = document.createElement('div'), n = countStart || 0, stream = null;
     ov.setAttribute('style', 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;font-family:system-ui,sans-serif;color:#fff');
-    ov.innerHTML = '<div data-a="tip" style="padding:10px 14px;background:#111;font-size:14px;line-height:1.35;text-align:center">' + (need ? 'Take at least ' + need + ' photos. ' : '') + 'Wipe your lens first. Use good light. Hold steady until it is sharp.</div>' +
+    ov.innerHTML = '<div data-a="tip" style="padding:10px 14px;background:#111;font-size:14px;line-height:1.35;text-align:center">Wipe your lens first. Use good light. Hold steady until it is sharp.</div>' +
       '<div data-a="warn" style="display:none;padding:10px 14px;background:#8A1F2B;font-size:15px;text-align:center"></div>' +
       '<video autoplay playsinline muted style="flex:1;min-height:0;width:100%;object-fit:contain;background:#000"></video>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px calc(14px + env(safe-area-inset-bottom));background:#111">' +
       '<button type="button" data-a="done" style="min-width:92px;padding:14px 16px;border-radius:10px;border:1px solid #444;background:#222;color:#fff;font-size:16px">Done</button>' +
       '<button type="button" data-a="snap" aria-label="Take photo" style="width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#d8d8d8"></button>' +
-      '<div data-a="count" style="min-width:92px;text-align:right;font-size:16px">' + cntTxt(n) + '</div></div>';
+      '<div data-a="count" style="min-width:92px;text-align:right;font-size:16px">' + n + ' taken</div></div>';
     document.body.appendChild(ov);
     var v = ov.querySelector('video'), cnt = ov.querySelector('[data-a=count]');
     function stop() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); ov.remove(); }
@@ -808,11 +807,11 @@ dialog.own{width:min(1120px,calc(100vw - 20px));max-height:calc(100vh - 20px)}
       if (qc.blurry || qc.dark) {
         warn.style.display = 'block';
         warn.innerHTML = (qc.dark ? 'Too dark. Move to better light and retake.' : 'That looks blurry. Wipe the lens, hold steady, and retake.') + ' <button type="button" data-a="keep" style="margin-left:8px;padding:6px 10px;border-radius:8px;border:1px solid #fff;background:transparent;color:#fff;font-size:13px">Keep anyway</button>';
-        warn.querySelector('[data-a=keep]').onclick = function () { warn.style.display = 'none'; n++; cnt.textContent = cntTxt(n); onShot(c); };
+        warn.querySelector('[data-a=keep]').onclick = function () { warn.style.display = 'none'; n++; cnt.textContent = n + ' taken'; onShot(c); };
         return;
       }
       warn.style.display = 'none';
-      n++; cnt.textContent = cntTxt(n);
+      n++; cnt.textContent = n + ' taken';
       ov.style.outline = '6px solid #fff'; setTimeout(function () { ov.style.outline = 'none'; }, 120);
       onShot(c);
     };
@@ -1026,10 +1025,10 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var rows = byTab(S.tab);
       rowsHtml = rows.length ? rows.map(function (r) {
         var im = (r.thumbs && r.thumbs[0]) || r.cover || '';
-        var isDraft = S.tab === 'draft', nDone = intakeN(S.priv[r.id]), hasStripe = !!(r.stripe && /^https:\/\//.test(r.stripe));
-        var ready = isDraft && hasStripe && nDone === INTAKE.length;
-        var need = isDraft && !ready ? (hasStripe ? '' : 'Needs Stripe link') : '';
-        return '<button class="own-row' + (ready ? ' ready' : '') + '"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + (ready ? '<span class="ready-t">Ready: Stripe link and all 5 steps done</span> · ' : '') + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, isDraft && !ready), need].filter(Boolean).join(' · ')) + '</span></span>' + (ready ? '<span class="ok" aria-label="Ready to publish">\u2713</span> ' : '') + '<span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
+        var isDraft = S.tab === 'draft', nDone = intakeN(S.priv[r.id]);
+        var ready = isDraft && nDone === INTAKE.length;
+        var need = '';
+        return '<button class="own-row' + (ready ? ' ready' : '') + '"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + (ready ? '<span class="ready-t">Ready: all 5 steps done. Tap to publish</span> · ' : '') + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, isDraft && !ready), need].filter(Boolean).join(' · ')) + '</span></span>' + (ready ? '<span class="ok" aria-label="Ready to publish">\u2713</span> ' : '') + '<span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
       }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
     }
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
@@ -1075,25 +1074,14 @@ if(typeof module!=='undefined')module.exports=TSQR;
     ]).then(function (r) {
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
       var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0 && k.indexOf('df_') !== 0; }));
-      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || '';
+      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || ''; E.stripeIds = pv.stripeIds || null;
       E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf;
       E.defects = (pv.defects || []).map(function (x) { return { id: x.id, text: x.text || '' }; }); E.defects.forEach(function (x) { if (map['df_' + x.id]) E.dfImg[x.id] = map['df_' + x.id]; });
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
   }
 
-  function minPh() { return (CFG && CFG.minPhotos) || 3; }
-  function photoGate() {
-    var E = S.E; if (!E) return; var have = E.raw.length, need = minPh(), ok = have >= need;
-    var pc = $('phCount'); if (pc) { pc.textContent = ok ? '\u2713 ' + have + ' photos. Minimum of ' + need + ' met.' : have + ' of ' + need + ' photos. Take at least ' + need + '.'; pc.style.color = ok ? '#1e6b3a' : 'var(--sale)'; }
-    var ph = body.querySelector('.inS[data-k=photo]'); if (!ph) return;
-    if (!ok) { ph.checked = false; ph.disabled = true; E.intake.photo = false; } else ph.disabled = false;
-    var lb = ph.parentNode, nt = lb.querySelector('.phNeed');
-    if (!ok && !nt) { nt = document.createElement('span'); nt.className = 'phNeed'; nt.style.color = 'var(--sale)'; lb.appendChild(nt); }
-    if (nt) { if (ok) nt.remove(); else nt.textContent = ' (needs ' + need + ' photos first)'; }
-  }
   function intakeUi() {
-    photoGate();
     var E = S.E, n = 0; body.querySelectorAll('.inS').forEach(function (c) { E.intake[c.dataset.k] = c.checked; if (c.checked) n++; });
     if ($('inCount')) $('inCount').textContent = n + ' of ' + INTAKE.length + ' done';
     var w = num($('fWt').value), L = num($('fL').value), W = num($('fW').value), H = num($('fH').value);
@@ -1133,23 +1121,19 @@ if(typeof module!=='undefined')module.exports=TSQR;
   }
   function renderQr() {
     var E = S.E, box = $('qrBox'); if (!box) return;
-    if (!E.sku) {
-      box.innerHTML = '<div style="margin-top:6px"><button type="button" class="btn btn-line" id="qrMake">Make label</button></div><small>Saves this item to the holding pile, gives it its item number and shows the label. You stay on this screen.</small>';
-      $('qrMake').onclick = function () { if (!$('fName').value.trim()) { say('Add the item name first, then tap Make label.', 'bad'); $('fName').focus(); return; } this.disabled = true; var me = this; save('draft', true).then(function () { me.disabled = false; }); };
-      return;
-    }
+    if (!E.sku) { box.innerHTML = '<small>Save this item once to get its item number. The QR label appears here after that.</small>'; return; }
     box.innerHTML = '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px"><div style="border:1px solid #CFCAC2;display:inline-block">' + labelHtml('2in') + '</div><div style="display:flex;flex-direction:column;gap:8px"><button type="button" class="btn btn-line" id="qr2">Print 2-inch label</button><button type="button" class="btn btn-line" id="qr4">Print 4 x 6 label</button></div></div>' +
       '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
     $('qr2').onclick = function () { printLabel('2in'); }; $('qr4').onclick = function () { printLabel('4x6'); };
   }
-  function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length, false, minPh()); }
+  function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length); }
   function addPhoto(c) { var E = S.E; if (E.raw.length >= 8) { say('The limit is 8 photos per item.', 'bad'); return; } E.raw.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), canvas: c, saved: false }); E.dirty = true; renderPhotos(); }
 
   function viewEditor() {
     var E = S.E, d = E.data, live = d.status === 'available' || d.status === 'sold';
     var opt = function (arr, v, ph) { return '<option value="">' + ph + '</option>' + arr.map(function (x) { return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); };
     frame('<div class="own-ed"><div><div class="own-acts"><button class="btn btn-line" id="oAddCam">📷 Camera</button><button class="btn btn-line" id="oAddFile">Add from this device</button></div>' +
-      '<div class="own-photos" id="oPhotos"></div><div id="phCount" style="margin:8px 0 4px;font-weight:600"></div>' +
+      '<div class="own-photos" id="oPhotos"></div>' +
       '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Tidy photos (same color, brightness and sharpness)</label>' +
       '<label><input type="checkbox" id="oCut"' + (E.cutout ? ' checked' : '') + '> Also cut out the background</label>' +
       '<label' + (E.cutout ? '' : ' style="display:none"') + ' id="oStrL">Strength <input type="range" id="oStr" min="5" max="100" value="' + E.strength + '"></label></div>' +
@@ -1164,7 +1148,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div><label for="fMat">Material</label><input class="field" id="fMat" value="' + esc(d.material) + '" placeholder="100% cotton"></div>' +
       '<div><label for="fPrice">Price (USD) <i>*</i></label><input class="field" id="fPrice" type="number" inputmode="decimal" min="0" step="0.01" value="' + (d.price || '') + '"></div>' +
       '<div><label for="fWas">Old price (shows a sale)</label><input class="field" id="fWas" type="number" inputmode="decimal" min="0" step="0.01" value="' + (d.was || '') + '"></div>' +
-      '<div><label for="fStripe">Stripe payment link</label><input class="field" id="fStripe" value="' + esc(d.stripe) + '" placeholder="https://buy.stripe.com/..."></div>' +
+      '<div><label for="fStripe">Stripe payment link <small>(made for you when you publish. Leave empty.)</small></label><input class="field" id="fStripe" value="' + esc(d.stripe) + '" placeholder="Made automatically"></div>' +
       '<div class="full"><label for="fDesc">Description and condition notes <i>*</i></label><textarea class="field" id="fDesc" placeholder="What it is, how it fits, any flaws. Be specific and honest.">' + esc(d.description) + '</textarea></div>' +
       '<div class="full priv"><b>Intake</b> <span id="inCount" style="color:#6b675f"></span><div style="margin-top:6px">' + INTAKE.map(function (k) { return '<label class="int-step"><input type="checkbox" class="inS" data-k="' + k[0] + '"' + (E.intake[k[0]] ? ' checked' : '') + '> ' + esc(k[1]) + '</label>'; }).join('') + '</div>' +
       '<div class="own-form" style="margin-top:8px;grid-template-columns:repeat(2,minmax(0,1fr))"><div><label for="fWt">Weight, ounces <i>*</i></label><input class="field" id="fWt" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.wt) + '"></div><div></div>' +
@@ -1173,7 +1157,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
       '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
-      '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b id="skuTxt">' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
+      '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
       '<div class="own-form" style="margin-top:10px"><div><label for="fSellerName">Seller name</label><input class="field" id="fSellerName" value="' + esc(E.sellerName) + '"></div><div><label for="fSellerEmail">Seller email</label><input class="field" id="fSellerEmail" type="email" value="' + esc(E.sellerEmail) + '"></div></div>' +
@@ -1205,7 +1189,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
   }
 
   function renderPhotos() {
-    var E = S.E, box = $('oPhotos'); if (!box) return; var gen = ++E.gen; if ($('fWt')) intakeUi(); else photoGate();
+    var E = S.E, box = $('oPhotos'); if (!box) return; var gen = ++E.gen;
     box.innerHTML = E.raw.length ? '' : '<div class="own-empty" style="grid-column:1/-1">No photos yet. Use Camera or Add from this device.</div>';
     var chain = Promise.resolve();
     E.raw.forEach(function (r, i) {
@@ -1252,7 +1236,30 @@ if(typeof module!=='undefined')module.exports=TSQR;
     return m;
   }
 
-  async function save(status, stay) {
+  /* ---------- Stripe, made automatically by the Worker when an item is published ---------- */
+  var SC_WORKER = 'https://aged-mountain-ea7b.thriftscout-official.workers.dev';
+  async function stripeApi(path, payload) {
+    var u = FB.auth.currentUser; if (!u) return { ok: false, error: 'Please sign in again.' };
+    var tk = await u.getIdToken(), ac = new AbortController(), to = setTimeout(function () { ac.abort(); }, 45000);
+    try {
+      var r = await fetch(SC_WORKER + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tk }, body: JSON.stringify(payload), signal: ac.signal });
+      var j = {}; try { j = await r.json(); } catch (e) {}
+      if (!r.ok) return { ok: false, error: j.error || ('The server answered ' + r.status + '.') };
+      return Object.assign({ ok: true }, j);
+    } catch (e) { return { ok: false, error: e && e.name === 'AbortError' ? 'The server took too long. Try again.' : 'Could not reach the server. Check the connection and try again.' }; }
+    finally { clearTimeout(to); }
+  }
+  function deactivateStripe(itemId) {
+    var ids = (S.priv[itemId] || {}).stripeIds;
+    if (!ids || !ids.linkId) return Promise.resolve();
+    return stripeApi('/stripe/deactivate', { linkId: ids.linkId }).catch(function () {});
+  }
+  function bakePhoto(i) {
+    var E = S.E;
+    return E.clean ? SC.clean(E.raw[i].canvas, E.strength, E.cutout).canvas : (function (c) { var o = document.createElement('canvas'); o.width = SC.OUT_W; o.height = SC.OUT_H; var x = o.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, o.width, o.height); var s = Math.min(o.width / c.width, o.height / c.height); x.drawImage(c, (o.width - c.width * s) / 2, (o.height - c.height * s) / 2, c.width * s, c.height * s); return o; })(E.raw[i].canvas);
+  }
+
+  async function save(status) {
     var E = S.E, F = FB.F, d = collect(), pub = status !== 'draft';
     $('oErr').innerHTML = '';
     if (pub) { var miss = check(d, E.raw.length); if (miss.length) { $('oErr').innerHTML = '<div class="own-err"><b>Not ready to publish. Still needed:</b><ul>' + miss.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>'; return; } }
@@ -1270,12 +1277,13 @@ if(typeof module!=='undefined')module.exports=TSQR;
       if (E.raw.length) up.cover = SC.fit(E.raw[0].canvas, E.raw[0].canvas.width, E.raw[0].canvas.height, 200).toDataURL('image/jpeg', 0.55);
       if (!E.data.createdAt) up.createdAt = Date.now();
       if (pub && !E.data.added) up.added = today();
+      var firstOut = null, stripeNote = '';
       var needBake = pub && (E.dirty || !E.data.photoCount);
       if (needBake) {
         var oldP = (await F.getDocs(F.collection(db, 'shop_items', E.id, 'photos'))).docs, keep = [], thumbs = [], stamp = Date.now().toString(36);
         for (i = 0; i < E.raw.length; i++) {
           say('Preparing photo ' + (i + 1) + ' of ' + E.raw.length + '...');
-          var out = E.clean ? SC.clean(E.raw[i].canvas, E.strength, E.cutout).canvas : (function (c) { var o = document.createElement('canvas'); o.width = SC.OUT_W; o.height = SC.OUT_H; var x = o.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, o.width, o.height); var s = Math.min(o.width / c.width, o.height / c.height); x.drawImage(c, (o.width - c.width * s) / 2, (o.height - c.height * s) / 2, c.width * s, c.height * s); return o; })(E.raw[i].canvas);
+          var out = bakePhoto(i); if (i === 0) firstOut = out;
           var pid = 'p' + stamp + i;
           await F.setDoc(F.doc(db, 'shop_items', E.id, 'photos', pid), { i: i, data: SC.jpeg(out, 190000, 0.84) });
           keep.push(pid);
@@ -1288,26 +1296,34 @@ if(typeof module!=='undefined')module.exports=TSQR;
       E.dfNew = {};
       for (i = 0; i < E.dfGone.length; i++) { try { await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', 'df_' + E.dfGone[i])); } catch (e2) {} }
       E.dfGone = [];
+      if (!E.sku) E.sku = nextSku();
+      var sIds = E.stripeIds || null, manualLink = !!d.stripe && !(sIds && d.stripe === sIds.url);
+      if (status === 'available' && !manualLink) {
+        say('Making the Stripe payment link...');
+        var simg = null;
+        if (E.raw.length) simg = SC.jpeg(firstOut || bakePhoto(0), 1300000, 0.9);
+        var sr = await stripeApi('/stripe/publish', { itemId: E.id, sku: E.sku, name: d.name, price: d.price, description: d.description, image: simg, existing: sIds ? { productId: sIds.productId, priceId: sIds.priceId, linkId: sIds.linkId, priceCents: sIds.priceCents } : null });
+        if (!sr.ok) throw new Error('Stripe would not make the payment link, so nothing was published. ' + sr.error);
+        up.stripe = sr.url;
+        E.stripeIds = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode };
+        if (sr.mode === 'test') stripeNote = ' TEST MODE: the Stripe link takes no real money yet.';
+        if (sr.notes && sr.notes.length) stripeNote += ' ' + sr.notes.join(' ');
+      } else if (manualLink && sIds) {
+        await deactivateStripe(E.id); E.stripeIds = null;
+      } else if (status !== 'available' && sIds && E.data.status === 'available') {
+        await deactivateStripe(E.id);
+      }
       say('Saving details...');
       await F.setDoc(ref, up, { merge: true });
       var cost = parseFloat(E.cost);
-      if (!E.sku) E.sku = nextSku();
-      var priv = { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku,
+      var priv = { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku, stripeIds: E.stripeIds || null,
         intake: E.intake, wt: num(E.wt), dL: num(E.dL), dW: num(E.dW), dH: num(E.dH), res: E.res || '', noDf: !!E.noDf, defects: E.defects.map(function (x) { return { id: x.id, text: x.text.trim() }; }) };
       await F.setDoc(F.doc(db, 'shop_private', E.id), priv);
       S.priv[E.id] = priv;
       window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
       await load();
-      if (stay) {
-        E.data.status = status; E.isNew = false; if (up.createdAt) E.data.createdAt = up.createdAt;
-        btns.forEach(function (b) { b.disabled = false; });
-        renderQr(); if ($('skuTxt')) $('skuTxt').textContent = E.sku;
-        say('Saved to the holding pile as ' + E.sku + '. Label is ready to print.', 'good');
-        var qb = $('qrBox'); if (qb && qb.scrollIntoView) qb.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        return;
-      }
       S.tab = status === 'draft' ? 'draft' : status; viewList();
-      say(status === 'draft' ? 'Saved to the holding pile.' + (E.defects.some(function (x) { return !E.dfImg[x.id]; }) ? ' A flaw still needs its photo.' : '') : status === 'sold' ? 'Marked sold.' : 'Live on the shop now.', 'good');
+      say(status === 'draft' ? 'Saved to the holding pile.' + (E.defects.some(function (x) { return !E.dfImg[x.id]; }) ? ' A flaw still needs its photo.' : '') : status === 'sold' ? 'Marked sold.' : 'Live on the shop now.' + stripeNote, 'good');
     } catch (e) {
       btns.forEach(function (b) { b.disabled = false; });
       say(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed. The Second Chance security rules still need to be published in Firebase.' : 'Could not save: ' + (e && e.message ? e.message : 'unknown error'), 'bad');
@@ -1405,6 +1421,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
           var order = { itemId: itemId, itemName: item.name || '', category: item.category || '', listedPrice: item.price || 0, buyerName: buyer, buyerEmail: $('sEmail').value.trim(), salePrice: o.salePrice, shipping: o.shipping, tax: o.tax, cardFee: c.fee, type: o.type, sellerName: o.type === 'consign' ? $('sSeller').value.trim() : '', sellerEmail: o.type === 'consign' ? $('sSellerEmail').value.trim() : '', pct: o.pct, min: o.min, commission: c.commission, payout: c.payout, cost: num(cost), shipCost: 0, soldAt: Date.now(), createdAt: Date.now(), ownerEmail: FB.auth.currentUser.email };
           await F.setDoc(F.doc(FB.db, 'shop_orders', oid), order);
           await F.setDoc(F.doc(FB.db, 'shop_items', itemId), { status: 'sold', updatedAt: Date.now() }, { merge: true });
+          deactivateStripe(itemId);
           window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE(); await load(); await loadOrders(); openOrder(oid);
         } catch (e) { $('sGo').disabled = false; say(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed. The new security rules need to be published in Firebase.' : 'Could not save the sale.', 'bad'); }
       };
