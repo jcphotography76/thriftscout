@@ -1097,9 +1097,9 @@ if(typeof module!=='undefined')module.exports=TSQR;
       rowsHtml = rows.length ? rows.map(function (r) {
         var im = (r.thumbs && r.thumbs[0]) || r.cover || '';
         var isDraft = S.tab === 'draft', nDone = intakeN(S.priv[r.id]);
-        var ready = isDraft && nDone === INTAKE.length;
+        var ready = isDraft && nDone === INTAKE.length, liveTab = S.tab === 'available', saved = liveTab && !!(S.priv[r.id] || {}).photosSaved;
         var need = '';
-        return '<button class="own-row' + (ready ? ' ready' : '') + '"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + (ready ? '<span class="ready-t">Ready: all 5 steps done. Tap to publish</span> · ' : '') + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, isDraft && !ready), need].filter(Boolean).join(' · ')) + '</span></span>' + (ready ? '<span class="ok" aria-label="Ready to publish">\u2713</span> ' : '') + '<span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
+        return '<button class="own-row' + (ready || saved ? ' ready' : '') + '"' + rowAttrs(r) + '>' + (im ? '<img alt="" src="' + esc(im) + '">' : '<img alt="">') + '<span class="t"><b>' + esc(r.name || 'Untitled item') + '</b><span>' + (ready ? '<span class="ready-t">Ready: all 5 steps done. Tap to publish</span> · ' : '') + (saved ? '<span class="ready-t">Photos saved</span> \u00b7 ' : (liveTab ? '<span style="color:var(--sale)">Photos not saved yet</span> \u00b7 ' : '')) + esc([r.category, (r.photoCount || r.rawCount || 0) + ' photos', metaOf(r.id, isDraft && !ready), need].filter(Boolean).join(' · ')) + '</span></span>' + (ready ? '<span class="ok" aria-label="Ready to publish">\u2713</span> ' : '') + (saved ? '<span class="ok" aria-label="Photos saved">\u2713</span> ' : '') + '<span class="p">' + (r.price ? money(r.price) : '') + '</span></button>';
       }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
     }
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
@@ -1146,7 +1146,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
       var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0 && k.indexOf('df_') !== 0; }));
       var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || nextSku(); E.stripeIds = pv.stripeIds || null;
-      E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf;
+      E.photosSaved = pv.photosSaved || 0; E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf;
       E.defects = (pv.defects || []).map(function (x) { return { id: x.id, text: x.text || '' }; }); E.defects.forEach(function (x) { if (map['df_' + x.id]) E.dfImg[x.id] = map['df_' + x.id]; });
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
@@ -1231,12 +1231,17 @@ if(typeof module!=='undefined')module.exports=TSQR;
     return new Blob(parts.concat(cen, [e.buffer]), { type: 'application/zip' });
   }
 
+
+  function markSaved(on) {
+    var E = S.E; E.photosSaved = on ? Date.now() : 0; if ($('fPhSaved')) $('fPhSaved').checked = !!on;
+    if (!E.isNew && S.priv[E.id]) { S.priv[E.id].photosSaved = E.photosSaved || null; try { FB.F.setDoc(FB.F.doc(FB.db, 'shop_private', E.id), { photosSaved: E.photosSaved || null }, { merge: true }).catch(function () {}); } catch (e) {} }
+  }
   function sharePhotos() {
     var E = S.E; if (!E.raw.length) { say('This item has no photos yet.', 'bad'); return; }
     var base = ((E.sku || 'item') + ' ' + (($('fName').value || '').trim())).replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
     Promise.all(E.raw.map(function (r, i) { return new Promise(function (res) { r.canvas.toBlob(function (b) { res(new File([b], base + ' ' + (i + 1) + '.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', 0.92); }); })).then(function (files) {
       if (navigator.canShare && navigator.canShare({ files: files }) && navigator.share) {
-        navigator.share({ files: files, title: base }).then(function () { say('Photos sent to the share menu.'); }, function (e) { if (!e || e.name !== 'AbortError') say('Could not open the share menu. Use Download zip instead.', 'bad'); });
+        navigator.share({ files: files, title: base }).then(function () { markSaved(true); say('Photos sent to the share menu. Marked as saved.'); }, function (e) { if (!e || e.name !== 'AbortError') say('Could not open the share menu. Use Download zip instead.', 'bad'); });
       } else { say('This browser cannot share photos directly, so a zip is downloading instead.'); downloadZip(); }
     });
   }
@@ -1247,8 +1252,8 @@ if(typeof module!=='undefined')module.exports=TSQR;
     Promise.all(jobs).then(function (files) {
       files.push({ name: 'details.txt', data: new TextEncoder().encode(detailsText()) });
       var nm = ((E.sku || 'item') + ' ' + (($('fName').value || '').trim())).replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
-      var a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files)); a.download = nm + '.zip'; document.body.appendChild(a); a.click(); a.remove();
-      say('Photos saved as "' + nm + '.zip". Move it into your Item Photos folder.');
+      var a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files)); a.download = nm + '.zip'; document.body.appendChild(a); a.click(); a.remove(); markSaved(true);
+      say('Photos saved as "' + nm + '.zip". Move it into your Item Photos folder. Marked as saved.');
     });
   }
   function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length); }
@@ -1283,7 +1288,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
       '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
-      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button></div><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
+      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button></div><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="fPhSaved"> Photos saved (ticks itself when you save or download them)</label><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
@@ -1337,7 +1342,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       $('fLb').oninput = syncWt; $('fOz').oninput = syncWt;
     $('fNoDf').onchange = function () { E.noDf = this.checked; };
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
-    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oShare').onclick = sharePhotos;
+    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oShare').onclick = sharePhotos; $('fPhSaved').checked = !!E.photosSaved; $('fPhSaved').onchange = function () { markSaved(this.checked); };
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
     $('oCut').onchange = function () { E.cutout = this.checked; $('oStrL').style.display = this.checked ? '' : 'none'; E.dirty = true; renderPhotos(); };
     $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
@@ -1479,7 +1484,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       say('Saving details...');
       await F.setDoc(ref, up, { merge: true });
       var cost = parseFloat(E.cost);
-      var priv = { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku, stripeIds: E.stripeIds || null,
+      var priv = { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku, photosSaved: E.photosSaved || null, stripeIds: E.stripeIds || null,
         intake: E.intake, wt: num(E.wt), dL: num(E.dL), dW: num(E.dW), dH: num(E.dH), res: E.res || '', noDf: !!E.noDf, defects: E.defects.map(function (x) { return { id: x.id, text: x.text.trim() }; }) };
       await F.setDoc(F.doc(db, 'shop_private', E.id), priv);
       S.priv[E.id] = priv;
