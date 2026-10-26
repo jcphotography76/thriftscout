@@ -309,7 +309,9 @@ body{background:var(--white);color:var(--ink)}
 .promise{background:#EFE2CB;border-top:1px solid var(--brass-lt);border-bottom:1px solid var(--brass-lt)}
 .promise-t{color:var(--wood)}
 @media (max-width:700px){.brand{padding:22px 16px;min-height:0}.brand::before,.brand::after{display:none}.win{max-width:100%}}
-.tools{grid-template-columns:repeat(4,minmax(130px,1fr)) auto auto}.tools .search{grid-column:1/-1}
+@media (min-width:1021px){.tools{grid-template-columns:repeat(4,minmax(130px,1fr)) auto auto}.tools .search{grid-column:1/-1}}
+@media (max-width:1020px){.tools{grid-template-columns:1fr 1fr}.tools .search{grid-column:1/-1}}
+@media (max-width:520px){.tools .check{grid-column:auto}}
 .dept{padding:15px 11px;font-size:.94rem;letter-spacing:.02em}.depts{gap:2px}
 </style>
 </head>
@@ -358,7 +360,7 @@ body{background:var(--white);color:var(--ink)}
     <form class="tools" id="tools" onsubmit="return false" role="search">
       <div class="search"><label class="sr" for="q">Search items</label><input class="field" id="q" type="search" placeholder="Search by item, brand or color" autocomplete="off"></div>
       <div><label class="sr" for="cond">Condition</label><select class="field" id="cond"><option value="">Any condition</option></select></div>
-      <div><label class="sr" for="aud">For</label><select class="field" id="aud"><option value="">Men's, women's, unisex</option><option>Men’s</option><option>Women’s</option><option>Unisex</option></select></div>
+      <div><label class="sr" for="aud">For</label><select class="field" id="aud"><option value="">For: anyone</option><option>Men’s</option><option>Women’s</option><option>Unisex</option></select></div>
       <div><label class="sr" for="brandf">Brand</label><select class="field" id="brandf"><option value="">Any brand</option></select></div>
       <div><label class="sr" for="sort">Sort</label><select class="field" id="sort"><option value="new">Newest first</option><option value="low">Price, low to high</option><option value="high">Price, high to low</option></select></div>
       <label class="check"><input type="checkbox" id="sale"> On sale</label>
