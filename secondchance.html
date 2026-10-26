@@ -313,6 +313,7 @@ body{background:var(--white);color:var(--ink)}
 @media (max-width:1020px){.tools{grid-template-columns:1fr 1fr}.tools .search{grid-column:1/-1}}
 @media (max-width:520px){.tools .check{grid-column:auto}}
 .dept{padding:15px 11px;font-size:.94rem;letter-spacing:.02em}.depts{gap:2px;overflow-y:hidden;overscroll-behavior-x:contain}
+@media (max-width:700px){dialog.own{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border-radius:0}.own-in{padding:16px 14px 28px}.own-in .btn,.own-acts .btn{min-height:50px;font-size:1rem}}
 </style>
 </head>
 <body>
@@ -1229,6 +1230,16 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
     return new Blob(parts.concat(cen, [e.buffer]), { type: 'application/zip' });
   }
+
+  function sharePhotos() {
+    var E = S.E; if (!E.raw.length) { say('This item has no photos yet.', 'bad'); return; }
+    var base = ((E.sku || 'item') + ' ' + (($('fName').value || '').trim())).replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+    Promise.all(E.raw.map(function (r, i) { return new Promise(function (res) { r.canvas.toBlob(function (b) { res(new File([b], base + ' ' + (i + 1) + '.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', 0.92); }); })).then(function (files) {
+      if (navigator.canShare && navigator.canShare({ files: files }) && navigator.share) {
+        navigator.share({ files: files, title: base }).then(function () { say('Photos sent to the share menu.'); }, function (e) { if (!e || e.name !== 'AbortError') say('Could not open the share menu. Use Download zip instead.', 'bad'); });
+      } else { say('This browser cannot share photos directly, so a zip is downloading instead.'); downloadZip(); }
+    });
+  }
   function downloadZip() {
     var E = S.E; if (!E.raw.length) { say('This item has no photos yet.', 'bad'); return; }
     say('Making the zip...');
@@ -1272,7 +1283,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
       '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
-      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download photos</button></div><small>Copy item details puts everything you entered in one block to paste into your description chat. Download photos saves a zip named with the item number and name.</small></div>' +
+      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button></div><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
@@ -1326,7 +1337,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       $('fLb').oninput = syncWt; $('fOz').oninput = syncWt;
     $('fNoDf').onchange = function () { E.noDf = this.checked; };
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
-    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip;
+    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oShare').onclick = sharePhotos;
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
     $('oCut').onchange = function () { E.cutout = this.checked; $('oStrL').style.display = this.checked ? '' : 'none'; E.dirty = true; renderPhotos(); };
     $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
