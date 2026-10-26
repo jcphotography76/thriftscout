@@ -1122,7 +1122,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, cutout: false, strength: 40, gen: 0, cost: '', loc: '', sku: '', intake: {}, wt: '', dL: '', dW: '', dH: '', res: '', defects: [], dfImg: {}, dfNew: {}, dfGone: [], noDf: false };
     if (item && item.photoOpt) { E.clean = item.photoOpt.clean !== false; E.cutout = !!item.photoOpt.cutout; E.strength = item.photoOpt.strength || 40; }
     frame('<div class="own-empty">Loading...</div>');
-    if (!id) { viewEditor(); if (auto === 'cam') cam(); return; }
+    if (!id) { E.sku = nextSku(); viewEditor(); if (auto === 'cam') cam(); return; }
     var order = E.data.rawOrder || [];
     Promise.all([
       F.getDocs(F.collection(FB.db, 'shop_items', id, 'raw')),
@@ -1130,7 +1130,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     ]).then(function (r) {
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
       var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0 && k.indexOf('df_') !== 0; }));
-      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || ''; E.stripeIds = pv.stripeIds || null;
+      var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || nextSku(); E.stripeIds = pv.stripeIds || null;
       E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf;
       E.defects = (pv.defects || []).map(function (x) { return { id: x.id, text: x.text || '' }; }); E.defects.forEach(function (x) { if (map['df_' + x.id]) E.dfImg[x.id] = map['df_' + x.id]; });
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
@@ -1179,7 +1179,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var E = S.E, box = $('qrBox'); if (!box) return;
     if (!E.sku) { box.innerHTML = '<small>Save this item once to get its item number. The QR label appears here after that.</small>'; return; }
     box.innerHTML = '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px"><div style="border:1px solid #CFCAC2;display:inline-block">' + labelHtml('2in') + '</div><div style="display:flex;flex-direction:column;gap:8px"><button type="button" class="btn btn-line" id="qr2">Print 2-inch label</button><button type="button" class="btn btn-line" id="qr4">Print 4 x 6 label</button></div></div>' +
-      '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
+      (E.isNew ? '<small>This number is held once you tap Save.</small>' : '') + '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
     $('qr2').onclick = function () { printLabel('2in'); }; $('qr4').onclick = function () { printLabel('4x6'); };
   }
   function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length); }
@@ -1200,7 +1200,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div><label for="fCond">Condition <i>*</i></label><select class="field" id="fCond">' + opt(CFG.conditions, d.condition, 'Choose condition') + '</select></div>' +
       '<div><label for="fBrand">Brand</label><input class="field" id="fBrand" value="' + esc(d.brand) + '"></div>' +
       '<div><label for="fSize">Size <i id="sizeReq"></i></label><input class="field" id="fSize" value="' + esc(d.size) + '" placeholder="Men’s M, 32 x 32, S/M"></div>' +
-      '<div class="full"><label for="fMeas">Measurements <i id="measReq"></i></label><input class="field" id="fMeas" value="' + esc(d.measurements) + '" placeholder="Chest 21 in, length 28 in"></div>' +
+      '<div class="full"><label>Measurements <i id="measReq"></i></label><div id="measBox"></div><input id="fMeas" type="hidden" value="' + esc(d.measurements) + '"></div>' +
       '<div><label for="fMat">Material</label><input class="field" id="fMat" value="' + esc(d.material) + '" placeholder="100% cotton"></div>' +
       '<div><label for="fPrice">Price (USD) <i>*</i></label><input class="field" id="fPrice" type="number" inputmode="decimal" min="0" step="0.01" value="' + (d.price || '') + '"></div>' +
       '<div><label for="fWas">Old price (shows a sale)</label><input class="field" id="fWas" type="number" inputmode="decimal" min="0" step="0.01" value="' + (d.was || '') + '"></div>' +
@@ -1224,7 +1224,38 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<span class="grow"></span><button class="btn btn-line" id="oBack">Back</button>' + (E.isNew && !E.raw.length ? '' : '<button class="btn btn-line" id="oDel" style="color:var(--sale);border-color:var(--sale)">Delete</button>') +
       '</div><div class="own-msg" id="ownMsg"></div></div></div>');
     var sync = function () { var n = CFG.needsSize.indexOf($('fCat').value) >= 0; $('sizeReq').textContent = n ? '*' : ''; $('measReq').textContent = n ? '*' : ''; };
-    $('fCat').onchange = sync; sync();
+    var MEAS = {
+      Tops: [['Chest (pit to pit)', 'Lay it flat. Straight across from one armpit seam to the other.'], ['Length', 'Top of the shoulder seam by the collar, straight down to the bottom hem.'], ['Shoulder width', 'Across the back, from one shoulder seam to the other.'], ['Sleeve length', 'From the shoulder seam to the end of the sleeve.'], ['Hem width', 'Lay it flat. Across the bottom hem, edge to edge.']],
+      Bottoms: [['Waist', 'Fasten it, lay it flat, and measure across the top of the waistband.'], ['Inseam', 'From the crotch seam down the inside of the leg to the hem.'], ['Rise', 'From the crotch seam up to the top of the waistband, in front.'], ['Leg opening', 'Lay it flat. Across the bottom of one leg.']],
+      Hats: [['Circumference', 'All the way around the inside of the band.']]
+    };
+    var MV = {}, MOTHER = '';
+    (function () {
+      var txt = String(d.measurements || ''), rest = txt;
+      Object.keys(MEAS).forEach(function (c) { MEAS[c].forEach(function (f) {
+        var re = new RegExp(f[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(?:in|inches|")?', 'i'), m = txt.match(re);
+        if (m) { MV[f[0]] = m[1]; rest = rest.replace(m[0], ''); }
+      }); });
+      MOTHER = rest.replace(/^[\s,;.·]+|[\s,;.·]+$/g, '').replace(/[,;·]\s*[,;·]+/g, ',');
+    })();
+    var measSetup = function () {
+      var box = $('measBox'), list = MEAS[$('fCat').value] || [], h = '';
+      if (list.length) {
+        h += '<div class="own-form" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + list.map(function (f, i) {
+          return '<div><label for="mv' + i + '">' + esc(f[0]) + ', inches</label><small style="display:block;color:#6b675f;margin:-2px 0 4px">' + esc(f[1]) + '</small><input class="field" id="mv' + i + '" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(MV[f[0]] || '') + '"></div>';
+        }).join('') + '</div>';
+      }
+      h += '<div style="margin-top:8px"><label for="mOther">' + (list.length ? 'Anything else (optional)' : 'Measurements') + '</label><input class="field" id="mOther" value="' + esc(MOTHER) + '" placeholder="' + (list.length ? 'Another measurement or note' : 'Chest 21 in, length 28 in') + '"></div>';
+      box.innerHTML = h;
+      var compose = function () {
+        var parts = list.map(function (f, i) { var v = $('mv' + i).value.trim(); MV[f[0]] = v; return v ? f[0] + ' ' + v + ' in' : ''; }).filter(Boolean);
+        MOTHER = $('mOther').value.trim(); if (MOTHER) parts.push(MOTHER);
+        $('fMeas').value = parts.join(', '); if (typeof intakeUi === 'function') intakeUi();
+      };
+      box.querySelectorAll('input').forEach(function (x) { x.oninput = compose; });
+      compose();
+    };
+    $('fCat').onchange = function () { sync(); measSetup(); }; sync(); measSetup();
     $('oAddCam').onclick = cam; $('oAddFile').onclick = function () { SC.pick(addPhoto); };
     body.querySelectorAll('.inS').forEach(function (c) { c.onchange = function () { E.intake[c.dataset.k] = c.checked; intakeUi(); }; });
     ['fWt', 'fL', 'fW', 'fH'].forEach(function (k) { $(k).oninput = intakeUi; });
