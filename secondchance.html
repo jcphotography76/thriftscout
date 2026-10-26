@@ -863,7 +863,8 @@ body{background:var(--white);color:var(--ink)}
       '<button type="button" data-a="done" style="min-width:92px;padding:14px 16px;border-radius:10px;border:1px solid #444;background:#222;color:#fff;font-size:16px">Done</button>' +
       '<button type="button" data-a="snap" aria-label="Take photo" style="width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#d8d8d8"></button>' +
       '<div data-a="count" style="min-width:92px;text-align:right;font-size:16px">' + n + ' taken</div></div>';
-    document.body.appendChild(ov);
+    // A modal dialog sits above everything on the page, so the camera must open inside it when one is showing.
+    (document.querySelector('dialog[open]') || document.body).appendChild(ov);
     var v = ov.querySelector('video'), cnt = ov.querySelector('[data-a=count]');
     function stop() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); ov.remove(); }
     ov.querySelector('[data-a=done]').onclick = function () { stop(); if (onDone) onDone(n); };
