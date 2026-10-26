@@ -309,6 +309,8 @@ body{background:var(--white);color:var(--ink)}
 .promise{background:#EFE2CB;border-top:1px solid var(--brass-lt);border-bottom:1px solid var(--brass-lt)}
 .promise-t{color:var(--wood)}
 @media (max-width:700px){.brand{padding:22px 16px;min-height:0}.brand::before,.brand::after{display:none}.win{max-width:100%}}
+.tools{grid-template-columns:repeat(4,minmax(130px,1fr)) auto auto}.tools .search{grid-column:1/-1}
+.dept{padding:15px 11px;font-size:.94rem;letter-spacing:.02em}.depts{gap:2px}
 </style>
 </head>
 <body>
@@ -356,6 +358,8 @@ body{background:var(--white);color:var(--ink)}
     <form class="tools" id="tools" onsubmit="return false" role="search">
       <div class="search"><label class="sr" for="q">Search items</label><input class="field" id="q" type="search" placeholder="Search by item, brand or color" autocomplete="off"></div>
       <div><label class="sr" for="cond">Condition</label><select class="field" id="cond"><option value="">Any condition</option></select></div>
+      <div><label class="sr" for="aud">For</label><select class="field" id="aud"><option value="">Men's, women's, unisex</option><option>Men’s</option><option>Women’s</option><option>Unisex</option></select></div>
+      <div><label class="sr" for="brandf">Brand</label><select class="field" id="brandf"><option value="">Any brand</option></select></div>
       <div><label class="sr" for="sort">Sort</label><select class="field" id="sort"><option value="new">Newest first</option><option value="low">Price, low to high</option><option value="high">Price, high to low</option></select></div>
       <label class="check"><input type="checkbox" id="sale"> On sale</label>
       <label class="check"><input type="checkbox" id="sold"> Show sold</label>
@@ -395,9 +399,10 @@ body{background:var(--white);color:var(--ink)}
 <script src="secondchance-products.js"></script>
 <script>
 (function(){
+  ['Handbags','Eyewear','Laser Engraving'].forEach(function(c){var L=window.SHOP_CONFIG.categories;if(L.indexOf(c)<0)L.push(c)});
   var CFG=window.SHOP_CONFIG, ALL=window.SHOP_PRODUCTS||[];
   var $=function(id){return document.getElementById(id)};
-  var state={cat:'All',q:'',cond:'',sort:'new',sale:false,sold:false};
+  var state={cat:'All',q:'',cond:'',aud:'',brand:'',sort:'new',sale:false,sold:false};
   var money=function(n){return '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:n%1?2:0})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 
@@ -447,6 +452,8 @@ body{background:var(--white);color:var(--ink)}
   function buildDepts(){
     var cats=['All'].concat(CFG.categories);
     $('depts').innerHTML=cats.map(function(c){return '<button class="dept" role="listitem" data-cat="'+esc(c)+'" aria-current="'+(state.cat===c)+'">'+(c==='All'?'All items':esc(c))+'</button>'}).join('');
+    var bs=[];GOOD.forEach(function(p){if(p.status!=='sold'&&p.brand&&bs.indexOf(p.brand)<0)bs.push(p.brand)});bs.sort(function(a,b){return a.localeCompare(b)});
+    var bf=$('brandf');if(bf){var cur=state.brand;bf.innerHTML='<option value="">Any brand</option>'+bs.map(function(b){return '<option>'+esc(b)+'</option>'}).join('');if(bs.indexOf(cur)>=0)bf.value=cur;else state.brand=''}
     $('dir').innerHTML=CFG.categories.map(function(c){return '<button class="dir-row" data-cat="'+esc(c)+'"><span class="dir-name">'+esc(c)+'</span><span class="dir-n">'+count(c)+' available</span></button>'}).join('');
   }
 
@@ -476,6 +483,8 @@ body{background:var(--white);color:var(--ink)}
       if(!state.sold&&p.status==='sold')return false;
       if(state.sale&&!p.was)return false;
       if(state.cond&&p.condition!==state.cond)return false;
+      if(state.aud&&p.audience!==state.aud)return false;
+      if(state.brand&&(p.brand||'')!==state.brand)return false;
       if(q){var hay=[p.name,p.brand,p.category,p.material,p.description].join(' ').toLowerCase();if(!q.split(/\s+/).every(function(w){return hay.indexOf(w)>=0}))return false}
       return true;
     });
@@ -646,10 +655,12 @@ body{background:var(--white);color:var(--ink)}
   document.addEventListener('click',function(e){
     var d=e.target.closest('[data-cat]');if(d){setCat(d.dataset.cat,true);return}
     var c=e.target.closest('.card');if(c){openItem(c.dataset.id);return}
-    if(e.target.id==='clear'){state={cat:state.cat,q:'',cond:'',sort:'new',sale:false,sold:false};$('q').value='';$('cond').value='';$('sort').value='new';$('sale').checked=false;$('sold').checked=false;render()}
+    if(e.target.id==='clear'){state={cat:state.cat,q:'',cond:'',aud:'',brand:'',sort:'new',sale:false,sold:false};$('q').value='';$('cond').value='';$('aud').value='';$('brandf').value='';$('sort').value='new';$('sale').checked=false;$('sold').checked=false;render()}
   });
   $('q').addEventListener('input',function(){state.q=this.value;render()});
   $('cond').addEventListener('change',function(){state.cond=this.value;render()});
+  $('aud').addEventListener('change',function(){state.aud=this.value;render()});
+  $('brandf').addEventListener('change',function(){state.brand=this.value;render()});
   $('sort').addEventListener('change',function(){state.sort=this.value;render()});
   $('sale').addEventListener('change',function(){state.sale=this.checked;render()});
   $('sold').addEventListener('change',function(){state.sold=this.checked;render()});
@@ -898,7 +909,7 @@ body{background:var(--white);color:var(--ink)}
   window.SC_CLEAR_CACHE = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} };
   function mapDoc(d) {
     var v = d.data();
-    return { id: d.id, remote: true, name: v.name, brand: v.brand, category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
+    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
   }
   function apply(items) { if (window.SC_SHOP) window.SC_SHOP.set(items); }
   window.SC_LOAD_LIVE = function (force) {
@@ -1182,6 +1193,50 @@ if(typeof module!=='undefined')module.exports=TSQR;
       (E.isNew ? '<small>This number is held once you tap Save.</small>' : '') + '<small>Scanning the QR with a phone camera opens this item here (sign in as owner). Pick your thermal printer in the print dialog. Set paper size to match the label.</small>';
     $('qr2').onclick = function () { printLabel('2in'); }; $('qr4').onclick = function () { printLabel('4x6'); };
   }
+
+  function detailsText() {
+    var E = S.E, d = collect(), L = [], w = num(E.wt), flaws = (E.defects || []).map(function (x) { return (x.text || '').trim(); }).filter(Boolean);
+    var add = function (k, v) { if (v !== '' && v != null) L.push(k + ': ' + v); };
+    add('Item number', E.sku); add('Name', d.name); add('For', d.audience); add('Section', d.category); add('Brand', d.brand); add('Size', d.size); add('Condition', d.condition); add('Material', d.material);
+    if (d.measurements) { L.push('Measurements:'); String(d.measurements).split(/,\s*(?=[A-Z])/).forEach(function (m) { if (m.trim()) L.push('  ' + m.trim()); }); }
+    if (w > 0) add('Weight', Math.floor(w / 16) + ' lb ' + (Math.round((w % 16) * 10) / 10) + ' oz');
+    L.push('Flaws: ' + (flaws.length ? flaws.join('; ') : (E.noDf ? 'None noted' : 'Not recorded')));
+    add('Asking price', isNaN(d.price) ? '' : '$' + d.price); add('Research notes', (E.res || '').trim());
+    return L.join('\n');
+  }
+  function copyDetails() {
+    var t = detailsText();
+    var ok = function () { say('Item details copied. Paste them into your description chat.'); };
+    var fb = function () { var a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); ok(); } catch (e) { say('Could not copy. Try again.', 'bad'); } a.remove(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fb); else fb();
+  }
+  var CRC_T = null;
+  function crc32(u8) { if (!CRC_T) { CRC_T = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_T[n] = c >>> 0; } } var r = 0xFFFFFFFF; for (var i = 0; i < u8.length; i++) r = CRC_T[(r ^ u8[i]) & 255] ^ (r >>> 8); return (r ^ 0xFFFFFFFF) >>> 0; }
+  function makeZip(files) {
+    var enc = new TextEncoder(), parts = [], cen = [], off = 0, dt = new Date(), dd = ((dt.getFullYear() - 1980) << 9) | ((dt.getMonth() + 1) << 5) | dt.getDate(), tm = (dt.getHours() << 11) | (dt.getMinutes() << 5) | (dt.getSeconds() >> 1);
+    files.forEach(function (f) {
+      var nm = enc.encode(f.name), crc = crc32(f.data), h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint16(10, tm, true); h.setUint16(12, dd, true); h.setUint32(14, crc, true); h.setUint32(18, f.data.length, true); h.setUint32(22, f.data.length, true); h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+      parts.push(h.buffer, nm, f.data);
+      var c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true); c.setUint16(12, tm, true); c.setUint16(14, dd, true); c.setUint32(16, crc, true); c.setUint32(20, f.data.length, true); c.setUint32(24, f.data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      cen.push(c.buffer, nm); off += 30 + nm.length + f.data.length;
+    });
+    var csize = 0; cen.forEach(function (x) { csize += x.byteLength || x.length; });
+    var e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cen, [e.buffer]), { type: 'application/zip' });
+  }
+  function downloadZip() {
+    var E = S.E; if (!E.raw.length) { say('This item has no photos yet.', 'bad'); return; }
+    say('Making the zip...');
+    var jobs = E.raw.map(function (r, i) { return new Promise(function (res) { r.canvas.toBlob(function (b) { b.arrayBuffer().then(function (ab) { res({ name: 'photo-' + (i + 1) + '.jpg', data: new Uint8Array(ab) }); }); }, 'image/jpeg', 0.92); }); });
+    Promise.all(jobs).then(function (files) {
+      files.push({ name: 'details.txt', data: new TextEncoder().encode(detailsText()) });
+      var nm = ((E.sku || 'item') + ' ' + (($('fName').value || '').trim())).replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+      var a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files)); a.download = nm + '.zip'; document.body.appendChild(a); a.click(); a.remove();
+      say('Photos saved as "' + nm + '.zip". Move it into your Item Photos folder.');
+    });
+  }
   function cam() { SC.camera(addPhoto, function () { renderPhotos(); }, S.E.raw.length); }
   function addPhoto(c) { var E = S.E; if (E.raw.length >= 8) { say('The limit is 8 photos per item.', 'bad'); return; } E.raw.push({ id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), canvas: c, saved: false }); E.dirty = true; renderPhotos(); }
 
@@ -1199,6 +1254,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div><label for="fCat">Section <i>*</i></label><select class="field" id="fCat">' + opt(CFG.categories, d.category, 'Choose a section') + '</select></div>' +
       '<div><label for="fCond">Condition <i>*</i></label><select class="field" id="fCond">' + opt(CFG.conditions, d.condition, 'Choose condition') + '</select></div>' +
       '<div><label for="fBrand">Brand</label><input class="field" id="fBrand" value="' + esc(d.brand) + '"></div>' +
+      '<div><label for="fFor">For</label><select class="field" id="fFor">' + opt(['Men\u2019s', 'Women\u2019s', 'Unisex'], d.audience, 'Choose') + '</select></div>' +
       '<div><label for="fSize">Size <i id="sizeReq"></i></label><input class="field" id="fSize" value="' + esc(d.size) + '" placeholder="Men’s M, 32 x 32, S/M"></div>' +
       '<div class="full"><label>Measurements <i id="measReq"></i></label><div id="measBox"></div><input id="fMeas" type="hidden" value="' + esc(d.measurements) + '"></div>' +
       '<div><label for="fMat">Material</label><input class="field" id="fMat" value="' + esc(d.material) + '" placeholder="100% cotton"></div>' +
@@ -1213,6 +1269,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
       '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
+      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download photos</button></div><small>Copy item details puts everything you entered in one block to paste into your description chat. Download photos saves a zip named with the item number and name.</small></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
@@ -1227,8 +1284,11 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var MEAS = {
       Tops: [['Chest (pit to pit)', 'Lay it flat. Straight across from one armpit seam to the other.'], ['Length', 'Top of the shoulder seam by the collar, straight down to the bottom hem.'], ['Shoulder width', 'Across the back, from one shoulder seam to the other.'], ['Sleeve length', 'From the shoulder seam to the end of the sleeve.'], ['Hem width', 'Lay it flat. Across the bottom hem, edge to edge.']],
       Bottoms: [['Waist', 'Fasten it, lay it flat, and measure across the top of the waistband.'], ['Inseam', 'From the crotch seam down the inside of the leg to the hem.'], ['Rise', 'From the crotch seam up to the top of the waistband, in front.'], ['Leg opening', 'Lay it flat. Across the bottom of one leg.']],
-      Hats: [['Circumference', 'All the way around the inside of the band.']]
+      Hats: [['Circumference', 'All the way around the inside of the band.']],
+      Handbags: [['Width', 'Across the widest part of the bag, laid flat.'], ['Height', 'Bottom to the top edge, not counting the strap.'], ['Depth', 'Across the bottom, front to back.'], ['Strap drop', 'From the top edge of the bag to the highest point of the strap, pulled straight.']],
+      Eyewear: [['Lens width', 'Across one lens at its widest point.'], ['Bridge', 'The gap between the two lenses, over the nose.'], ['Temple length', 'One arm, from the hinge to the tip.'], ['Lens height', 'Top to bottom of one lens at its tallest point.'], ['Frame width', 'Outside edge to outside edge across the front.']]
     };
+    var MUNIT = { Eyewear: 'mm' };
     var MV = {}, MOTHER = '';
     (function () {
       var txt = String(d.measurements || ''), rest = txt;
@@ -1242,13 +1302,13 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var box = $('measBox'), list = MEAS[$('fCat').value] || [], h = '';
       if (list.length) {
         h += '<div class="own-form" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + list.map(function (f, i) {
-          return '<div><label for="mv' + i + '">' + esc(f[0]) + ', inches</label><small style="display:block;color:#6b675f;margin:-2px 0 4px">' + esc(f[1]) + '</small><input class="field" id="mv' + i + '" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(MV[f[0]] || '') + '"></div>';
+          return '<div><label for="mv' + i + '">' + esc(f[0]) + ', ' + (MUNIT[$('fCat').value] === 'mm' ? 'millimeters' : 'inches') + '</label><small style="display:block;color:#6b675f;margin:-2px 0 4px">' + esc(f[1]) + '</small><input class="field" id="mv' + i + '" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(MV[f[0]] || '') + '"></div>';
         }).join('') + '</div>';
       }
       h += '<div style="margin-top:8px"><label for="mOther">' + (list.length ? 'Anything else (optional)' : 'Measurements') + '</label><input class="field" id="mOther" value="' + esc(MOTHER) + '" placeholder="' + (list.length ? 'Another measurement or note' : 'Chest 21 in, length 28 in') + '"></div>';
       box.innerHTML = h;
       var compose = function () {
-        var parts = list.map(function (f, i) { var v = $('mv' + i).value.trim(); MV[f[0]] = v; return v ? f[0] + ' ' + v + ' in' : ''; }).filter(Boolean);
+        var parts = list.map(function (f, i) { var v = $('mv' + i).value.trim(); MV[f[0]] = v; return v ? f[0] + ' ' + v + ' ' + (MUNIT[$('fCat').value] || 'in') : ''; }).filter(Boolean);
         MOTHER = $('mOther').value.trim(); if (MOTHER) parts.push(MOTHER);
         $('fMeas').value = parts.join(', '); if (typeof intakeUi === 'function') intakeUi();
       };
@@ -1263,7 +1323,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       $('fLb').oninput = syncWt; $('fOz').oninput = syncWt;
     $('fNoDf').onchange = function () { E.noDf = this.checked; };
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
-    intakeUi(); renderDefects(); renderQr();
+    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip;
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
     $('oCut').onchange = function () { E.cutout = this.checked; $('oStrL').style.display = this.checked ? '' : 'none'; E.dirty = true; renderPhotos(); };
     $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
@@ -1300,7 +1360,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
 
   function collect() {
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
-    d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.material = g('fMat');
+    d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.audience = $('fFor').value; d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
     E.loc = g('fLoc'); E.wt = g('fWt'); E.dL = g('fL'); E.dW = g('fW'); E.dH = g('fH'); E.res = g('fRes'); E.noDf = $('fNoDf').checked; intakeUi(); E.cost = $('fCost').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
@@ -1359,7 +1419,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       for (var i = 0; i < E.raw.length; i++) { var r = E.raw[i]; if (!r.saved) { await F.setDoc(F.doc(db, 'shop_items', E.id, 'raw', r.id), { data: SC.jpeg(r.canvas, 230000, 0.82), at: Date.now() }); r.saved = true; } }
       for (i = 0; i < E.removed.length; i++) await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', E.removed[i]));
       E.removed = [];
-      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
+      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
         photoOpt: { clean: !!E.clean, cutout: !!E.cutout, strength: E.strength || 40 }, rawOrder: E.raw.map(function (r) { return r.id; }), rawCount: E.raw.length, updatedAt: Date.now(), ownerUid: FB.auth.currentUser.uid };
       if (pub) up.aiDraft = false;
       up.price = d.price > 0 ? d.price : F.deleteField(); up.was = d.was > 0 ? d.was : F.deleteField();
@@ -1663,11 +1723,11 @@ if(typeof module!=='undefined')module.exports=TSQR;
   function downloadInventoryCsv() {
     var q = function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     var names = { draft: 'Holding pile', available: 'Live', sold: 'Sold' };
-    var cols = ['Item number', 'Name', 'Status', 'Category', 'Brand', 'Size', 'Condition', 'Where it is stored', 'What I paid', 'Asking price', 'Sold price', 'Date added', 'Date sold', 'Weight (oz)', 'Consignment seller', 'Stripe link', 'Link to item'];
+    var cols = ['Item number', 'Name', 'Status', 'Category', 'For', 'Brand', 'Size', 'Condition', 'Where it is stored', 'What I paid', 'Asking price', 'Sold price', 'Date added', 'Date sold', 'Weight (oz)', 'Consignment seller', 'Stripe link', 'Link to item'];
     var items = S.items.slice().sort(function (a, b) { var x = (S.priv[a.id] || {}).sku || '~', y = (S.priv[b.id] || {}).sku || '~'; return x.localeCompare(y); });
     var rows = items.map(function (it) {
       var pv = S.priv[it.id] || {}, st = it.status || 'draft', od = (S.orders || []).filter(function (o) { return o.itemId === it.id; })[0];
-      return [pv.sku || '', it.name || '', names[st] || st, it.category || '', it.brand || '', it.size || '', it.condition || '', pv.loc || '', pv.cost != null && pv.cost !== '' ? pv.cost : '', it.price || '', od ? num(od.salePrice) : '', fmtD(it.added || it.createdAt), od ? fmtD(od.soldAt) : '', pv.wt || '', pv.sellerName || '', it.stripe || '', base() + '#item=' + it.id];
+      return [pv.sku || '', it.name || '', names[st] || st, it.category || '', it.audience || '', it.brand || '', it.size || '', it.condition || '', pv.loc || '', pv.cost != null && pv.cost !== '' ? pv.cost : '', it.price || '', od ? num(od.salePrice) : '', fmtD(it.added || it.createdAt), od ? fmtD(od.soldAt) : '', pv.wt || '', pv.sellerName || '', it.stripe || '', base() + '#item=' + it.id];
     });
     var lines = [cols.map(q).join(',')].concat(rows.map(function (r) { return r.map(q).join(','); }));
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv' })); a.download = 'second-chance-inventory-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
