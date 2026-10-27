@@ -2002,15 +2002,30 @@ This is a plain-language starting document, not legal advice.</div>
         key:    ['⚠️ Key problem', "Google did not accept the API key. Open Config and check it."],
         nokey:  ['⚪ AI: no key', 'Add your Google API key in Config to use the scanner.'],
         worker: ['🟢 Shared AI', 'Scans run through the shared Thrift Scout AI. No key needed.'],
+        workerdown: ['🔴 Shared AI down', "The shared Thrift Scout AI server did not answer. Check your signal, or try again in a few minutes."],
+        backup: ['🟡 Google busy, backup on', "Google's AI is busy, but the shared backup AI is ready. Scans try Google first, then switch to the backup."],
         check:  ['⏳ Checking AI...', 'Checking Google’s AI...']
       };
       const m = map[state] || map.check;
       b.textContent = m[0]; b.dataset.state = state; b.title = m[1] + ' Tap to check again.'; b.dataset.msg = m[1];
     }
+    // Is the shared Thrift Scout AI server awake? A plain visit to its address (no AI call, costs nothing).
+    async function workerUp() {
+      const c = new AbortController(), to = setTimeout(() => c.abort(), 8000);
+      try { await fetch(WORKER_URL, { mode: 'no-cors', cache: 'no-store', signal: c.signal }); clearTimeout(to); return true; }
+      catch (e) { clearTimeout(to); return false; }
+    }
     async function checkAiMeter(userTapped) {
       if (meterBusy) return; meterBusy = true;
       try {
-        if (!activeKey() && workerOk()) { meterSet('worker'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, false); return; }
+        if (!activeKey() && workerOk()) {
+          if (navigator.onLine === false) { meterSet('offline'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
+          meterSet('check');
+          const up = await workerUp();
+          meterSet(up ? 'worker' : 'workerdown');
+          if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, !up);
+          return;
+        }
         if (!hasKey()) { meterSet('nokey'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
         if (navigator.onLine === false) { meterSet('offline'); if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, true); return; }
         meterSet('check');
@@ -2031,6 +2046,7 @@ This is a plain-language starting document, not legal advice.</div>
         } catch (e) {
           clearTimeout(to); state = e.name === 'AbortError' ? 'slow' : 'offline';
         }
+        if ((state === 'busy' || state === 'slow') && workerOk() && await workerUp()) { if (state === 'busy') state = 'backup'; }
         meterSet(state);
         try { logScan({ ok: state === 'ready' || state === 'slow', meter: state }); } catch (e) {}
         if (userTapped) triggerAlert(document.getElementById('aiMeter').dataset.msg, state === 'busy' || state === 'offline' || state === 'key');
