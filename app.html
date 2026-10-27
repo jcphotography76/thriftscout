@@ -1966,7 +1966,13 @@ This is a plain-language starting document, not legal advice.</div>
             logScan({ ok: false, err: 'timeout', secs: Math.round(thisTimeout / 1000), kb: bodyKb, imgs: parts.length - 1, model, tries: slowTries + 1 });
             refund(); // a call that never answered is not counted
             if (slowTries < 1) { slowTries++; mi--; continue; }
-            return { ok: false, error: `No answer from Google after two tries (${Math.round(thisTimeout / 1000)}s each). No scan was counted. Tap Retry. If it keeps happening, copy the Scan log in Settings and send it to Claude.` };
+            if (sharedTries < 2 && workerOk() && !(opts && opts.tools)) {
+              sharedTries++; setProgress("Google is not answering. Trying the shared backup AI...", 60);
+              const sr = await callShared(parts, opts);
+              if (sr.ok) return sr;
+              sharedErr = sr.error;
+            }
+            return { ok: false, error: `No answer from Google after two tries (${Math.round(thisTimeout / 1000)}s each). No scan was counted. Tap Retry. If it keeps happening, copy the Scan log in Settings and send it to Claude.` + (sharedErr ? ' The backup AI also failed: ' + sharedErr : '') };
           }
           logScan({ ok: false, err: 'network: ' + err.message, kb: bodyKb, imgs: parts.length - 1, model });
           refund();
@@ -2123,7 +2129,13 @@ This is a plain-language starting document, not legal advice.</div>
       });
     })();
 
+    // The AI sometimes wraps its answer in a list: [ {...} ]. Use the first item so the price is found.
     function parseModelJson(text) {
+      let r = parseModelJsonRaw(text);
+      if (Array.isArray(r)) r = r.find(x => x && typeof x === 'object' && !Array.isArray(x)) || {};
+      return r;
+    }
+    function parseModelJsonRaw(text) {
       let cleaned = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
       try { return JSON.parse(cleaned); } catch (e0) {
         const a = cleaned.indexOf('{');
