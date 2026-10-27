@@ -487,7 +487,7 @@
         <div class="settings-section-title">Profile</div>
         <div>
           <label class="metric-label">Last Name</label>
-          <input type="text" id="profileNameInput" class="input-field" value="Claypool" style="margin-top:4px;">
+          <input type="text" id="profileNameInput" class="input-field" value="" placeholder="Optional" style="margin-top:4px;">
         </div>
         <div>
           <label class="metric-label">Your Rank or Title (optional, e.g. SPC, Sgt, Petty Officer)</label>
@@ -1646,7 +1646,7 @@ This is a plain-language starting document, not legal advice.</div>
       activeTab: 'scout',
       vaultCategory: 'general',
       vaultItems: [],
-      userLastName: localStorage.getItem('ts_last_name') || 'Claypool',
+      userLastName: localStorage.getItem('ts_last_name') || "",
       userRank: localStorage.getItem('ts_rank') || '',
       codaPhoto: localStorage.getItem('ts_coda_photo') || '',
       userAvatar: localStorage.getItem('ts_avatar') || '👤',
@@ -2265,7 +2265,7 @@ This is a plain-language starting document, not legal advice.</div>
 
     document.getElementById('saveProfileBtn').onclick = () => {
       playAudioFeedback('BUY', false, false);
-      STATE.userLastName = document.getElementById('profileNameInput').value.trim() || 'Claypool';
+      STATE.userLastName = document.getElementById('profileNameInput').value.trim() || "";
       STATE.userRank = document.getElementById('profileRankInput').value.trim();
       localStorage.setItem('ts_rank', STATE.userRank);
       localStorage.setItem('ts_last_name', STATE.userLastName);
