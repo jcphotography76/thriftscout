@@ -215,6 +215,7 @@
 
     <!-- TAB 1: SCOUT -->
     <section id="tab-scout" class="tab-view active">
+      <div class="card" style="padding:10px;"><button type="button" class="btn btn-outline" id="guideOpenBtn" style="width:100%;">📖 Brand &amp; Tag Guide: what to look for</button></div>
       <div class="card" id="valuationCardContainer">
         <div class="card-title">RAPID VALUATION <span style="font-size:.68rem; color:var(--accent);">⚡ AI Vision Estimate</span></div>
 
@@ -1069,6 +1070,253 @@ This is a plain-language starting document, not legal advice.</div>
       .then(function (s) { stream = s; v.srcObject = s; })
       .catch(function () { ov.remove(); alert(strict ? 'The camera was blocked. Allow camera access for this site. Shipping proof must be taken live with the camera.' : 'The camera was blocked. Allow camera access for this site, or choose photos from your device.'); if (!strict) SC.pick(onShot); if (onDone) onDone(0); });
   };
+})();
+
+  </script>
+
+  <script>
+(function () {
+  'use strict';
+  var esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+
+  /* ---------- drawn diagrams: generic shapes only, no real brand logos or names ---------- */
+  var S = 'stroke="var(--text-muted)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  var F = 'fill="var(--surface)" stroke="var(--text-muted)" stroke-width="1.6"';
+  var T = 'font-family="system-ui,Arial,sans-serif" fill="var(--text)"';
+  var A = 'fill="var(--accent)"';
+  var svg = function (inner, h) { return '<svg viewBox="0 0 300 ' + (h || 150) + '" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>'; };
+  var arrow = function (x1, y1, x2, y2) { return '<path d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + '" stroke="var(--accent)" stroke-width="2" fill="none"/><circle cx="' + x2 + '" cy="' + y2 + '" r="4" ' + A + '/>'; };
+  var DIAG = {
+    woven: function () {
+      return svg('<path d="M20 20 Q150 -8 280 20 L280 40 Q150 12 20 40 Z" ' + F + '/>' +
+        '<rect x="95" y="52" width="110" height="64" rx="3" ' + F + '/><rect x="100" y="57" width="100" height="54" rx="2" stroke="var(--text-muted)" stroke-dasharray="3 3" fill="none"/>' +
+        '<text x="150" y="78" text-anchor="middle" font-size="15" font-weight="700" ' + T + '>BRAND</text><text x="150" y="94" text-anchor="middle" font-size="8" ' + T + '>SIZE L &#183; 100% COTTON</text><text x="150" y="106" text-anchor="middle" font-size="8" ' + T + '>MADE IN USA</text>' +
+        arrow(40, 130, 100, 112) + '<text x="10" y="146" font-size="10" ' + T + '>Stitched all round = woven label</text>' + arrow(262, 128, 204, 98) + '<text x="196" y="146" font-size="10" ' + T + '>Read every line</text>');
+    },
+    tagless: function () {
+      return svg('<path d="M20 20 Q150 -8 280 20 L280 40 Q150 12 20 40 Z" ' + F + '/>' +
+        '<text x="150" y="68" text-anchor="middle" font-size="13" font-weight="700" ' + T + '>BRAND</text>' +
+        '<text x="150" y="84" text-anchor="middle" font-size="8" ' + T + '>L &#183; 100% COTTON &#183; MADE IN ____</text><text x="150" y="96" text-anchor="middle" font-size="8" ' + T + '>RN ##### &#183; CARE SYMBOLS</text><text x="150" y="108" text-anchor="middle" font-size="7" ' + T + '>STYLE ###### &#183; DATE CODE</text>' +
+        arrow(40, 130, 100, 100) + '<text x="10" y="146" font-size="10" ' + T + '>Printed on the fabric, no tag to cut out</text>');
+    },
+    care: function () {
+      return svg('<rect x="70" y="8" width="160" height="134" rx="4" ' + F + '/>' +
+        '<rect x="80" y="16" width="64" height="20" rx="2" stroke="var(--accent)" stroke-width="2" fill="none"/><text x="112" y="31" text-anchor="middle" font-size="12" font-weight="700" ' + T + '>RN 12345</text>' +
+        '<text x="86" y="52" font-size="9" ' + T + '>100% COTTON</text><text x="86" y="64" font-size="9" ' + T + '>MADE IN USA</text>' +
+        '<path d="M92 78 h24 l-3 18 h-18 z" ' + S + '/><path d="M128 96 l12 -20 l12 20 z" ' + S + '/><rect x="164" y="76" width="20" height="20" ' + S + '/><circle cx="104" cy="118" r="9" ' + S + '/><path d="M130 126 h24 l4 -14 h-26 z" ' + S + '/>' +
+        arrow(256, 26, 146, 26) + '<text x="196" y="52" font-size="10" ' + T + '>RN number:</text><text x="196" y="65" font-size="10" ' + T + '>look it up at</text><text x="196" y="78" font-size="10" ' + T + '>ftc.gov to find</text><text x="196" y="91" font-size="10" ' + T + '>the company</text>');
+    },
+    stitch: function () {
+      return svg('<rect x="14" y="14" width="124" height="100" rx="3" ' + F + '/><path d="M20 90 H132" stroke="var(--text)" stroke-width="1.6" stroke-dasharray="6 3"/>' +
+        '<rect x="162" y="14" width="124" height="100" rx="3" ' + F + '/><path d="M168 84 H280 M168 94 H280" stroke="var(--text)" stroke-width="1.6" stroke-dasharray="6 3"/>' +
+        '<text x="76" y="132" text-anchor="middle" font-size="11" font-weight="700" ' + T + '>ONE row</text><text x="76" y="145" text-anchor="middle" font-size="9" ' + T + '>often older tees</text>' +
+        '<text x="224" y="132" text-anchor="middle" font-size="11" font-weight="700" ' + T + '>TWO rows</text><text x="224" y="145" text-anchor="middle" font-size="9" ' + T + '>common on newer tees</text>');
+    },
+    union: function () {
+      return svg('<rect x="70" y="20" width="160" height="100" rx="6" ' + F + '/><circle cx="150" cy="56" r="20" ' + S + '/><path d="M138 56 h24 M150 44 v24" ' + S + '/>' +
+        '<text x="150" y="92" text-anchor="middle" font-size="11" font-weight="700" ' + T + '>UNION MADE</text><text x="150" y="107" text-anchor="middle" font-size="10" ' + T + '>IN U.S.A.</text>' +
+        '<text x="150" y="140" text-anchor="middle" font-size="10" ' + T + '>A union label usually means US-made, often 1970s to 1990s</text>');
+    },
+    jewelry: function () {
+      var st = function (x, t, sub) { return '<rect x="' + x + '" y="30" width="76" height="40" rx="20" ' + F + '/><text x="' + (x + 38) + '" y="56" text-anchor="middle" font-size="16" font-weight="700" ' + T + '>' + t + '</text><text x="' + (x + 38) + '" y="92" text-anchor="middle" font-size="10" ' + T + '>' + sub + '</text>'; };
+      return svg(st(10, '925', 'sterling silver') + st(112, '14K', 'solid gold') + st(214, 'GF', 'gold filled') +
+        '<text x="150" y="122" text-anchor="middle" font-size="10" ' + T + '>GP, GE, HGE, RGP = plated, not solid</text><text x="150" y="138" text-anchor="middle" font-size="10" ' + T + '>A maker’s name stamp is also worth a search</text>');
+    },
+    eyewear: function () {
+      return svg('<path d="M20 50 H250 Q268 50 270 68 V84 Q268 92 258 92 H20 Z" ' + F + '/><text x="130" y="76" text-anchor="middle" font-size="15" font-weight="700" ' + T + '>52 □ 18 &#183; 140</text>' +
+        '<text x="60" y="30" font-size="10" ' + T + '>lens</text><text x="112" y="30" font-size="10" ' + T + '>bridge</text><text x="172" y="30" font-size="10" ' + T + '>arm length</text>' +
+        '<path d="M70 34 V46 M118 34 V46 M190 34 V46" stroke="var(--accent)" stroke-width="2"/>' +
+        '<text x="150" y="118" text-anchor="middle" font-size="10" ' + T + '>Inside the arm: size numbers, model number, color code</text><text x="150" y="134" text-anchor="middle" font-size="10" ' + T + '>and where it was made</text>');
+    },
+    zipper: function () {
+      return svg('<path d="M150 6 V144" stroke="var(--text-muted)" stroke-width="10" stroke-dasharray="3 3"/><rect x="132" y="50" width="36" height="52" rx="8" ' + F + '/><circle cx="150" cy="112" r="10" ' + S + '/>' +
+        '<text x="150" y="82" text-anchor="middle" font-size="10" font-weight="700" ' + T + '>MAKER</text>' + arrow(236, 76, 172, 76) + '<text x="178" y="62" font-size="9" ' + T + '>The pull is stamped</text><text x="178" y="108" font-size="9" ' + T + '>Older garments often</text><text x="178" y="120" font-size="9" ' + T + '>use Talon, Scovill</text><text x="178" y="132" font-size="9" ' + T + '>or Conmar</text>');
+    },
+    creed: function () {
+      return svg('<rect x="60" y="18" width="180" height="108" rx="10" fill="var(--surface)" stroke="var(--text-muted)" stroke-width="1.6" stroke-dasharray="5 3"/>' +
+        '<text x="150" y="52" text-anchor="middle" font-size="12" font-weight="700" ' + T + '>BRAND</text><text x="150" y="70" text-anchor="middle" font-size="9" ' + T + '>short story or promise</text><text x="150" y="88" text-anchor="middle" font-size="10" ' + T + '>STYLE NO. A1234</text><text x="150" y="104" text-anchor="middle" font-size="10" ' + T + '>SERIAL ######</text>' +
+        '<text x="150" y="142" text-anchor="middle" font-size="10" ' + T + '>Inside a bag: a leather patch with style and serial numbers</text>');
+    },
+    tee: function () {
+      return svg('<path d="M90 14 L120 8 Q150 26 180 8 L210 14 L266 44 L246 76 L212 60 V138 H88 V60 L54 76 L34 44 Z" ' + F + '/><rect x="116" y="50" width="68" height="52" rx="3" stroke="var(--text-muted)" stroke-dasharray="4 3" fill="none"/>' +
+        '<text x="150" y="80" text-anchor="middle" font-size="10" ' + T + '>graphic</text><text x="150" y="118" text-anchor="middle" font-size="8" ' + T + '>&#169; 1994 OWNER</text>' + arrow(40, 112, 120, 117) + '<text x="10" y="134" font-size="9" ' + T + '>Year dates the design,</text><text x="10" y="146" font-size="9" ' + T + '>not always the shirt</text>');
+    }
+  };
+
+  /* ---------- how to read a tag ---------- */
+  var TOPICS = [
+    { id: 'woven', t: 'Woven neck label', pts: ['A label stitched in at the neck is common on older and better-made pieces.', 'Read the brand line, the line name (some brands have several), the size, the fiber content and the country.', 'A frayed, faded or re-sewn label can mean the piece is a copy or a repair.'] },
+    { id: 'tagless', t: 'Printed (tagless) neck', pts: ['Print on the fabric instead of a tag is usually seen on newer pieces.', 'You still get the brand, size, fiber and often an RN number and style number.', 'Faded or cracked print is a condition flaw to photograph.'] },
+    { id: 'care', t: 'Care tag and RN number', pts: ['An RN number is issued to a US business that labels clothing. Searching it on the FTC website shows the company, even when the brand name is worn off.', 'Country of origin and fiber content must be on the tag, so read both before you price.', 'A tag with a CA number was made for the Canadian market.'] },
+    { id: 'stitch', t: 'Single and double stitch', pts: ['Look at the bottom hem and sleeve ends.', 'A single row of stitching is often found on older tees, and two rows are common on newer ones.', 'This is a clue, not proof. Use it together with the tag and the copyright year.'] },
+    { id: 'tee', t: 'Graphic tee dates', pts: ['A copyright year printed near the graphic dates the artwork. The shirt can be the same year or later.', 'Band and event tees often name the printer on the tag or near the hem.', 'Cracked or faded print, pit stains and neck stretch hurt a graphic tee most.'] },
+    { id: 'union', t: 'Union label', pts: ['A union label sewn into the seam points to US-made clothing, often from the 1970s to the 1990s.', 'Check the care tag for “Made in USA” too.'] },
+    { id: 'zipper', t: 'Zippers', pts: ['The back of the zipper pull is stamped with the maker.', 'Older garments often carry Talon, Scovill or Conmar zippers. YKK is common across many decades, so it does not date a piece.', 'Check that the zipper runs smoothly both ways before you buy.'] },
+    { id: 'jewelry', t: 'Jewelry stamps', pts: ['925 or STERLING means sterling silver. 10K, 14K and 18K mean solid gold.', 'GF or “1/20 12K GF” means gold filled. GP, GE, HGE and RGP mean plated, which is not solid gold.', 'A maker’s name stamp is worth a quick search. Costume jewelry from some makers is collected.', 'A stamp can be faked, so a magnet and a jeweler’s test are the next step for expensive pieces.'] },
+    { id: 'eyewear', t: 'Eyewear frames', pts: ['Inside the arm you will usually find three numbers, such as 52 □ 18 140. They are lens width, bridge width and arm length in millimeters.', 'You will also find a model number, a color code and the country of origin.', 'Check hinges, lens scratches and nose pad condition.', 'Old Ray-Ban glass lenses are etched with B&L, for Bausch & Lomb, who made them before 1999.'] },
+    { id: 'creed', t: 'Handbags', pts: ['Look inside for a patch or stamp with the brand, a style number and sometimes a serial number.', 'Check the hardware for the brand stamp, the stitching for evenness, and the lining for stains and odor.', 'Corners, handles and straps wear first. Photograph any cracking.'] }
+  ];
+  var KILLERS = ['Odor (smoke, mildew, perfume). It rarely washes out.', 'Stains on collars, underarms and the front.', 'Pilling and fuzzing on knits and fleece.', 'Cracked, peeling or faded graphics.', 'Holes, seam splits and missing buttons or snaps.', 'Stretched necks and bagged-out knees or elbows.', 'Broken zippers and loose hardware.', 'Fading or sun damage, especially on dark colors.'];
+
+  /* ---------- brand notes: identification only, no sell-through claims ---------- */
+  var BRANDS = [
+    { n: 'Adidas', aka: 'Originals, Performance', f: ['The three-leaf Trefoil logo is the classic Originals line.', 'The newer three-bar logo is used on performance clothing.', 'Three stripes alone do not prove a piece is real. Check the tag and stitching.'], l: ['woven', 'care'] },
+    { n: 'Carhartt', aka: 'Workwear, Carhartt WIP', f: ['Known for brown duck canvas jackets and bibs, often with a quilted lining.', 'Older pieces say Made in USA on the tag.', 'Carhartt WIP is a separate fashion line that began in Europe, so its tag looks different.'], l: ['woven', 'zipper'] },
+    { n: 'Champion', aka: 'Reverse Weave, C9', f: ['Reverse Weave is the heavy sweatshirt line, introduced in 1938. It has a ribbed side panel (gusset).', 'The small “C” logo sits on the sleeve or chest.', 'C9 by Champion is the line sold at Target, so it is a different tier.'], l: ['woven', 'stitch'] },
+    { n: 'Coach', aka: 'Handbags', f: ['Inside is a leather creed patch with a style number.', 'Older US-made bags carry a serial number there.', 'Check hardware stamps and edge paint for cracking.'], l: ['creed'] },
+    { n: 'Columbia', aka: 'Outdoor jackets', f: ['Omni-Tech is the waterproof line, and Interchange jackets zip together with a liner.', 'Check zippers and the inside coating for peeling.'], l: ['care', 'zipper'] },
+    { n: 'Dickies', aka: 'Workwear', f: ['Known for the 874 work pant and for work shirts with the name patch.', 'Check knees, cuffs and the crotch seam for wear and stains.'], l: ['woven', 'care'] },
+    { n: 'Disney', aka: 'Parks, Mickey & Co., Disney Store', f: ['Look for the copyright line, which names Disney and a year.', 'Park, store and cast-member pieces have their own tags.', 'Check the graphic for cracking.'], l: ['tee', 'woven'] },
+    { n: 'Eddie Bauer', aka: 'First Ascent', f: ['Outdoor clothing, famous for down jackets and vests.', 'First Ascent is the top technical line.', 'Older pieces say Made in USA.'], l: ['woven', 'zipper'] },
+    { n: 'Harley-Davidson', aka: 'Dealer tees', f: ['Many shirts have the dealership name and city printed on the back.', 'Check the tag, the copyright year and the stitching.'], l: ['tee', 'stitch'] },
+    { n: 'Band and tour tees', aka: 'Brockum, Winterland, Giant', f: ['Tour shirts often name the printer on the tag or hem.', 'Look for a tour year in the artwork and a copyright line.', 'A reprint made later copies the artwork but not the tag, stitching or fabric.'], l: ['tee', 'stitch'] },
+    { n: 'Hip-hop and streetwear labels', aka: 'Rocawear, FUBU, Sean John, Ecko, Phat Farm, Baby Phat', f: ['Rocawear was started in 1999. FUBU in 1992. Sean John in 1998. Phat Farm in 1992.', 'Baby Phat is the women’s line of Phat Farm.', 'This guide helps you recognize the labels. It does not say what sells.'], l: ['woven', 'care'] },
+    { n: 'Levi’s', aka: 'Levi Strauss, Dockers, Signature', f: ['The red tab on the back pocket: a capital “E” in LEVI’S means made before 1971, and a small “e” means after.', '501 is the button-fly jean. Older pairs say Made in USA.', 'Selvedge denim has a clean woven edge on the inside seam.', 'Signature by Levi Strauss & Co. is a lower-priced line. Dockers is the khaki line.'], l: ['care', 'stitch'] },
+    { n: 'Lee', aka: 'Riders', f: ['Lee Riders is the value line.', 'Check the tag and care label for the line name.'], l: ['care', 'woven'] },
+    { n: 'Wrangler', aka: 'Cowboy Cut, Rustler', f: ['The 13MWZ is the classic cowboy cut jean.', 'Rustler is Wrangler’s lower-priced line.', 'Look at the tag for the line name.'], l: ['care', 'woven'] },
+    { n: 'L.L.Bean', aka: 'Freeport, Maine', f: ['Known for Bean boots, flannel shirts and fleece.', 'Older pieces say Made in USA.', 'Check boot soles for cracking and linings for wear.'], l: ['woven', 'care'] },
+    { n: 'Lacoste', aka: 'Izod Lacoste', f: ['The crocodile logo is embroidered on the chest.', 'Izod Lacoste is the older US-licensed version, sold until the early 1990s.', 'Check that the logo is cleanly stitched.'], l: ['woven', 'care'] },
+    { n: 'Nike', aka: 'ACG, Dri-FIT, Tech Fleece, Team', f: ['The Swoosh appears on the chest or sleeve. The tag style changed many times over the years.', 'ACG stands for All Conditions Gear, Nike’s outdoor line.', 'Compare tags with the photos you collect in My tag photos to learn the ones you see.'], l: ['woven', 'care'] },
+    { n: 'Oakley', aka: 'Eyewear', f: ['Model name is printed inside the arm.', 'Check lenses for scratches and the frame for rubber that has turned sticky.'], l: ['eyewear'] },
+    { n: 'Patagonia', aka: 'Synchilla, Better Sweater, Nano Puff', f: ['Synchilla is the fleece line, introduced in 1985.', 'The tag has a style number.', 'Check for pilling and for worn cuffs and hems.'], l: ['woven', 'care'] },
+    { n: 'Pendleton', aka: 'Wool, Pendleton Woolen Mills', f: ['Wool shirts, jackets and blankets. The label says Pendleton Woolen Mills.', 'Check for moth holes, which show as small clusters.'], l: ['woven', 'care'] },
+    { n: 'Polo Ralph Lauren', aka: 'Polo Sport, Polo Jeans Co., Purple Label, Black Label, RRL, Lauren, Chaps', f: ['The line name is on the tag, so read it: Polo Ralph Lauren (main), Polo Sport, Polo Jeans Co., Purple Label (top), Black Label, RRL (workwear), Lauren (women’s), Chaps (lower-priced).', 'The embroidered pony comes small and also large (Big Pony).', 'Check the pony stitching, the buttons and the collar.'], l: ['woven', 'care'] },
+    { n: 'Pyrex', aka: 'Corning, glass bakeware', f: ['Lowercase “pyrex” is the older Corning-made glass. All-caps “PYREX” is generally newer.', 'Pattern and color matter more than the shape, so photograph the pattern clearly.', 'Check for chips, cracks and worn-off pattern.'], l: [] },
+    { n: 'Ray-Ban', aka: 'Bausch & Lomb', f: ['Older glass lenses are etched B&L.', 'Model name and size are on the arm and the bridge.', 'Check for lens scratches and a bent frame.'], l: ['eyewear'] },
+    { n: 'Reyn Spooner', aka: 'Hawaiian shirts', f: ['Known for the reverse-print Hawaiian shirt, printed on the back of the fabric so colors look muted.', 'Check the label and the collar.'], l: ['woven', 'care'] },
+    { n: 'The North Face', aka: 'Nuptse, Denali, Summit Series', f: ['Nuptse is the puffer jacket and Denali is the fleece.', 'Summit Series is the top technical line.', 'Check the tag and the zippers.'], l: ['woven', 'zipper'] },
+    { n: 'Tommy Hilfiger', aka: 'Tommy Jeans', f: ['The red, white and blue flag logo is on the chest or sleeve.', 'Tommy Jeans is a separate line.', 'Check the tag and logo stitching.'], l: ['woven', 'care'] },
+    { n: 'Sports team gear', aka: 'NFL, NBA, MLB, college', f: ['Official licensed pieces carry a league tag or a hologram sticker.', 'Check the team name, the year and the player name on the back.'], l: ['tee', 'care'] }
+  ];
+
+  /* ---------- user's own tag photos: stored on this phone (IndexedDB), shared with the Second Chance page ---------- */
+  var DBN = 'ts_guide', STORE = 'photos', dbp = null;
+  function openDb() {
+    if (dbp) return dbp;
+    dbp = new Promise(function (res, rej) {
+      if (!window.indexedDB) return rej(new Error('no storage'));
+      var q = indexedDB.open(DBN, 1);
+      q.onupgradeneeded = function () { var d = q.result; if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE, { keyPath: 'id' }); };
+      q.onsuccess = function () { res(q.result); }; q.onerror = function () { rej(q.error); };
+    });
+    return dbp;
+  }
+  function allPhotos() { return openDb().then(function (d) { return new Promise(function (res, rej) { var r = d.transaction(STORE).objectStore(STORE).getAll(); r.onsuccess = function () { res((r.result || []).sort(function (a, b) { return b.at - a.at; })); }; r.onerror = function () { rej(r.error); }; }); }); }
+  function putPhoto(rec) { return openDb().then(function (d) { return new Promise(function (res, rej) { var tx = d.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(rec); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); }); }
+  function delPhoto(id) { return openDb().then(function (d) { return new Promise(function (res, rej) { var tx = d.transaction(STORE, 'readwrite'); tx.objectStore(STORE).delete(id); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); }); }
+  function shrink(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 900 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k));
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        var out = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 1; URL.revokeObjectURL(url); res(out);
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); rej(new Error('That photo could not be read.')); };
+      im.src = url;
+    });
+  }
+
+  /* ---------- screen ---------- */
+  var ov = null, st = { tab: 'tags', q: '', open: null, add: null };
+  function css() {
+    if (document.getElementById('tsGuideCss')) return;
+    var s = document.createElement('style'); s.id = 'tsGuideCss';
+    s.textContent = '#tsGuide{position:fixed;inset:0;z-index:1500;background:var(--bg);color:var(--text);display:flex;flex-direction:column}' +
+      '#tsGuide .gh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card-bg)}' +
+      '#tsGuide .gh b{flex:1;font-size:1.05rem}#tsGuide .gx{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}' +
+      '#tsGuide .gt{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--card-bg)}' +
+      '#tsGuide .gt button{flex:1;padding:9px 6px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:.82rem;cursor:pointer}' +
+      '#tsGuide .gt button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#04201c}' +
+      '#tsGuide .gb{flex:1;overflow-y:auto;padding:12px 14px 40px;-webkit-overflow-scrolling:touch}' +
+      '#tsGuide .gc{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}' +
+      '#tsGuide .gc>button.gr{width:100%;display:flex;align-items:center;gap:8px;text-align:left;background:transparent;border:0;color:var(--text);padding:13px 14px;font-weight:700;font-size:.95rem;cursor:pointer}' +
+      '#tsGuide .gc>button.gr span{flex:1}#tsGuide .gc>button.gr i{color:var(--text-muted);font-style:normal}' +
+      '#tsGuide .gd{padding:0 14px 14px;font-size:.88rem;line-height:1.5}#tsGuide .gd ul{margin:8px 0 0 18px;padding:0}#tsGuide .gd li{margin-bottom:5px}' +
+      '#tsGuide .gm{color:var(--text-muted);font-size:.8rem}' +
+      '#tsGuide .gs{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1rem;margin-bottom:10px}' +
+      '#tsGuide .gk{display:inline-block;margin:6px 6px 0 0;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.78rem;cursor:pointer}' +
+      '#tsGuide .gp{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}' +
+      '#tsGuide .gp figure{margin:0;position:relative}#tsGuide .gp img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:block}' +
+      '#tsGuide .gp figcaption{font-size:.72rem;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '#tsGuide .gp .gdel{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;border:0;border-radius:6px;padding:3px 7px;font-size:.75rem;cursor:pointer}' +
+      '#tsGuide .gf{display:grid;gap:8px;margin-bottom:12px}#tsGuide .gf input,#tsGuide .gf textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1rem}' +
+      '#tsGuide .gbtn{padding:11px 14px;border-radius:10px;border:0;background:var(--accent);color:#04201c;font-weight:800;cursor:pointer}' +
+      '#tsGuide .gnote{font-size:.8rem;color:var(--text-muted);margin:6px 0}';
+    document.head.appendChild(s);
+  }
+  function norm(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  function brandCard(b, idx, photos) {
+    var open = st.open === 'b' + idx || !!st.q.trim(), mine = photos.filter(function (p) { var pl = norm(p.brand), bl = norm(b.n); return pl === bl || (pl.length > 2 && (bl.indexOf(pl) >= 0 || pl.indexOf(bl) >= 0)); });
+    var h = '<div class="gc"><button class="gr" data-b="' + idx + '"><span>' + esc(b.n) + (b.aka ? ' <i class="gm">' + esc(b.aka) + '</i>' : '') + '</span><i>' + (open ? '▲' : '▼') + '</i></button>';
+    if (open) {
+      h += '<div class="gd"><ul>' + b.f.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+        (b.l.length ? '<div class="gm" style="margin-top:8px">Where to look:</div>' + b.l.map(function (k) { var tp = TOPICS.filter(function (t) { return t.id === k; })[0]; return tp ? '<button class="gk" data-t="' + k + '">' + esc(tp.t) + '</button>' : ''; }).join('') : '') +
+        '<div style="margin-top:10px"><b>Your tag photos' + (mine.length ? '' : ' (none yet)') + '</b></div>' +
+        (mine.length ? '<div class="gp">' + mine.map(function (p) { return '<figure><img alt="" src="' + p.data + '"><button class="gdel" data-d="' + esc(p.id) + '">Delete</button><figcaption>' + esc(p.note || '') + '</figcaption></figure>'; }).join('') + '</div>' : '') +
+        '<button class="gk" data-add="' + esc(b.n) + '" style="margin-top:10px">+ Add my photo of this tag</button></div>';
+    }
+    return h + '</div>';
+  }
+  function render() {
+    var body = ov.querySelector('.gb'), tabs = ov.querySelector('.gt');
+    tabs.innerHTML = [['tags', 'Read a tag'], ['brands', 'Brands'], ['mine', 'My tag photos']].map(function (t) { return '<button data-tab="' + t[0] + '" aria-current="' + (st.tab === t[0]) + '">' + t[1] + '</button>'; }).join('');
+    allPhotos().catch(function () { return []; }).then(function (photos) {
+      var h = '';
+      if (st.tab === 'tags') {
+        h += '<p class="gnote">Pictures show what each tag looks like. Tap a topic to open it.</p>' + TOPICS.map(function (t) {
+          var open = st.open === 't' + t.id;
+          return '<div class="gc" id="gt-' + t.id + '"><button class="gr" data-t="' + t.id + '"><span>' + esc(t.t) + '</span><i>' + (open ? '▲' : '▼') + '</i></button>' + (open ? '<div class="gd">' + DIAG[t.id]() + '<ul>' + t.pts.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '') + '</div>';
+        }).join('') + '<div class="gc"><button class="gr" data-t="killers"><span>What lowers the price</span><i>' + (st.open === 'tkillers' ? '▲' : '▼') + '</i></button>' + (st.open === 'tkillers' ? '<div class="gd"><ul>' + KILLERS.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' : '') + '</div>';
+      } else if (st.tab === 'brands') {
+        var q = st.q.trim().toLowerCase(), list = BRANDS.map(function (b, i) { return { b: b, i: i }; }).filter(function (x) { return !q || (x.b.n + ' ' + x.b.aka + ' ' + x.b.f.join(' ')).toLowerCase().indexOf(q) >= 0; });
+        h += '<input class="gs" id="gq" type="search" placeholder="Search a brand or line" value="' + esc(st.q) + '" autocomplete="off">' +
+          (list.length ? list.map(function (x) { return brandCard(x.b, x.i, photos); }).join('') : '<p class="gnote">No brand with that name yet. Add your own photo under My tag photos.</p>') +
+          '<p class="gnote">These notes help you recognize labels and lines. They are not price or demand advice, and they can miss details. Your own tag photos are the best reference.</p>';
+      } else {
+        h += '<div class="gf"><input id="gBrand" list="gBrandList" placeholder="Brand (for example Levi’s)" value="' + esc(st.add || '') + '" autocomplete="off"><datalist id="gBrandList">' + BRANDS.map(function (b) { return '<option value="' + esc(b.n) + '">'; }).join('') + '</datalist>' +
+          '<input id="gNote" placeholder="Note (optional, such as “1990s red tab”)" maxlength="60">' +
+          '<input id="gFile" type="file" accept="image/*" capture="environment" style="display:none"><button class="gbtn" id="gAdd">Take or choose a photo</button></div>' +
+          '<p class="gnote">Photos are saved on this phone only. They stay until you delete them or clear the browser’s site data.</p>' + (photos.length ? '<div class="gp">' + photos.map(function (p) { return '<figure><img alt="" src="' + p.data + '"><button class="gdel" data-d="' + esc(p.id) + '">Delete</button><figcaption>' + esc(p.brand) + (p.note ? ' · ' + esc(p.note) : '') + '</figcaption></figure>'; }).join('') + '</div>' : '<p class="gnote">No photos yet.</p>');
+      }
+      body.innerHTML = h; wire(body);
+    });
+  }
+  function wire(body) {
+    body.querySelectorAll('[data-t]').forEach(function (b) { b.onclick = function () { var k = 't' + b.dataset.t; if (b.className === 'gk') { st.tab = 'tags'; st.open = k; render(); setTimeout(function () { var e = ov.querySelector('#gt-' + b.dataset.t); if (e) e.scrollIntoView(); }, 60); return; } st.open = st.open === k ? null : k; render(); }; });
+    body.querySelectorAll('[data-b]').forEach(function (b) { b.onclick = function () { var k = 'b' + b.dataset.b; st.open = st.open === k ? null : k; render(); }; });
+    body.querySelectorAll('[data-d]').forEach(function (b) { b.onclick = function () { if (confirm('Delete this photo?')) delPhoto(b.dataset.d).then(render); }; });
+    body.querySelectorAll('[data-add]').forEach(function (b) { b.onclick = function () { st.add = b.dataset.add; st.tab = 'mine'; render(); }; });
+    var q = body.querySelector('#gq'); if (q) q.oninput = function () { st.q = q.value; var p = q.selectionStart; render(); setTimeout(function () { var n = ov.querySelector('#gq'); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (e) {} } }, 30); };
+    var add = body.querySelector('#gAdd'), file = body.querySelector('#gFile');
+    if (add) {
+      add.onclick = function () { if (!body.querySelector('#gBrand').value.trim()) { alert('Type the brand first.'); return; } file.click(); };
+      file.onchange = function () {
+        var f = file.files && file.files[0]; if (!f) return;
+        var brand = body.querySelector('#gBrand').value.trim(), note = body.querySelector('#gNote').value.trim();
+        add.disabled = true; add.textContent = 'Saving...';
+        shrink(f).then(function (data) { return putPhoto({ id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), brand: brand, note: note, data: data, at: Date.now() }); })
+          .then(function () { st.add = brand; render(); })
+          .catch(function (e) { add.disabled = false; add.textContent = 'Take or choose a photo'; alert((e && e.message) || 'Could not save the photo on this phone.'); });
+      };
+    }
+  }
+  function open(tab) {
+    css();
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'tsGuide'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Brand and tag guide');
+      ov.innerHTML = '<div class="gh"><b>📖 Brand & Tag Guide</b><button class="gx" id="gClose">Close</button></div><div class="gt"></div><div class="gb"></div>';
+      document.body.appendChild(ov);
+      ov.querySelector('#gClose').onclick = close;
+      ov.querySelector('.gt').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (b) { st.tab = b.dataset.tab; st.open = null; render(); ov.querySelector('.gb').scrollTop = 0; } });
+    }
+    if (tab) st.tab = tab;
+    ov.style.display = 'flex'; document.documentElement.style.overflow = 'hidden'; render();
+  }
+  function close() { if (ov) ov.style.display = 'none'; document.documentElement.style.overflow = ''; }
+  window.TSGuide = { open: open, close: close, _data: { BRANDS: BRANDS, TOPICS: TOPICS } };
+  document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#guideOpenBtn')) open(); });
 })();
 
   </script>
