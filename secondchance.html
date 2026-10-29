@@ -1123,7 +1123,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
       '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '</div>' +
       (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
-      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oFixLinks">Update Stripe links to current prices</button>' : '') + '</div>'));
+      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links to current prices</button>' : '') + '</div>'));
     if ($('oFind')) {
       $('oSortSel').value = S.sort;
       var applyFind = function () {
@@ -1148,6 +1148,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     if ($('oCsv')) $('oCsv').onclick = downloadCsv;
     if ($('oInvCsv')) $('oInvCsv').onclick = downloadInventoryCsv;
     if ($('oFixLinks')) $('oFixLinks').onclick = fixStripeLinks;
+    if ($('oBulk')) $('oBulk').onclick = viewBulk;
   }
 
   /* ---------- editor ---------- */
@@ -1535,10 +1536,22 @@ if(typeof module!=='undefined')module.exports=TSQR;
       return;
     }
     clearTimeout(fixArmed); fixArmed = null; fixRunning = true; if (btn) btn.disabled = true;
-    var okN = 0, bad = [];
+    var res = await runLinks(todo);
+    fixRunning = false;
+    window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
+    try { await load(); } catch (e) {}
+    viewList();
+    say(linkSummary(res, todo.length), res.bad.length ? 'bad' : 'good');
+  }
+  function linkSummary(res, n) {
+    return res.okN + ' of ' + n + ' updated.' + (res.bad.length ? ' Problems: ' + res.bad.slice(0, 4).join(' | ') + (res.bad.length > 4 ? ' (and ' + (res.bad.length - 4) + ' more)' : '') + ' Go to the Live tab and tap "Update Stripe links to current prices" to retry those.' : ' All their Stripe links match the prices now.');
+  }
+  // Makes a fresh Stripe link at each item's current price, saves it, and turns the old link off (the server does that part).
+  async function runLinks(todo) {
+    var F = FB.F, db = FB.db, okN = 0, bad = [];
     for (var i = 0; i < todo.length; i++) {
       var it = todo[i], pv = S.priv[it.id] || {}, ids = pv.stripeIds || null, sku = pv.sku || '';
-      say('Updating ' + (i + 1) + ' of ' + todo.length + ': ' + (sku || it.name) + '...');
+      say('Updating Stripe link ' + (i + 1) + ' of ' + todo.length + ': ' + (sku || it.name) + '...');
       if (!sku) { bad.push((it.name || it.id) + ' (no SC number)'); continue; }
       var sr = await stripeApi('/stripe/publish', { itemId: it.id, sku: sku, name: it.name, price: it.price, description: it.description || '', image: null, existing: ids ? { productId: ids.productId, priceId: ids.priceId, linkId: ids.linkId, priceCents: ids.priceCents } : null });
       if (!sr.ok) { bad.push(sku + ': ' + sr.error); continue; }
@@ -1547,13 +1560,93 @@ if(typeof module!=='undefined')module.exports=TSQR;
         await F.setDoc(F.doc(db, 'shop_items', it.id), { stripe: sr.url }, { merge: true });
         await F.setDoc(F.doc(db, 'shop_private', it.id), { stripeIds: nids }, { merge: true });
         it.stripe = sr.url; pv.stripeIds = nids; S.priv[it.id] = pv; okN++;
-      } catch (e) { bad.push(sku + ': the new link was made but could not be saved. Run this again.'); }
+      } catch (e) { bad.push(sku + ': the new link was made but could not be saved.'); }
     }
-    fixRunning = false;
+    return { okN: okN, bad: bad };
+  }
+
+  // ---- Bulk price change: pick a group, take a percent off, never below cost + Stripe fee + $1 profit. Stripe links follow automatically. ----
+  var bulkArmed = null, bulkRunning = false;
+  function floorFor(id) {
+    var c = Number((S.priv[id] || {}).cost); if (!(c > 0)) c = 0;
+    return Math.max(1, Math.ceil((c + 0.30 + 1.00) / 0.971));
+  }
+  function bulkPlan() {
+    var B = S.bulk, pct = Math.min(90, Math.max(0, Number(B.pct) || 0)), rows = [], keep = 0;
+    byTab('available').filter(function (it) { return !B.cat || it.category === B.cat; }).forEach(function (it) {
+      var old = Number(it.price) || 0, fl = floorFor(it.id), np = Math.max(fl, Math.round(old * (1 - pct / 100) * 2) / 2);
+      if (!(np < old)) { keep++; return; }
+      rows.push({ it: it, old: old, np: np, atFloor: np === fl && Math.round(old * (1 - pct / 100) * 2) / 2 < fl, was: Math.max(Number(it.was) || 0, old) });
+    });
+    return { rows: rows, keep: keep, pct: pct };
+  }
+  function viewBulk() {
+    S.bulk = S.bulk || { cat: '', pct: 10 };
+    var live = byTab('available'), cats = {};
+    live.forEach(function (it) { var c = it.category || 'Other'; cats[c] = (cats[c] || 0) + 1; });
+    var catOpts = '<option value="">All live items (' + live.length + ')</option>' + Object.keys(cats).sort().map(function (c) { return '<option value="' + esc(c) + '"' + (S.bulk.cat === c ? ' selected' : '') + '>' + esc(c) + ' (' + cats[c] + ')</option>'; }).join('');
+    var onSale = live.filter(function (it) { return (!S.bulk.cat || it.category === S.bulk.cat) && Number(it.was) > Number(it.price); }).length;
+    frame('<h3 style="margin:0 0 10px">Bulk price change</h3>' +
+      '<div class="own-form"><div><label for="bCat">Group</label><select class="field" id="bCat">' + catOpts + '</select></div>' +
+      '<div><label for="bPct">Percent off</label><input class="field" id="bPct" type="number" inputmode="decimal" min="1" max="90" step="1" value="' + esc(String(S.bulk.pct)) + '"></div></div>' +
+      '<p class="own-msg" style="margin:8px 0">Nothing goes below what you paid plus Stripe\u2019s fee plus $1 profit. Prices round to the nearest 50 cents. The old price shows as the crossed-out sale price.</p>' +
+      '<div id="bPrev"></div><div class="own-msg" id="ownMsg"></div>' +
+      '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oBack">Back</button><span class="grow"></span>' +
+      (onSale ? '<button class="btn btn-line" id="bEnd">End sale (' + onSale + ')</button>' : '') + '<button class="btn" id="bGo">Apply</button></div>');
+    var paint = function () {
+      var P = bulkPlan(), h = '';
+      if (!P.rows.length) h = '<div class="own-empty">No prices would change.' + (P.keep ? ' ' + P.keep + ' item' + (P.keep === 1 ? ' is' : 's are') + ' already at their lowest allowed price.' : '') + '</div>';
+      else h = '<div style="max-height:46vh;overflow:auto;border:1px solid var(--line,#ccc);border-radius:8px">' + P.rows.map(function (r) {
+        return '<div style="display:flex;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line,#ddd);font-size:.9rem"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>' + esc((S.priv[r.it.id] || {}).sku || '') + '</b> ' + esc(r.it.name || '') + '</span><span style="white-space:nowrap">' + money(r.old) + ' &rarr; <b>' + money(r.np) + '</b>' + (r.atFloor ? ' <i>(lowest allowed)</i>' : '') + '</span></div>';
+      }).join('') + '</div><p class="own-msg" style="margin:8px 0">' + P.rows.length + ' price' + (P.rows.length === 1 ? '' : 's') + ' will change.' + (P.keep ? ' ' + P.keep + ' stay as they are (already at the lowest allowed price).' : '') + '</p>';
+      $('bPrev').innerHTML = h; $('bGo').textContent = 'Apply'; clearTimeout(bulkArmed); bulkArmed = null;
+    };
+    $('bCat').onchange = function () { S.bulk.cat = this.value; viewBulk(); };
+    $('bPct').oninput = function () { S.bulk.pct = this.value; paint(); };
+    $('oBack').onclick = function () { viewList(); };
+    $('bGo').onclick = bulkApply;
+    if ($('bEnd')) $('bEnd').onclick = bulkEnd;
+    paint();
+  }
+  async function bulkApply() {
+    if (bulkRunning) return;
+    var P = bulkPlan(), btn = $('bGo'); if (!P.rows.length) { say('No prices would change.'); return; }
+    if (!bulkArmed) {
+      bulkArmed = setTimeout(function () { bulkArmed = null; if (btn) btn.textContent = 'Apply'; }, 8000);
+      btn.textContent = 'Tap again to change ' + P.rows.length;
+      say('This changes ' + P.rows.length + ' prices and makes new Stripe links. Tap again to do it.'); return;
+    }
+    clearTimeout(bulkArmed); bulkArmed = null; bulkRunning = true; btn.disabled = true;
+    await bulkWrite(P.rows.map(function (r) { return { it: r.it, price: r.np, was: r.was }; }), 'Changed');
+    bulkRunning = false;
+  }
+  async function bulkEnd() {
+    if (bulkRunning) return;
+    var rows = byTab('available').filter(function (it) { return (!S.bulk.cat || it.category === S.bulk.cat) && Number(it.was) > Number(it.price); }).map(function (it) { return { it: it, price: Number(it.was), was: null }; });
+    var btn = $('bEnd'); if (!rows.length) return;
+    if (!bulkArmed) {
+      bulkArmed = setTimeout(function () { bulkArmed = null; if (btn) btn.textContent = 'End sale (' + rows.length + ')'; }, 8000);
+      btn.textContent = 'Tap again to restore ' + rows.length;
+      say('This puts ' + rows.length + ' items back to their old prices. Tap again to do it.'); return;
+    }
+    clearTimeout(bulkArmed); bulkArmed = null; bulkRunning = true; btn.disabled = true;
+    await bulkWrite(rows, 'Restored');
+    bulkRunning = false;
+  }
+  async function bulkWrite(changes, verb) {
+    var F = FB.F, db = FB.db, done = [], failed = [];
+    for (var i = 0; i < changes.length; i++) {
+      var c = changes[i];
+      say('Saving price ' + (i + 1) + ' of ' + changes.length + '...');
+      try { await F.setDoc(F.doc(db, 'shop_items', c.it.id), { price: c.price, was: c.was }, { merge: true }); c.it.price = c.price; c.it.was = c.was; done.push(c.it); }
+      catch (e) { failed.push((((S.priv[c.it.id] || {}).sku) || c.it.name) + ' price not saved'); }
+    }
+    var res = done.length ? await runLinks(done) : { okN: 0, bad: [] };
+    res.bad = failed.concat(res.bad);
     window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
     try { await load(); } catch (e) {}
     viewList();
-    say(okN + ' of ' + todo.length + ' updated.' + (bad.length ? ' Problems: ' + bad.slice(0, 4).join(' | ') + (bad.length > 4 ? ' (and ' + (bad.length - 4) + ' more)' : '') + ' Tap the button again to retry those.' : ' All live links match their prices now.'), bad.length ? 'bad' : 'good');
+    say(verb + ' ' + done.length + ' price' + (done.length === 1 ? '' : 's') + '. ' + linkSummary(res, done.length), res.bad.length ? 'bad' : 'good');
   }
   async function del() {
     var E = S.E, F = FB.F; if (!confirm('Delete this item and all of its photos? This cannot be undone.')) return;
