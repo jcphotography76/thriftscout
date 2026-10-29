@@ -1123,7 +1123,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
       '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '</div>' +
       (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
-      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button></div>'));
+      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oFixLinks">Update Stripe links to current prices</button>' : '') + '</div>'));
     if ($('oFind')) {
       $('oSortSel').value = S.sort;
       var applyFind = function () {
@@ -1147,6 +1147,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     body.querySelectorAll('.own-row').forEach(function (b) { b.onclick = function () { if (b.dataset.oid) openOrder(b.dataset.oid); else openEditor(b.dataset.id); }; });
     if ($('oCsv')) $('oCsv').onclick = downloadCsv;
     if ($('oInvCsv')) $('oInvCsv').onclick = downloadInventoryCsv;
+    if ($('oFixLinks')) $('oFixLinks').onclick = fixStripeLinks;
   }
 
   /* ---------- editor ---------- */
@@ -1516,6 +1517,43 @@ if(typeof module!=='undefined')module.exports=TSQR;
       btns.forEach(function (b) { b.disabled = false; });
       say(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed. The Second Chance security rules still need to be published in Firebase.' : 'Could not save: ' + (e && e.message ? e.message : 'unknown error'), 'bad');
     }
+  }
+  // Makes sure every live item's Stripe link charges the item's current price. Safe to run again: items that already match are skipped.
+  var fixArmed = null, fixRunning = false;
+  async function fixStripeLinks() {
+    if (fixRunning) return;
+    var F = FB.F, db = FB.db, btn = $('oFixLinks');
+    var todo = byTab('available').filter(function (it) {
+      var ids = (S.priv[it.id] || {}).stripeIds, cents = Math.round(Number(it.price) * 100);
+      return !ids || !it.stripe || Number(ids.priceCents) !== cents || ids.url !== it.stripe;
+    });
+    if (!todo.length) { say('Every live item already has a Stripe link at its current price. Nothing to update.', 'good'); return; }
+    if (!fixArmed) {
+      fixArmed = setTimeout(function () { fixArmed = null; if (btn) btn.textContent = 'Update Stripe links to current prices'; }, 8000);
+      if (btn) btn.textContent = 'Tap again to update ' + todo.length + ' link' + (todo.length === 1 ? '' : 's');
+      say(todo.length + ' live item' + (todo.length === 1 ? ' needs' : 's need') + ' a new Stripe link. Tap the button again to do it.');
+      return;
+    }
+    clearTimeout(fixArmed); fixArmed = null; fixRunning = true; if (btn) btn.disabled = true;
+    var okN = 0, bad = [];
+    for (var i = 0; i < todo.length; i++) {
+      var it = todo[i], pv = S.priv[it.id] || {}, ids = pv.stripeIds || null, sku = pv.sku || '';
+      say('Updating ' + (i + 1) + ' of ' + todo.length + ': ' + (sku || it.name) + '...');
+      if (!sku) { bad.push((it.name || it.id) + ' (no SC number)'); continue; }
+      var sr = await stripeApi('/stripe/publish', { itemId: it.id, sku: sku, name: it.name, price: it.price, description: it.description || '', image: null, existing: ids ? { productId: ids.productId, priceId: ids.priceId, linkId: ids.linkId, priceCents: ids.priceCents } : null });
+      if (!sr.ok) { bad.push(sku + ': ' + sr.error); continue; }
+      try {
+        var nids = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode };
+        await F.setDoc(F.doc(db, 'shop_items', it.id), { stripe: sr.url }, { merge: true });
+        await F.setDoc(F.doc(db, 'shop_private', it.id), { stripeIds: nids }, { merge: true });
+        it.stripe = sr.url; pv.stripeIds = nids; S.priv[it.id] = pv; okN++;
+      } catch (e) { bad.push(sku + ': the new link was made but could not be saved. Run this again.'); }
+    }
+    fixRunning = false;
+    window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
+    try { await load(); } catch (e) {}
+    viewList();
+    say(okN + ' of ' + todo.length + ' updated.' + (bad.length ? ' Problems: ' + bad.slice(0, 4).join(' | ') + (bad.length > 4 ? ' (and ' + (bad.length - 4) + ' more)' : '') + ' Tap the button again to retry those.' : ' All live links match their prices now.'), bad.length ? 'bad' : 'good');
   }
   async function del() {
     var E = S.E, F = FB.F; if (!confirm('Delete this item and all of its photos? This cannot be undone.')) return;
