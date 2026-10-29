@@ -1308,7 +1308,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
       '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
-      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button><button type="button" class="btn btn-line" id="oRe">Re-process photos</button></div><small>Re-process photos rebuilds the shop pictures of a live item from your originals right away. Messages show at the top of the screen.</small><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="fPhSaved"> Photos saved (ticks itself when you save or download them)</label><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
+      '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button><button type="button" class="btn btn-line" id="oRe">Re-process photos</button><button type="button" class="btn btn-line" id="oGuide">Add a tag photo to the Brand Guide</button></div><small>Re-process photos rebuilds the shop pictures of a live item from your originals right away. Messages show at the top of the screen.</small><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="fPhSaved"> Photos saved (ticks itself when you save or download them)</label><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
@@ -1362,7 +1362,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       $('fLb').oninput = syncWt; $('fOz').oninput = syncWt;
     $('fNoDf').onchange = function () { E.noDf = this.checked; };
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
-    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oShare').onclick = sharePhotos; $('oRe').onclick = function () { var st = S.E.data.status; if (st === 'available') { S.E.dirty = true; say('Rebuilding the shop photos from your originals...'); save('available'); } else say('This item is not live yet. Its shop photos are built when you publish.'); }; $('fPhSaved').checked = !!E.photosSaved; $('fPhSaved').onchange = function () { markSaved(this.checked); };
+    intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oGuide').onclick = guideAdd; $('oShare').onclick = sharePhotos; $('oRe').onclick = function () { var st = S.E.data.status; if (st === 'available') { S.E.dirty = true; say('Rebuilding the shop photos from your originals...'); save('available'); } else say('This item is not live yet. Its shop photos are built when you publish.'); }; $('fPhSaved').checked = !!E.photosSaved; $('fPhSaved').onchange = function () { markSaved(this.checked); };
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
     $('oCut').onchange = function () { E.cutout = this.checked; $('oStrL').style.display = this.checked ? '' : 'none'; E.dirty = true; renderPhotos(); };
     $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
@@ -1518,6 +1518,40 @@ if(typeof module!=='undefined')module.exports=TSQR;
       btns.forEach(function (b) { b.disabled = false; });
       say(String(e && e.code).indexOf('permission') >= 0 ? 'Not allowed. The Second Chance security rules still need to be published in Firebase.' : 'Could not save: ' + (e && e.message ? e.message : 'unknown error'), 'bad');
     }
+  }
+  // Adds one of this item's photos to the Brand Guide in the Thrift Scout app (kept on this phone, same site).
+  function guideDb() {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) return rej(new Error('This phone cannot store it.'));
+      var q = indexedDB.open('ts_guide', 1);
+      q.onupgradeneeded = function () { var d = q.result; if (!d.objectStoreNames.contains('photos')) d.createObjectStore('photos', { keyPath: 'id' }); };
+      q.onsuccess = function () { res(q.result); }; q.onerror = function () { rej(q.error); };
+    });
+  }
+  function guideAdd() {
+    var E = S.E; if (!E || !E.raw.length) { say('Take a photo of the tag first.', 'bad'); return; }
+    var brand = ($('fBrand').value || '').trim(); if (!brand) { say('Type the brand first, then pick the tag photo.', 'bad'); return; }
+    var dlgEl = document.querySelector('dialog[open]') || document.body, old = document.getElementById('guidePick'); if (old) old.remove();
+    var ovl = document.createElement('div'); ovl.id = 'guidePick';
+    ovl.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.88);overflow:auto;padding:14px;color:#fff';
+    ovl.innerHTML = '<div style="max-width:640px;margin:0 auto"><b>Which photo shows the tag? Tap it to add it to the Brand Guide under ' + esc(brand) + '.</b><div id="guideGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0"></div><button type="button" class="btn btn-line" id="guideCancel">Cancel</button></div>';
+    dlgEl.appendChild(ovl);
+    var grid = ovl.querySelector('#guideGrid');
+    E.raw.forEach(function (r, i) {
+      var im = document.createElement('img'); im.alt = 'Photo ' + (i + 1); im.style.cssText = 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer';
+      try { im.src = r.canvas.toDataURL('image/jpeg', 0.5); } catch (e) {}
+      im.onclick = function () {
+        var k = Math.min(1, 900 / Math.max(r.canvas.width, r.canvas.height)), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(r.canvas.width * k)); c.height = Math.max(1, Math.round(r.canvas.height * k));
+        c.getContext('2d').drawImage(r.canvas, 0, 0, c.width, c.height);
+        var data = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 1;
+        guideDb().then(function (d) { return new Promise(function (res, rej) { var tx = d.transaction('photos', 'readwrite'); tx.objectStore('photos').put({ id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), brand: brand, note: (E.sku || ''), data: data, at: Date.now() }); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); })
+          .then(function () { ovl.remove(); say('Added to the Brand Guide under ' + brand + '. Find it in the Thrift Scout app, Brand & Tag Guide, My tag photos.', 'good'); })
+          .catch(function (e) { ovl.remove(); say('Could not add it: ' + ((e && e.message) || 'storage error'), 'bad'); });
+      };
+      grid.appendChild(im);
+    });
+    ovl.querySelector('#guideCancel').onclick = function () { ovl.remove(); };
   }
   // Makes sure every live item's Stripe link charges the item's current price. Safe to run again: items that already match are skipped.
   var fixArmed = null, fixRunning = false;
