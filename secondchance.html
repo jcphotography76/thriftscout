@@ -323,6 +323,29 @@ body{background:var(--white);color:var(--ink)}
 .brand-name img{display:block;width:100%;height:clamp(146px,31vw,430px);object-fit:cover;object-position:50% 15%}
 .brand-sub{margin-top:8px}
 @media (max-width:700px){.brand{padding:0 0 10px}.brand-sub{font-size:.7rem;letter-spacing:.08em}.brand-sub::before,.brand-sub::after{width:18px;margin:0 6px}}
+
+/* JEWELRY BUNDLE DEAL */
+#bundleBar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#24170f;color:#f3e7c9;border-top:3px solid var(--brass);padding:10px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -6px 18px rgba(0,0,0,.35)}
+#bundleBar[hidden]{display:none}
+.b-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:1100px;margin:0 auto}
+.b-chips{display:flex;gap:8px}
+.bchip{position:relative;width:44px;height:44px;padding:0;border:1px solid var(--brass-lt);background:#000;cursor:pointer}
+.bchip img{width:100%;height:100%;object-fit:cover;display:block}
+.bchip i{position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;background:#fff;color:#000;font-style:normal;font-size:.85rem;line-height:18px;text-align:center}
+.b-txt{display:flex;flex-direction:column;font-size:.92rem}.b-txt b{color:#F0D58E;font-weight:500}
+.b-msg{max-width:1100px;margin:6px auto 0;color:#ffd6c9;font-size:.9rem}
+.b-act{margin-top:8px;justify-content:flex-end}
+.b-ack{flex:1 1 220px;font-size:.88rem;display:flex;gap:8px;align-items:center}
+#bundleBar .btn{min-height:44px;padding:0 18px;color:#f3e7c9;border-color:#a98a45;background:transparent}
+#bundleBar .btn-solid{background:#F0D58E;color:#24170f;border-color:#F0D58E}
+#bundleBar .btn[disabled]{opacity:.5;cursor:not-allowed}
+body.has-bundle{padding-bottom:170px}
+@media (max-width:700px){#bundleBar .b-act{display:grid;grid-template-columns:1fr 1fr;gap:8px}#bundleBar .b-ack{grid-column:1/-1}#bundleBar .b-act .btn{width:100%;padding:0 8px;font-size:.9rem}.b-row{gap:8px}}
+.plaque{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:14px 0 6px;padding:14px 18px;background:#24170f;color:#f3e7c9;border:2px solid var(--brass)}
+.pl-t{display:flex;flex-direction:column;gap:2px}.pl-t b{font-family:var(--serif);font-weight:400;font-size:1.25rem;color:#F0D58E}
+.plaque .btn{min-height:44px;padding:0 20px;color:#f3e7c9;border-color:#a98a45;background:transparent}.plaque .btn-solid{background:#F0D58E;color:#24170f;border-color:#F0D58E}
+.tag-deal{top:10px;left:auto;right:10px;background:#24170f;color:#F0D58E;border:1px solid var(--brass)}
+.bpick{position:absolute;right:10px;bottom:10px;padding:6px 10px;background:#fff;color:var(--ink);font-size:.8rem;font-weight:500;border:1px solid var(--brass);cursor:pointer}
 </style>
 </head>
 <body>
@@ -363,6 +386,7 @@ body{background:var(--white);color:var(--ink)}
 <section class="shop" id="shop">
   <div class="wrap">
     <div id="notice"></div>
+    <div id="dealPlaque"></div>
     <div class="shop-head">
       <h2 class="shop-h" id="shopTitle">All items</h2>
       <div class="count" id="count" aria-live="polite"></div>
@@ -378,6 +402,7 @@ body{background:var(--white);color:var(--ink)}
       <label class="check"><input type="checkbox" id="sold"> Show sold</label>
     </form>
     <div class="grid" id="grid"></div>
+    <div id="bundleBar" hidden></div>
   </div>
 </section>
 
@@ -420,7 +445,7 @@ body{background:var(--white);color:var(--ink)}
   })();
   var CFG=window.SHOP_CONFIG, ALL=window.SHOP_PRODUCTS||[];
   var $=function(id){return document.getElementById(id)};
-  var state={cat:'All',q:'',cond:'',aud:'',brand:'',color:'',sort:'new',sale:false,sold:false};
+  var state={cat:'All',q:'',cond:'',aud:'',brand:'',color:'',sort:'new',sale:false,sold:false,deal:false};
   var money=function(n){return '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:n%1?2:0})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 
@@ -513,6 +538,7 @@ body{background:var(--white);color:var(--ink)}
       if(state.aud&&p.audience!==state.aud)return false;
       if(state.brand&&(p.brand||'')!==state.brand)return false;
       if(state.color&&(p.color||'')!==state.color)return false;
+      if(state.deal&&!p.bundle)return false;
       if(q){var hay=[p.name,p.brand,p.category,p.material,p.color,p.description].join(' ').toLowerCase();if(!q.split(/\s+/).every(function(w){return hay.indexOf(w)>=0}))return false}
       return true;
     });
@@ -528,7 +554,7 @@ body{background:var(--white);color:var(--ink)}
     var im=imgs(p), sold=p.status==='sold';
     return '<button class="card" data-id="'+esc(p.id)+'" aria-label="'+esc((p.brand?p.brand+' ':'')+p.name+', '+money(p.price)+(sold?', sold':''))+'">'+
       '<div class="photo"><img src="'+esc(im[0])+'" alt="" loading="lazy">'+(im[1]?'<img src="'+esc(im[1])+'" alt="" loading="lazy">':'')+
-      (p.was&&!sold?'<span class="tag tag-sale">Sale</span>':'')+(p.sample?'<span class="tag tag-sample">Sample</span>':'')+(sold?'<div class="sold-veil">Sold</div>':'')+'</div>'+
+      (p.was&&!sold?'<span class="tag tag-sale">Sale</span>':'')+(p.sample?'<span class="tag tag-sample">Sample</span>':'')+(sold?'<div class="sold-veil">Sold</div>':'')+(p.bundle&&p.remote&&!sold?'<span class="tag tag-deal">3 for '+money(BUNDLE_PRICE)+'</span><span class="bpick" role="button" data-bpick="'+esc(p.id)+'">'+(bundleSel.indexOf(p.id)>=0?'\u2713 In bundle':'+ Bundle')+'</span>':'')+'</div>'+
       '<div class="meta"><div class="m-brand">'+esc(p.brand||'')+'</div><div class="m-name">'+esc(p.name)+'</div>'+
       '<div class="m-price'+(p.was?' m-sale':'')+'">'+money(p.price)+(p.was?'<span class="m-was">'+money(p.was)+'</span>':'')+'</div>'+
       '<div class="m-line">'+esc([p.size,p.condition,p.consigned?'Consignment':''].filter(Boolean).join(' · '))+'</div></div></button>';
@@ -540,8 +566,60 @@ body{background:var(--white);color:var(--ink)}
     $('grid').innerHTML=out.length?out.map(card).join(''):'<div class="empty"><h3>Nothing matches yet</h3><p>Try a different search, or clear the filters to see everything.</p><button class="btn btn-solid" id="clear">Clear filters</button></div>';
     document.querySelectorAll('.dept').forEach(function(b){b.setAttribute('aria-current',String(b.dataset.cat===state.cat))});
     buildLD(out);
+    dealPlaque();bundleUi();
   }
   function setCat(c,scroll){state.cat=c;render();if(scroll)$('shop').scrollIntoView({behavior:'smooth'});try{history.replaceState(null,'',c==='All'?location.pathname+location.search:'#cat='+encodeURIComponent(c))}catch(e){}}
+
+  /* ---- Jewelry bundle: any 3 for one price ---- */
+  var BUNDLE_N=3,BUNDLE_PRICE=7.99,bundleSel=[],bundleBusy=false,bundleMsg='',bundleAck=false;
+  try{bundleSel=JSON.parse(sessionStorage.getItem('sc_bundle')||'[]');if(!Array.isArray(bundleSel))bundleSel=[]}catch(e){bundleSel=[]}
+  function bundleSave(){try{sessionStorage.setItem('sc_bundle',JSON.stringify(bundleSel))}catch(e){}}
+  function dealItems(){return GOOD.filter(function(p){return p.bundle&&p.remote&&p.status!=='sold'&&p.stripe})}
+  function bundlePrune(){var ok=dealItems().map(function(p){return p.id}),n=bundleSel.filter(function(id){return ok.indexOf(id)>=0});if(n.length!==bundleSel.length){bundleSel=n;bundleSave()}}
+  function togglePick(id){
+    var i=bundleSel.indexOf(id);bundleMsg='';
+    if(i>=0)bundleSel.splice(i,1);else if(bundleSel.length>=BUNDLE_N)bundleMsg='Your bundle is full. Take one out first.';else bundleSel.push(id);
+    bundleSave();render();
+    var p=GOOD.filter(function(x){return x.id===curId})[0];if(p&&$('dealBox'))dealBoxUi(p);
+  }
+  function dealPlaque(){
+    var el=$('dealPlaque');if(!el)return;
+    if(!dealItems().length||(state.cat!=='All'&&state.cat!=='Jewelry')){el.innerHTML='';return}
+    el.innerHTML='<div class="plaque"><div class="pl-t"><b>Jewelry deal</b><span>Any '+BUNDLE_N+' earrings or necklaces for '+money(BUNDLE_PRICE)+' plus shipping. Mix and match.</span></div>'+
+      (state.deal?'<button class="btn" type="button" id="dealAll">Show all '+(state.cat==='All'?'items':'jewelry')+'</button>':'<button class="btn btn-solid" type="button" id="dealShop">Shop the deal</button>')+'</div>';
+  }
+  function bundleUi(){
+    var bar=$('bundleBar');if(!bar)return;
+    bundlePrune();
+    var n=bundleSel.length,left=BUNDLE_N-n;
+    if(!n&&!bundleMsg){bar.hidden=true;document.body.classList.remove('has-bundle');return}
+    bar.hidden=false;document.body.classList.add('has-bundle');
+    var chips=bundleSel.map(function(id){var p=GOOD.filter(function(x){return x.id===id})[0];return p?'<button type="button" class="bchip" data-bdrop="'+esc(id)+'" aria-label="Take '+esc(p.name)+' out of the bundle"><img src="'+esc(imgs(p)[0])+'" alt=""><i>×</i></button>':''}).join('');
+    bar.innerHTML='<div class="b-row"><div class="b-chips">'+chips+'</div><div class="b-txt"><b>Jewelry deal: '+n+' of '+BUNDLE_N+'</b><span>'+(left>0?'Pick '+left+' more earrings or necklaces.':'Ready: '+money(BUNDLE_PRICE)+' plus shipping.')+'</span></div></div>'+
+      (bundleMsg?'<div class="b-msg" role="alert">'+esc(bundleMsg)+'</div>':'')+
+      '<div class="b-row b-act"><label class="b-ack"><input type="checkbox" id="bAck"'+(bundleAck?' checked':'')+'> I understand all sales are final.</label><button type="button" class="btn" id="bClear">Clear</button><button type="button" class="btn btn-solid" id="bGo"'+(left>0?' disabled':'')+'>Check out, '+money(BUNDLE_PRICE)+' + shipping</button></div>';
+    var ak=$('bAck');if(ak)ak.onchange=function(){bundleAck=ak.checked};
+  }
+  function bundleGo(){
+    if(bundleBusy||bundleSel.length!==BUNDLE_N)return;
+    if(!bundleAck){bundleMsg='Please tick that you understand all sales are final.';bundleUi();return}
+    bundleBusy=true;var b=$('bGo');if(b){b.disabled=true;b.textContent='Setting up your bundle...'}
+    offerPost('/bundle',{items:bundleSel}).then(function(j){
+      bundleBusy=false;
+      if(j&&j.ok&&j.url){bundleSel=[];bundleSave();location.href=j.url;return}
+      if(j&&j.bad&&j.bad.length){bundleSel=bundleSel.filter(function(id){return j.bad.indexOf(id)<0});bundleSave()}
+      bundleMsg=(j&&j.message)||'Something went wrong. Please try again.';render();
+    }).catch(function(){bundleBusy=false;bundleMsg='Could not reach the shop. Please try again.';bundleUi()});
+  }
+  function dealBoxSetup(p){
+    var d=$('dBody').querySelector('.d-buy');if(!d||$('dealBox'))return;
+    var el=document.createElement('div');el.id='dealBox';d.parentNode.insertBefore(el,d.nextSibling);dealBoxUi(p);
+  }
+  function dealBoxUi(p){
+    var el=$('dealBox');if(!el)return;var inb=bundleSel.indexOf(p.id)>=0;
+    el.innerHTML='<div class="d-offer"><b>Jewelry deal: any '+BUNDLE_N+' for '+money(BUNDLE_PRICE)+' plus shipping.</b><div class="d-fine">Mix any earrings or necklaces that show the deal tag. You have '+bundleSel.length+' of '+BUNDLE_N+' picked.</div><button class="btn" type="button" id="dealBtn">'+(inb?'Take out of bundle':'Add to bundle')+'</button></div>';
+    $('dealBtn').onclick=function(){togglePick(p.id)};
+  }
 
   /* ---- item dialog ---- */
   var dlg=$('dlg'),lastFocus=null;
@@ -564,6 +642,7 @@ body{background:var(--white);color:var(--ink)}
     var ack=$('ack'),bb=$('buyBtn');if(ack&&bb){ack.onchange=function(){if(ack.checked){bb.setAttribute('href',bb.getAttribute('data-href'));bb.setAttribute('aria-disabled','false')}else{bb.removeAttribute('href');bb.setAttribute('aria-disabled','true')}}}
     gallery(im,p);
     if(canBuy&&p.remote)offerSetup(p);
+    if(canBuy&&p.remote&&p.bundle)dealBoxSetup(p);
     if(p.remote&&!p.full&&window.SC_SHOP.loadPhotos&&!p.loading){p.loading=true;window.SC_SHOP.loadPhotos(p.id).then(function(u){p.full=true;p.loading=false;if(u&&u.length){p.images=u;if(dlg.open&&curId===id)openItem(id,false)}}).catch(function(){p.full=true;p.loading=false})}
     if(!dlg.open)lastFocus=document.activeElement;
     if(!dlg.open)dlg.showModal();
@@ -579,7 +658,7 @@ body{background:var(--white);color:var(--ink)}
       if(curId!==p.id||!$('offerBox'))return;
       if(j.hold){
         var t=''; try{t=new Date(j.until).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'})}catch(e){}
-        box.innerHTML='<div class="d-offer"><b>On hold for another shopper.</b><div class="d-fine">They have an offer in progress. If they do not check out, this item is back in the shop by '+esc(t)+'.</div></div>';
+        box.innerHTML='<div class="d-offer"><b>On hold for another shopper.</b><div class="d-fine">They have an offer or bundle in progress. If they do not check out, this item is back in the shop by '+esc(t)+'.</div></div>';
         var bb=$('buyBtn'); if(bb){bb.removeAttribute('href');bb.setAttribute('aria-disabled','true');bb.textContent='On hold'}
         var ak=$('ack'); if(ak){ak.disabled=true}
       } else if(j.offers){
@@ -719,9 +798,15 @@ body{background:var(--white);color:var(--ink)}
 
   /* ---- events ---- */
   document.addEventListener('click',function(e){
-    var d=e.target.closest('[data-cat]');if(d){setCat(d.dataset.cat,true);return}
+    var bp=e.target.closest('[data-bpick]');if(bp){e.preventDefault();togglePick(bp.dataset.bpick);return}
+    var bd=e.target.closest('[data-bdrop]');if(bd){togglePick(bd.dataset.bdrop);return}
+    if(e.target.closest('#bClear')){bundleSel=[];bundleMsg='';bundleSave();render();return}
+    if(e.target.closest('#bGo')){bundleGo();return}
+    if(e.target.closest('#dealShop')){state.deal=true;setCat('Jewelry',true);return}
+    if(e.target.closest('#dealAll')){state.deal=false;render();return}
+    var d=e.target.closest('[data-cat]');if(d){state.deal=false;setCat(d.dataset.cat,true);return}
     var c=e.target.closest('.card');if(c){openItem(c.dataset.id);return}
-    if(e.target.id==='clear'){state={cat:state.cat,q:'',cond:'',aud:'',brand:'',color:'',sort:'new',sale:false,sold:false};$('q').value='';$('cond').value='';$('aud').value='';$('brandf').value='';$('colorf').value='';$('sort').value='new';$('sale').checked=false;$('sold').checked=false;render()}
+    if(e.target.id==='clear'){state={cat:state.cat,q:'',cond:'',aud:'',brand:'',color:'',sort:'new',sale:false,sold:false,deal:false};$('q').value='';$('cond').value='';$('aud').value='';$('brandf').value='';$('colorf').value='';$('sort').value='new';$('sale').checked=false;$('sold').checked=false;render()}
   });
   $('q').addEventListener('input',function(){state.q=this.value;render()});
   $('cond').addEventListener('change',function(){state.cond=this.value;render()});
@@ -985,7 +1070,7 @@ body{background:var(--white);color:var(--ink)}
   window.SC_CLEAR_CACHE = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} };
   function mapDoc(d) {
     var v = d.data();
-    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', flawsDescribed: !!v.flawsDescribed, ship: v.ship || null, color: v.color || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
+    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', flawsDescribed: !!v.flawsDescribed, bundle: !!v.bundle, ship: v.ship || null, color: v.color || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
   }
   function apply(items) { if (window.SC_SHOP) window.SC_SHOP.set(items); }
   window.SC_LOAD_LIVE = function (force) {
@@ -1186,7 +1271,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
       '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '<button class="own-tab" id="oHoldTab" type="button" style="margin-left:auto">Hold</button></div>' +
       (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
-      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links and turn on offers</button>' : '') + '</div>'));
+      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links and turn on offers</button><button class="btn btn-line" id="oBundle">Turn on the 3 for $7.99 jewelry deal</button>' : '') + '</div>'));
     if ($('oFind')) {
       $('oSortSel').value = S.sort;
       var applyFind = function () {
@@ -1212,6 +1297,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     if ($('oCsv')) $('oCsv').onclick = downloadCsv;
     if ($('oInvCsv')) $('oInvCsv').onclick = downloadInventoryCsv;
     if ($('oFixLinks')) $('oFixLinks').onclick = fixStripeLinks;
+    if ($('oBundle')) $('oBundle').onclick = bundleTag;
     if ($('oBulk')) $('oBulk').onclick = viewBulk;
   }
 
@@ -1377,6 +1463,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
       '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button><button type="button" class="btn btn-line" id="oRe">Re-process photos</button><button type="button" class="btn btn-line" id="oGuide">Add a tag photo to the Brand Guide</button></div><small>Re-process photos rebuilds the shop pictures of a live item from your originals right away. Messages show at the top of the screen.</small><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="fPhSaved"> Photos saved (ticks itself when you save or download them)</label><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
+      '<div class="full"><label class="int-step"><input type="checkbox" id="fBundle"' + (d.bundle ? ' checked' : '') + '> Include in the Jewelry deal (any 3 for $7.99 plus shipping). For earrings and necklaces.</label></div>' +
       '<div class="full priv"><label for="fMin">Lowest offer I would accept (private)</label><input class="field" id="fMin" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.minOffer) + '" placeholder="Blank = 80% of the price"><small>Shoppers can make an offer on every item. An offer at or above this is accepted on its own and held for 24 hours. A lower offer gets a polite no. It is never shown on the shop, and it never goes below what you paid plus Stripe\u2019s fee plus $1.</small></div>' +
       '<div class="full priv"><label for="fCost">What you paid (private)</label><input class="field" id="fCost" type="number" inputmode="decimal" min="0" step="0.01" value="' + esc(E.cost) + '"><small>Only you can see this. It never appears on the shop page.</small></div>' +
       '<div class="full priv"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fCons"' + (d.consigned ? ' checked' : '') + '> Consignment item (listed for someone else)</label>' +
@@ -1490,7 +1577,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
 
   function collect() {
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
-    d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.audience = $('fFor').value; d.color = $('fColor').value; d.material = g('fMat');
+    d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.audience = $('fFor').value; d.color = $('fColor').value; d.bundle = $('fBundle').checked; d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
     E.loc = g('fLoc'); E.wt = g('fWt'); E.dL = g('fL'); E.dW = g('fW'); E.dH = g('fH'); E.res = g('fRes'); E.noDf = $('fNoDf').checked; E.dfDesc = $('fDfDesc').checked; intakeUi(); E.cost = $('fCost').value; E.minOffer = $('fMin').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
@@ -1549,7 +1636,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       for (var i = 0; i < E.raw.length; i++) { var r = E.raw[i]; if (!r.saved) { if (SC.blank(r.canvas)) throw new Error('Photo ' + (i + 1) + ' is blank. The phone may be low on memory. Remove it and take it again, or reload the page and retry.'); await F.setDoc(F.doc(db, 'shop_items', E.id, 'raw', r.id), { data: SC.jpeg(r.canvas, 230000, 0.82), at: Date.now() }); r.saved = true; } }
       for (i = 0; i < E.removed.length; i++) await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', E.removed[i]));
       E.removed = [];
-      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, flawsDescribed: !!E.dfDesc, ship: (num(E.wt) > 0 && num(E.dL) > 0 && num(E.dW) > 0 && num(E.dH) > 0) ? { oz: num(E.wt), L: num(E.dL), W: num(E.dW), H: num(E.dH) } : null, color: d.color || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
+      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, flawsDescribed: !!E.dfDesc, bundle: !!d.bundle, ship: (num(E.wt) > 0 && num(E.dL) > 0 && num(E.dW) > 0 && num(E.dH) > 0) ? { oz: num(E.wt), L: num(E.dL), W: num(E.dW), H: num(E.dH) } : null, color: d.color || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
         photoOpt: { clean: !!E.clean, cutout: !!E.cutout, strength: E.strength || 40 }, rawOrder: E.raw.map(function (r) { return r.id; }), rawCount: E.raw.length, updatedAt: Date.now(), ownerUid: FB.auth.currentUser.uid };
       if (pub) up.aiDraft = false;
       up.price = d.price > 0 ? d.price : F.deleteField(); up.was = d.was > 0 ? d.was : F.deleteField();
@@ -1583,7 +1670,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
         say('Making the Stripe payment link...');
         var simg = null;
         if (E.raw.length) simg = SC.jpeg(firstOut || bakePhoto(0), 1300000, 0.9);
-        var sr = await stripeApi('/stripe/publish', { itemId: E.id, sku: E.sku, name: d.name, price: d.price, minOffer: parseFloat(E.minOffer) > 0 ? parseFloat(E.minOffer) : null, floorCents: floorCentsFor(parseFloat(E.cost)), shipOz: num(E.wt) > 0 ? num(E.wt) : null, description: d.description, image: simg, existing: sIds ? { productId: sIds.productId, priceId: sIds.priceId, linkId: sIds.linkId, priceCents: sIds.priceCents } : null });
+        var sr = await stripeApi('/stripe/publish', { itemId: E.id, sku: E.sku, name: d.name, price: d.price, minOffer: parseFloat(E.minOffer) > 0 ? parseFloat(E.minOffer) : null, floorCents: floorCentsFor(parseFloat(E.cost)), shipOz: num(E.wt) > 0 ? num(E.wt) : null, bundle: !!d.bundle, description: d.description, image: simg, existing: sIds ? { productId: sIds.productId, priceId: sIds.priceId, linkId: sIds.linkId, priceCents: sIds.priceCents } : null });
         if (!sr.ok) throw new Error('Stripe would not make the payment link, so nothing was published. ' + sr.error);
         up.stripe = sr.url;
         E.stripeIds = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode, shipV: sr.shipRate ? 1 : 0 };
@@ -1646,6 +1733,34 @@ if(typeof module!=='undefined')module.exports=TSQR;
   }
   // Makes sure every live item's Stripe link charges the item's current price. Safe to run again: items that already match are skipped.
   var fixArmed = null, fixRunning = false;
+  // Puts every live earring and necklace into the 3 for $7.99 deal, then refreshes their links so the shop server knows. Safe to run again.
+  var bundleArmed = null, bundleRunning = false;
+  async function bundleTag() {
+    if (bundleRunning) return;
+    var F = FB.F, db = FB.db, btn = $('oBundle'), re = /earring|necklace|pendant|choker/i;
+    var todo = byTab('available').filter(function (it) { return it.category === 'Jewelry' && re.test(it.name || '') && !it.bundle; });
+    if (!todo.length) { say('Every live earring and necklace is already in the 3 for $7.99 deal. To add or remove one item, open it and use the checkbox.', 'good'); return; }
+    if (!bundleArmed) {
+      bundleArmed = setTimeout(function () { bundleArmed = null; if (btn) btn.textContent = 'Turn on the 3 for $7.99 jewelry deal'; }, 8000);
+      if (btn) btn.textContent = 'Tap again to add ' + todo.length + ' item' + (todo.length === 1 ? '' : 's');
+      say(todo.length + ' live earring or necklace listing' + (todo.length === 1 ? '' : 's') + ' will join the deal (bracelets, rings and watches are skipped). Tap the button again to do it.');
+      return;
+    }
+    clearTimeout(bundleArmed); bundleArmed = null; bundleRunning = true; if (btn) btn.disabled = true;
+    var tagged = [], bad = [];
+    for (var i = 0; i < todo.length; i++) {
+      say('Adding item ' + (i + 1) + ' of ' + todo.length + '...');
+      try { await F.setDoc(F.doc(db, 'shop_items', todo[i].id), { bundle: true }, { merge: true }); todo[i].bundle = true; tagged.push(todo[i]); }
+      catch (e) { bad.push((todo[i].name || todo[i].id) + ' (could not save)'); }
+    }
+    var res = tagged.length ? await runLinks(tagged) : { okN: 0, bad: [] };
+    bundleRunning = false;
+    window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
+    try { await load(); } catch (e) {}
+    viewList();
+    var all = bad.concat(res.bad);
+    say(tagged.length + ' item' + (tagged.length === 1 ? '' : 's') + ' joined the deal, ' + res.okN + ' link' + (res.okN === 1 ? '' : 's') + ' refreshed.' + (all.length ? ' Problems: ' + all.slice(0, 4).join(' | ') : ''), all.length ? 'bad' : 'good');
+  }
   async function fixStripeLinks() {
     if (fixRunning) return;
     var F = FB.F, db = FB.db, btn = $('oFixLinks');
@@ -1678,7 +1793,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var it = todo[i], pv = S.priv[it.id] || {}, ids = pv.stripeIds || null, sku = pv.sku || '';
       say('Updating Stripe link ' + (i + 1) + ' of ' + todo.length + ': ' + (sku || it.name) + '...');
       if (!sku) { bad.push((it.name || it.id) + ' (no SC number)'); continue; }
-      var sr = await stripeApi('/stripe/publish', { itemId: it.id, sku: sku, name: it.name, price: it.price, minOffer: Number(pv.minOffer) > 0 ? Number(pv.minOffer) : null, floorCents: floorFor(it.id) * 100, shipOz: Number(pv.wt) > 0 ? Number(pv.wt) : null, description: it.description || '', image: null, existing: ids ? { productId: ids.productId, priceId: ids.priceId, linkId: ids.linkId, priceCents: ids.priceCents } : null });
+      var sr = await stripeApi('/stripe/publish', { itemId: it.id, sku: sku, name: it.name, price: it.price, minOffer: Number(pv.minOffer) > 0 ? Number(pv.minOffer) : null, floorCents: floorFor(it.id) * 100, shipOz: Number(pv.wt) > 0 ? Number(pv.wt) : null, bundle: !!it.bundle, description: it.description || '', image: null, existing: ids ? { productId: ids.productId, priceId: ids.priceId, linkId: ids.linkId, priceCents: ids.priceCents } : null });
       if (!sr.ok) { bad.push(sku + ': ' + sr.error); continue; }
       try {
         var nids = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode, shipV: sr.shipRate ? 1 : 0 };
