@@ -495,8 +495,9 @@ body{background:var(--white);color:var(--ink)}
 
   /* ---- departments: top bar + directory ---- */
   function count(cat){return GOOD.filter(function(p){return p.status!=='sold'&&(cat==='All'||p.category===cat)}).length}
+  var BASIC=['Tops','Outerwear','Bottoms','Footwear','Hats','Accessories','Handbags','Jewelry','Kids & Baby','Home','Electronics','Books & Media'];
   function buildDepts(){
-    var cats=['All'].concat(CFG.categories.filter(function(c){return count(c)>0||state.cat===c}));
+    var cats=['All'].concat(CFG.categories.filter(function(c){return BASIC.indexOf(c)>=0||count(c)>0||state.cat===c}));
     $('depts').innerHTML=cats.map(function(c){return '<button class="dept" role="listitem" data-cat="'+esc(c)+'" aria-current="'+(state.cat===c)+'">'+(c==='All'?'All items':esc(c))+'</button>'}).join('');
     var bs=[];GOOD.forEach(function(p){if(p.status!=='sold'&&p.brand&&bs.indexOf(p.brand)<0)bs.push(p.brand)});bs.sort(function(a,b){return a.localeCompare(b)});
     var cl=[];GOOD.forEach(function(p){if(p.status!=='sold'&&p.color&&cl.indexOf(p.color)<0)cl.push(p.color)});cl.sort(function(a,b){return a.localeCompare(b)});
