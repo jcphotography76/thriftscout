@@ -1195,9 +1195,9 @@ if(typeof module!=='undefined')module.exports=TSQR;
       }).join('') : '<div class="own-empty">' + (S.tab === 'draft' ? 'The holding pile is empty. Photos you take in the Thrift Scout app land here, or add some with the buttons above.' : 'Nothing is live yet. Publish an item from the holding pile.') + '</div>';
     }
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
-      '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '</div>' +
+      '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '<button class="own-tab" id="oHoldTab" type="button" style="margin-left:auto">Hold</button></div>' +
       (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
-      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oOffers">Offers</button><button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links and turn on offers</button>' : '') + '</div>'));
+      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links and turn on offers</button>' : '') + '</div>'));
     if ($('oFind')) {
       $('oSortSel').value = S.sort;
       var applyFind = function () {
@@ -1217,13 +1217,13 @@ if(typeof module!=='undefined')module.exports=TSQR;
     if ($('oTsBan')) $('oTsBan').onclick = function () { S.tab = 'toship'; viewList(); };
     $('oNew').onclick = function () { openEditor(null); };
     $('oCam').onclick = function () { openEditor(null, 'cam'); };
-    body.querySelectorAll('.own-tab').forEach(function (b) { b.onclick = function () { S.tab = b.dataset.t; viewList(); }; });
+    body.querySelectorAll('.own-tab[data-t]').forEach(function (b) { b.onclick = function () { S.tab = b.dataset.t; viewList(); }; });
+    if ($('oHoldTab')) $('oHoldTab').onclick = viewOffers;
     body.querySelectorAll('.own-row').forEach(function (b) { b.onclick = function () { if (b.dataset.oid) openOrder(b.dataset.oid); else openEditor(b.dataset.id); }; });
     if ($('oCsv')) $('oCsv').onclick = downloadCsv;
     if ($('oInvCsv')) $('oInvCsv').onclick = downloadInventoryCsv;
     if ($('oFixLinks')) $('oFixLinks').onclick = fixStripeLinks;
     if ($('oBulk')) $('oBulk').onclick = viewBulk;
-    if ($('oOffers')) $('oOffers').onclick = viewOffers;
   }
 
   /* ---------- editor ---------- */
@@ -1677,14 +1677,15 @@ if(typeof module!=='undefined')module.exports=TSQR;
 
   // ---- Bulk price change: pick a group, take a percent off, never below cost + Stripe fee + $1 profit. Stripe links follow automatically. ----
   async function viewOffers() {
-    frame('<h3 style="margin:0 0 10px">Offers</h3><div id="oOffBody" class="own-empty">Loading...</div><div class="own-msg" id="ownMsg"></div><div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oBack">Back</button></div>');
+    frame('<h3 style="margin:0 0 10px">Hold and offers</h3><div id="oOffBody" class="own-empty">Loading...</div><div class="own-msg" id="ownMsg"></div><div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oBack">Back</button></div>');
     $('oBack').onclick = function () { viewList(); };
     var r = await stripeApi('/stripe/offers', {});
     if (!r.ok) { $('oOffBody').textContent = r.error || 'Could not load offers.'; return; }
     var fm = function (t) { return new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
-    var h = '<b>On hold right now</b>' + ((r.holds || []).length ? r.holds.map(function (x) { return '<div style="padding:7px 0;border-bottom:1px solid var(--line,#ddd)"><b>' + esc(x.sku || '') + '</b> ' + esc(x.name || '') + '<br><small>Accepted at ' + money(x.offer / 100) + '. Held until ' + fm(x.until) + '.</small></div>'; }).join('') : '<p class="own-msg">Nothing is on hold.</p>');
-    h += '<p style="margin:14px 0 4px"><b>Recent offers</b></p>' + ((r.log || []).length ? r.log.map(function (x) { var lab = { accepted: 'Accepted', declined: 'Turned down', expired: 'Hold ended, item back in the shop', sold: 'Sold through an offer' }[x.result] || x.result; return '<div style="padding:7px 0;border-bottom:1px solid var(--line,#ddd)"><b>' + esc(x.sku || '') + '</b> ' + esc(x.name || '') + '<br><small>' + esc(lab) + ' &middot; offer ' + money(x.offer / 100) + ' on ' + money(x.price / 100) + ' &middot; ' + esc(fm(x.t)) + '</small></div>'; }).join('') : '<p class="own-msg">No offers yet.</p>');
+    var h = '<b>On hold right now</b>' + ((r.holds || []).length ? r.holds.map(function (x) { return '<button type="button" class="own-row" data-item="' + esc(x.itemId || '') + '"><span class="t"><b>' + esc(x.sku || '') + '</b> ' + esc(x.name || '') + '<br><small>Accepted at ' + money(x.offer / 100) + '. Held until ' + fm(x.until) + '.</small></span></button>'; }).join('') : '<p class="own-msg">Nothing is on hold.</p>');
+    h += '<p style="margin:14px 0 4px"><b>Recent offers</b></p>' + ((r.log || []).length ? r.log.map(function (x) { var lab = { accepted: 'Accepted', declined: 'Turned down', expired: 'Hold ended, item back in the shop', sold: 'Sold through an offer' }[x.result] || x.result; return '<button type="button" class="own-row" data-item="' + esc(x.itemId || '') + '"><span class="t"><b>' + esc(x.sku || '') + '</b> ' + esc(x.name || '') + '<br><small>' + esc(lab) + ' &middot; offer ' + money(x.offer / 100) + ' on ' + money(x.price / 100) + ' &middot; ' + esc(fm(x.t)) + '</small></span></button>'; }).join('') : '<p class="own-msg">No offers yet.</p>');
     $('oOffBody').className = ''; $('oOffBody').innerHTML = h;
+    $('oOffBody').querySelectorAll('[data-item]').forEach(function (b) { b.onclick = function () { var id = b.dataset.item; if (id && S.items.some(function (x) { return x.id === id; })) openEditor(id); else say('That item is not in the shop list any more.', 'bad'); }; });
   }
   var bulkArmed = null, bulkRunning = false;
   function floorCentsFor(cost) { var c = cost > 0 ? cost : 0; return Math.max(1, Math.ceil((c + 0.30 + 1.00) / 0.971)) * 100; }
