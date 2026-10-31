@@ -318,9 +318,9 @@ body{background:var(--white);color:var(--ink)}
 #ownToast{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 10px);z-index:50;background:#2A1B12;color:#fff;border:2px solid #A67C2E;padding:12px 14px;font-size:.95rem;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.4);display:none}#ownToast.bad{background:#8A1F2B;border-color:#fff}#ownToast.good{background:#1E6B40;border-color:#fff}
 
 /* SECOND CHANCE PHOTO BANNER */
-.brand{padding:0 0 12px;min-height:0}
-.brand-name{display:block;width:min(100%,1040px);margin:0 auto;font-size:0;letter-spacing:0;text-transform:none;background:none;-webkit-text-fill-color:initial;color:inherit;line-height:0}
-.brand-name img{display:block;width:100%;height:auto}
+.brand{padding:0 0 12px;min-height:0;background:#24170f}.brand::before,.brand::after{display:none}
+.brand-name{display:block;width:100%;margin:0;font-size:0;letter-spacing:0;text-transform:none;background:none;-webkit-text-fill-color:initial;color:inherit;line-height:0}
+.brand-name img{display:block;width:100%;height:clamp(146px,31vw,430px);object-fit:cover;object-position:50% 15%}
 .brand-sub{margin-top:8px}
 @media (max-width:700px){.brand{padding:0 0 10px}.brand-sub{font-size:.7rem;letter-spacing:.08em}.brand-sub::before,.brand-sub::after{width:18px;margin:0 6px}}
 </style>
