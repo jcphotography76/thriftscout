@@ -439,8 +439,12 @@ body{background:var(--white);color:var(--ink)}
 <script src="secondchance-products.js"></script>
 <script>
 (function(){
-  ['Footwear','Handbags','Eyewear','Laser Engraving'].forEach(function(c){var L=window.SHOP_CONFIG.categories;if(L.indexOf(c)<0)L.push(c)});
-  (function(){var N=window.SHOP_CONFIG.needsSize;if(N&&N.indexOf('Footwear')<0)N.push('Footwear')})();
+  (function(){
+    var C=window.SHOP_CONFIG, want=['Tops','Outerwear','Bottoms','Dresses & Skirts','Hats','Footwear','Accessories','Handbags','Jewelry','Watches','Eyewear','Kids & Baby','Home','Kitchen & Dining','Electronics','Books & Media','Toys & Games','Collectibles','Sports & Outdoors','Tools & Hardware','Seasonal & Holiday','Handmade','Laser Engraving'];
+    var rest=(C.categories||[]).filter(function(c){return want.indexOf(c)<0});
+    C.categories=want.concat(rest);
+    var N=C.needsSize=C.needsSize||[];['Footwear','Outerwear','Dresses & Skirts','Kids & Baby'].forEach(function(c){if(N.indexOf(c)<0)N.push(c)});
+  })();
   var CFG=window.SHOP_CONFIG, ALL=window.SHOP_PRODUCTS||[];
   var $=function(id){return document.getElementById(id)};
   var state={cat:'All',q:'',cond:'',aud:'',brand:'',sort:'new',sale:false,sold:false};
@@ -491,11 +495,11 @@ body{background:var(--white);color:var(--ink)}
   /* ---- departments: top bar + directory ---- */
   function count(cat){return GOOD.filter(function(p){return p.status!=='sold'&&(cat==='All'||p.category===cat)}).length}
   function buildDepts(){
-    var cats=['All'].concat(CFG.categories);
+    var cats=['All'].concat(CFG.categories.filter(function(c){return count(c)>0||state.cat===c}));
     $('depts').innerHTML=cats.map(function(c){return '<button class="dept" role="listitem" data-cat="'+esc(c)+'" aria-current="'+(state.cat===c)+'">'+(c==='All'?'All items':esc(c))+'</button>'}).join('');
     var bs=[];GOOD.forEach(function(p){if(p.status!=='sold'&&p.brand&&bs.indexOf(p.brand)<0)bs.push(p.brand)});bs.sort(function(a,b){return a.localeCompare(b)});
     var bf=$('brandf');if(bf){var cur=state.brand;bf.innerHTML='<option value="">Any brand</option>'+bs.map(function(b){return '<option>'+esc(b)+'</option>'}).join('');if(bs.indexOf(cur)>=0)bf.value=cur;else state.brand=''}
-    $('dir').innerHTML=CFG.categories.map(function(c){return '<button class="dir-row" data-cat="'+esc(c)+'"><span class="dir-name">'+esc(c)+'</span><span class="dir-n">'+count(c)+' available</span></button>'}).join('');
+    $('dir').innerHTML=CFG.categories.filter(function(c){return count(c)>0}).map(function(c){return '<button class="dir-row" data-cat="'+esc(c)+'"><span class="dir-name">'+esc(c)+'</span><span class="dir-n">'+count(c)+' available</span></button>'}).join('');
   }
 
   /* ---- shop window slideshow ---- */
@@ -1366,7 +1370,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div class="own-msg" id="oNote">Photo rules: clean the camera lens (no smudges or streaks), shoot in good light, and keep the photo sharp. Blurry or dark photos are not allowed. Every photo is centered and placed on the shop backdrop. Raise Strength if a shadow or edge is left behind. A plain, light surface works best.</div></div>' +
       '<div><div class="own-form">' +
       '<div class="full"><label for="fName">Item name <i>*</i></label><input class="field" id="fName" value="' + esc(d.name) + '" placeholder="Levi’s straight-leg jeans, vintage wash"></div>' +
-      '<div><label for="fCat">Section <i>*</i></label><select class="field" id="fCat">' + opt(CFG.categories, d.category, 'Choose a section') + '</select></div>' +
+      '<div><label for="fCat">Section <i>*</i></label><select class="field" id="fCat">' + opt(CFG.categories, d.category, 'Choose a section') + '</select><small id="catHint"></small></div>' +
       '<div><label for="fCond">Condition <i>*</i></label><select class="field" id="fCond">' + opt(CFG.conditions, d.condition, 'Choose condition') + '</select></div>' +
       '<div><label for="fBrand">Brand</label><input class="field" id="fBrand" value="' + esc(d.brand) + '"></div>' +
       '<div><label for="fFor">For</label><select class="field" id="fFor">' + opt(['Men\u2019s', 'Women\u2019s', 'Unisex'], d.audience, 'Choose') + '</select></div>' +
@@ -1396,11 +1400,32 @@ if(typeof module!=='undefined')module.exports=TSQR;
         : '<button class="btn btn-solid" id="oPub">Publish to shop</button><button class="btn btn-line" id="oSave">Save draft</button>') +
       '<span class="grow"></span><button class="btn btn-line" id="oBack">Back</button>' + (E.isNew && !E.raw.length ? '' : '<button class="btn btn-line" id="oDel" style="color:var(--sale);border-color:var(--sale)">Delete</button>') +
       '</div><div class="own-msg" id="ownMsg"></div></div></div>');
-    var sync = function () { var n = CFG.needsSize.indexOf($('fCat').value) >= 0; $('sizeReq').textContent = n ? '*' : ''; $('measReq').textContent = n ? '*' : ''; };
+    var CATHINT = {
+      Footwear: 'Say if they are worn or new in the box. Photograph the soles and the inside.',
+      Electronics: 'Say what you tested: powers on, screen, buttons, battery, charger or cables included. Reset or wipe it first. Give the model number.',
+      Watches: 'Say if it runs and whether it needs a battery. Give the brand, model and case size.',
+      'Books & Media': 'Give the title, author or artist, format, edition and year. Mention writing, wear or skipping.',
+      'Toys & Games': 'Say if it is complete: pieces, batteries, box. Give the year if it is printed on it.',
+      Collectibles: 'Give the maker, year and series, and say whether the box or tag is included.',
+      'Kitchen & Dining': 'Give the maker and pattern. Mention chips, cracks and stains. Say what it holds.',
+      'Tools & Hardware': 'Say if it works. List what comes with it, such as bits, case, battery or charger.',
+      'Kids & Baby': 'Give the size and age range. Check for recalls on cribs, car seats and other child gear before listing.',
+      'Sports & Outdoors': 'Give the size and what it fits. Mention wear or damage.'
+    };
+    var sync = function () { var n = CFG.needsSize.indexOf($('fCat').value) >= 0; $('sizeReq').textContent = n ? '*' : ''; $('measReq').textContent = n ? '*' : ''; $('catHint').textContent = CATHINT[$('fCat').value] || ''; };
     var MEAS = {
       Tops: [['Chest (pit to pit)', 'Lay it flat. Straight across from one armpit seam to the other.'], ['Length', 'Top of the shoulder seam by the collar, straight down to the bottom hem.'], ['Shoulder width', 'Across the back, from one shoulder seam to the other.'], ['Sleeve length', 'From the shoulder seam to the end of the sleeve.'], ['Hem width', 'Lay it flat. Across the bottom hem, edge to edge.']],
       Bottoms: [['Waist', 'Fasten it, lay it flat, and measure across the top of the waistband.'], ['Inseam', 'From the crotch seam down the inside of the leg to the hem.'], ['Rise', 'From the crotch seam up to the top of the waistband, in front.'], ['Leg opening', 'Lay it flat. Across the bottom of one leg.']],
       Hats: [['Circumference', 'All the way around the inside of the band.']],
+      Outerwear: [['Chest (pit to pit)', 'Lay it flat, zipped or buttoned. Straight across from one armpit seam to the other.'], ['Length', 'Top of the shoulder seam by the collar, straight down to the bottom hem.'], ['Shoulder width', 'Across the back, from one shoulder seam to the other.'], ['Sleeve length', 'From the shoulder seam to the end of the cuff.']],
+      'Dresses & Skirts': [['Bust (pit to pit)', 'Lay it flat. Straight across from one armpit seam to the other. Skip for skirts.'], ['Waist', 'Lay it flat. Straight across the waist seam or waistband.'], ['Length', 'Dresses: top of the shoulder to the hem. Skirts: top of the waistband to the hem.']],
+      'Kids & Baby': [['Chest (pit to pit)', 'Lay it flat. Straight across from one armpit seam to the other.'], ['Length', 'Top of the shoulder seam by the collar, straight down to the bottom hem.'], ['Sleeve length', 'From the shoulder seam to the end of the sleeve.']],
+      Accessories: [['Length', 'Belts: from the buckle end to the tip. Scarves and ties: the full length.'], ['Width', 'Across the widest part.']],
+      Watches: [['Case width (mm)', 'Across the case, not counting the crown.'], ['Band length', 'The full length of the band, laid flat, clasp to the end.'], ['Band width (mm)', 'Across the band where it meets the case.']],
+      Electronics: [['Width', 'Left to right, facing the front.'], ['Height', 'Top to bottom.'], ['Depth', 'Front to back.'], ['Screen size', 'Corner to corner on the diagonal. Screens only.']],
+      'Kitchen & Dining': [['Height', 'Bottom to the top edge.'], ['Width or diameter', 'Across the widest part.'], ['Capacity', 'Printed on the piece, or fill it with water and measure.']],
+      Collectibles: [['Height', 'Bottom to the top.'], ['Width', 'Across the widest part.'], ['Depth', 'Front to back.']],
+      'Toys & Games': [['Height', 'Bottom to the top.'], ['Width', 'Across the widest part.'], ['Depth', 'Front to back.']],
       Footwear: [['Insole length', 'Inside the shoe, from the back of the heel to the tip of the toe, along the insole.'], ['Width', 'Across the widest part of the insole, at the ball of the foot.'], ['Heel height', 'Outside the shoe, from the floor to the top of the heel at the back. Leave empty for flat shoes.']],
       Handbags: [['Width', 'Across the widest part of the bag, laid flat.'], ['Height', 'Bottom to the top edge, not counting the strap.'], ['Depth', 'Across the bottom, front to back.'], ['Strap drop', 'From the top edge of the bag to the highest point of the strap, pulled straight.']],
       Eyewear: [['Lens width', 'Across one lens at its widest point.'], ['Bridge', 'The gap between the two lenses, over the nose.'], ['Temple length', 'One arm, from the hinge to the tip.'], ['Lens height', 'Top to bottom of one lens at its tallest point.'], ['Frame width', 'Outside edge to outside edge across the front.']]
