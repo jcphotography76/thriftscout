@@ -398,8 +398,9 @@ body{background:var(--white);color:var(--ink)}
     <form class="tools" id="tools" onsubmit="return false" role="search">
       <div class="search"><label class="sr" for="q">Search items</label><input class="field" id="q" type="search" placeholder="Search by item, brand or color" autocomplete="off"></div>
       <div><label class="sr" for="cond">Condition</label><select class="field" id="cond"><option value="">Any condition</option></select></div>
-      <div><label class="sr" for="aud">For</label><select class="field" id="aud"><option value="">For: anyone</option><option>Men’s</option><option>Women’s</option><option>Unisex</option></select></div>
+      <div><label class="sr" for="aud">For</label><select class="field" id="aud"><option value="">For: anyone</option><option>Men’s</option><option>Women’s</option><option>Unisex</option><option>Kids’</option></select></div>
       <div><label class="sr" for="brandf">Brand</label><select class="field" id="brandf"><option value="">Any brand</option></select></div>
+      <div><label class="sr" for="colorf">Color</label><select class="field" id="colorf"><option value="">Any color</option></select></div>
       <div><label class="sr" for="sort">Sort</label><select class="field" id="sort"><option value="new">Newest first</option><option value="low">Price, low to high</option><option value="high">Price, high to low</option></select></div>
       <label class="check"><input type="checkbox" id="sale"> On sale</label>
       <label class="check"><input type="checkbox" id="sold"> Show sold</label>
@@ -447,7 +448,7 @@ body{background:var(--white);color:var(--ink)}
   })();
   var CFG=window.SHOP_CONFIG, ALL=window.SHOP_PRODUCTS||[];
   var $=function(id){return document.getElementById(id)};
-  var state={cat:'All',q:'',cond:'',aud:'',brand:'',sort:'new',sale:false,sold:false};
+  var state={cat:'All',q:'',cond:'',aud:'',brand:'',color:'',sort:'new',sale:false,sold:false};
   var money=function(n){return '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:n%1?2:0})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 
@@ -498,6 +499,8 @@ body{background:var(--white);color:var(--ink)}
     var cats=['All'].concat(CFG.categories.filter(function(c){return count(c)>0||state.cat===c}));
     $('depts').innerHTML=cats.map(function(c){return '<button class="dept" role="listitem" data-cat="'+esc(c)+'" aria-current="'+(state.cat===c)+'">'+(c==='All'?'All items':esc(c))+'</button>'}).join('');
     var bs=[];GOOD.forEach(function(p){if(p.status!=='sold'&&p.brand&&bs.indexOf(p.brand)<0)bs.push(p.brand)});bs.sort(function(a,b){return a.localeCompare(b)});
+    var cl=[];GOOD.forEach(function(p){if(p.status!=='sold'&&p.color&&cl.indexOf(p.color)<0)cl.push(p.color)});cl.sort(function(a,b){return a.localeCompare(b)});
+    var cf=$('colorf');if(cf){var cc=state.color;cf.innerHTML='<option value="">Any color</option>'+cl.map(function(b){return '<option>'+esc(b)+'</option>'}).join('');if(cl.indexOf(cc)>=0)cf.value=cc;else state.color=''}
     var bf=$('brandf');if(bf){var cur=state.brand;bf.innerHTML='<option value="">Any brand</option>'+bs.map(function(b){return '<option>'+esc(b)+'</option>'}).join('');if(bs.indexOf(cur)>=0)bf.value=cur;else state.brand=''}
     $('dir').innerHTML=CFG.categories.filter(function(c){return count(c)>0}).map(function(c){return '<button class="dir-row" data-cat="'+esc(c)+'"><span class="dir-name">'+esc(c)+'</span><span class="dir-n">'+count(c)+' available</span></button>'}).join('');
   }
@@ -530,7 +533,8 @@ body{background:var(--white);color:var(--ink)}
       if(state.cond&&p.condition!==state.cond)return false;
       if(state.aud&&p.audience!==state.aud)return false;
       if(state.brand&&(p.brand||'')!==state.brand)return false;
-      if(q){var hay=[p.name,p.brand,p.category,p.material,p.description].join(' ').toLowerCase();if(!q.split(/\s+/).every(function(w){return hay.indexOf(w)>=0}))return false}
+      if(state.color&&(p.color||'')!==state.color)return false;
+      if(q){var hay=[p.name,p.brand,p.category,p.material,p.color,p.description].join(' ').toLowerCase();if(!q.split(/\s+/).every(function(w){return hay.indexOf(w)>=0}))return false}
       return true;
     });
     out.sort(function(a,b){
@@ -567,7 +571,7 @@ body{background:var(--white);color:var(--ink)}
     var p=GOOD.filter(function(x){return x.id===id})[0]; if(!p)return;
     curId=id;
     var im=imgs(p), sold=p.status==='sold';
-    var spec=[['Size',p.size],['Measurements',p.measurements],['Condition',p.condition],['Material',p.material],['Category',p.category]].filter(function(r){return r[1]});
+    var spec=[['Size',p.size],['Measurements',p.measurements],['Condition',p.condition],['Color',p.color],['Material',p.material],['Category',p.category]].filter(function(r){return r[1]});
     var canBuy=!sold&&!p.sample&&p.stripe;
     var buy=canBuy?'<label class="d-ack"><input type="checkbox" id="ack"> I understand all sales are final.</label><a class="btn btn-solid" id="buyBtn" aria-disabled="true" data-href="'+esc(p.stripe)+'" target="_blank" rel="noopener">Buy now, '+money(p.price)+'</a><div class="d-fine">Secure checkout with Stripe. Shipping is added at checkout.</div><div id="offerBox"></div>'
       :'<button class="btn" disabled>'+(sold?'Sold':(p.sample?'Sample item, not for sale':'Not available yet'))+'</button>';
@@ -738,12 +742,13 @@ body{background:var(--white);color:var(--ink)}
   document.addEventListener('click',function(e){
     var d=e.target.closest('[data-cat]');if(d){setCat(d.dataset.cat,true);return}
     var c=e.target.closest('.card');if(c){openItem(c.dataset.id);return}
-    if(e.target.id==='clear'){state={cat:state.cat,q:'',cond:'',aud:'',brand:'',sort:'new',sale:false,sold:false};$('q').value='';$('cond').value='';$('aud').value='';$('brandf').value='';$('sort').value='new';$('sale').checked=false;$('sold').checked=false;render()}
+    if(e.target.id==='clear'){state={cat:state.cat,q:'',cond:'',aud:'',brand:'',color:'',sort:'new',sale:false,sold:false};$('q').value='';$('cond').value='';$('aud').value='';$('brandf').value='';$('colorf').value='';$('sort').value='new';$('sale').checked=false;$('sold').checked=false;render()}
   });
   $('q').addEventListener('input',function(){state.q=this.value;render()});
   $('cond').addEventListener('change',function(){state.cond=this.value;render()});
   $('aud').addEventListener('change',function(){state.aud=this.value;render()});
   $('brandf').addEventListener('change',function(){state.brand=this.value;render()});
+  $('colorf').addEventListener('change',function(){state.color=this.value;render()});
   $('sort').addEventListener('change',function(){state.sort=this.value;render()});
   $('sale').addEventListener('change',function(){state.sale=this.checked;render()});
   $('sold').addEventListener('change',function(){state.sold=this.checked;render()});
@@ -1001,7 +1006,7 @@ body{background:var(--white);color:var(--ink)}
   window.SC_CLEAR_CACHE = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} };
   function mapDoc(d) {
     var v = d.data();
-    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
+    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', color: v.color || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
   }
   function apply(items) { if (window.SC_SHOP) window.SC_SHOP.set(items); }
   window.SC_LOAD_LIVE = function (force) {
@@ -1301,7 +1306,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
   function detailsText() {
     var E = S.E, d = collect(), L = [], w = num(E.wt), flaws = (E.defects || []).map(function (x) { return (x.text || '').trim(); }).filter(Boolean);
     var add = function (k, v) { if (v !== '' && v != null) L.push(k + ': ' + v); };
-    add('Item number', E.sku); add('Name', d.name); add('For', d.audience); add('Section', d.category); add('Brand', d.brand); add('Size', d.size); add('Condition', d.condition); add('Material', d.material);
+    add('Item number', E.sku); add('Name', d.name); add('For', d.audience); add('Section', d.category); add('Brand', d.brand); add('Color', d.color); add('Size', d.size); add('Condition', d.condition); add('Material', d.material);
     if (d.measurements) { L.push('Measurements:'); String(d.measurements).split(/,\s*(?=[A-Z])/).forEach(function (m) { if (m.trim()) L.push('  ' + m.trim()); }); }
     if (w > 0) add('Weight', Math.floor(w / 16) + ' lb ' + (Math.round((w % 16) * 10) / 10) + ' oz');
     L.push('Flaws: ' + (flaws.length ? flaws.join('; ') : (E.noDf ? 'None noted' : 'Not recorded')));
@@ -1373,7 +1378,8 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div><label for="fCat">Section <i>*</i></label><select class="field" id="fCat">' + opt(CFG.categories, d.category, 'Choose a section') + '</select><small id="catHint"></small></div>' +
       '<div><label for="fCond">Condition <i>*</i></label><select class="field" id="fCond">' + opt(CFG.conditions, d.condition, 'Choose condition') + '</select></div>' +
       '<div><label for="fBrand">Brand</label><input class="field" id="fBrand" value="' + esc(d.brand) + '"></div>' +
-      '<div><label for="fFor">For</label><select class="field" id="fFor">' + opt(['Men\u2019s', 'Women\u2019s', 'Unisex'], d.audience, 'Choose') + '</select></div>' +
+      '<div><label for="fFor">For</label><select class="field" id="fFor">' + opt(['Men\u2019s', 'Women\u2019s', 'Unisex', 'Kids\u2019'], d.audience, 'Choose') + '</select></div>' +
+      '<div><label for="fColor">Color</label><select class="field" id="fColor">' + opt(COLORS, d.color, 'Choose') + '</select></div>' +
       '<div><label for="fSize">Size <i id="sizeReq"></i></label><input class="field" id="fSize" value="' + esc(d.size) + '" placeholder="Men’s M, 32 x 32, S/M"></div>' +
       '<div class="full"><label>Measurements <i id="measReq"></i></label><div id="measBox"></div><input id="fMeas" type="hidden" value="' + esc(d.measurements) + '"></div>' +
       '<div><label for="fMat">Material</label><input class="field" id="fMat" value="' + esc(d.material) + '" placeholder="100% cotton"></div>' +
@@ -1400,6 +1406,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
         : '<button class="btn btn-solid" id="oPub">Publish to shop</button><button class="btn btn-line" id="oSave">Save draft</button>') +
       '<span class="grow"></span><button class="btn btn-line" id="oBack">Back</button>' + (E.isNew && !E.raw.length ? '' : '<button class="btn btn-line" id="oDel" style="color:var(--sale);border-color:var(--sale)">Delete</button>') +
       '</div><div class="own-msg" id="ownMsg"></div></div></div>');
+    var COLORS = ['Black','White','Gray','Silver','Gold','Brown','Tan or beige','Cream','Red','Pink','Orange','Yellow','Green','Blue','Purple','Teal','Multicolor','Clear'];
     var CATHINT = {
       Footwear: 'Say if they are worn or new in the box. Photograph the soles and the inside.',
       Electronics: 'Say what you tested: powers on, screen, buttons, battery, charger or cables included. Reset or wipe it first. Give the model number.',
@@ -1502,7 +1509,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
 
   function collect() {
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
-    d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.audience = $('fFor').value; d.material = g('fMat');
+    d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.audience = $('fFor').value; d.color = $('fColor').value; d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
     E.loc = g('fLoc'); E.wt = g('fWt'); E.dL = g('fL'); E.dW = g('fW'); E.dH = g('fH'); E.res = g('fRes'); E.noDf = $('fNoDf').checked; intakeUi(); E.cost = $('fCost').value; E.minOffer = $('fMin').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
@@ -1561,7 +1568,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       for (var i = 0; i < E.raw.length; i++) { var r = E.raw[i]; if (!r.saved) { if (SC.blank(r.canvas)) throw new Error('Photo ' + (i + 1) + ' is blank. The phone may be low on memory. Remove it and take it again, or reload the page and retry.'); await F.setDoc(F.doc(db, 'shop_items', E.id, 'raw', r.id), { data: SC.jpeg(r.canvas, 230000, 0.82), at: Date.now() }); r.saved = true; } }
       for (i = 0; i < E.removed.length; i++) await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', E.removed[i]));
       E.removed = [];
-      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
+      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, color: d.color || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
         photoOpt: { clean: !!E.clean, cutout: !!E.cutout, strength: E.strength || 40 }, rawOrder: E.raw.map(function (r) { return r.id; }), rawCount: E.raw.length, updatedAt: Date.now(), ownerUid: FB.auth.currentUser.uid };
       if (pub) up.aiDraft = false;
       up.price = d.price > 0 ? d.price : F.deleteField(); up.was = d.was > 0 ? d.was : F.deleteField();
@@ -2042,11 +2049,11 @@ if(typeof module!=='undefined')module.exports=TSQR;
   function downloadInventoryCsv() {
     var q = function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     var names = { draft: 'Holding pile', available: 'Live', sold: 'Sold' };
-    var cols = ['Item number', 'Name', 'Status', 'Category', 'For', 'Brand', 'Size', 'Condition', 'Where it is stored', 'What I paid', 'Asking price', 'Sold price', 'Date added', 'Date sold', 'Weight (oz)', 'Consignment seller', 'Stripe link', 'Link to item'];
+    var cols = ['Item number', 'Name', 'Status', 'Category', 'For', 'Brand', 'Color', 'Size', 'Condition', 'Where it is stored', 'What I paid', 'Asking price', 'Sold price', 'Date added', 'Date sold', 'Weight (oz)', 'Consignment seller', 'Stripe link', 'Link to item'];
     var items = S.items.slice().sort(function (a, b) { var x = (S.priv[a.id] || {}).sku || '~', y = (S.priv[b.id] || {}).sku || '~'; return x.localeCompare(y); });
     var rows = items.map(function (it) {
       var pv = S.priv[it.id] || {}, st = it.status || 'draft', od = (S.orders || []).filter(function (o) { return o.itemId === it.id; })[0];
-      return [pv.sku || '', it.name || '', names[st] || st, it.category || '', it.audience || '', it.brand || '', it.size || '', it.condition || '', pv.loc || '', pv.cost != null && pv.cost !== '' ? pv.cost : '', it.price || '', od ? num(od.salePrice) : '', fmtD(it.added || it.createdAt), od ? fmtD(od.soldAt) : '', pv.wt || '', pv.sellerName || '', it.stripe || '', base() + '#item=' + it.id];
+      return [pv.sku || '', it.name || '', names[st] || st, it.category || '', it.audience || '', it.brand || '', it.color || '', it.size || '', it.condition || '', pv.loc || '', pv.cost != null && pv.cost !== '' ? pv.cost : '', it.price || '', od ? num(od.salePrice) : '', fmtD(it.added || it.createdAt), od ? fmtD(od.soldAt) : '', pv.wt || '', pv.sellerName || '', it.stripe || '', base() + '#item=' + it.id];
     });
     var lines = [cols.map(q).join(',')].concat(rows.map(function (r) { return r.map(q).join(','); }));
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv' })); a.download = 'second-chance-inventory-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
