@@ -1611,10 +1611,10 @@ if(typeof module!=='undefined')module.exports=TSQR;
         say('Making the Stripe payment link...');
         var simg = null;
         if (E.raw.length) simg = SC.jpeg(firstOut || bakePhoto(0), 1300000, 0.9);
-        var sr = await stripeApi('/stripe/publish', { itemId: E.id, sku: E.sku, name: d.name, price: d.price, minOffer: parseFloat(E.minOffer) > 0 ? parseFloat(E.minOffer) : null, floorCents: floorCentsFor(parseFloat(E.cost)), description: d.description, image: simg, existing: sIds ? { productId: sIds.productId, priceId: sIds.priceId, linkId: sIds.linkId, priceCents: sIds.priceCents } : null });
+        var sr = await stripeApi('/stripe/publish', { itemId: E.id, sku: E.sku, name: d.name, price: d.price, minOffer: parseFloat(E.minOffer) > 0 ? parseFloat(E.minOffer) : null, floorCents: floorCentsFor(parseFloat(E.cost)), shipOz: num(E.wt) > 0 ? num(E.wt) : null, description: d.description, image: simg, existing: sIds ? { productId: sIds.productId, priceId: sIds.priceId, linkId: sIds.linkId, priceCents: sIds.priceCents } : null });
         if (!sr.ok) throw new Error('Stripe would not make the payment link, so nothing was published. ' + sr.error);
         up.stripe = sr.url;
-        E.stripeIds = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode };
+        E.stripeIds = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode, shipV: sr.shipRate ? 1 : 0 };
         if (sr.mode === 'test') stripeNote = ' TEST MODE: the Stripe link takes no real money yet.';
         if (sr.notes && sr.notes.length) stripeNote += ' ' + sr.notes.join(' ');
       } else if (manualLink && sIds) {
@@ -1679,7 +1679,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var F = FB.F, db = FB.db, btn = $('oFixLinks');
     var todo = byTab('available').filter(function (it) {
       var ids = (S.priv[it.id] || {}).stripeIds, cents = Math.round(Number(it.price) * 100);
-      return !ids || !it.stripe || Number(ids.priceCents) !== cents || ids.url !== it.stripe || !(S.priv[it.id] || {}).offerReady;
+      return !ids || !it.stripe || Number(ids.priceCents) !== cents || ids.url !== it.stripe || !(S.priv[it.id] || {}).offerReady || !ids.shipV;
     });
     if (!todo.length) { say('Every live item has a Stripe link at its current price and Make an offer is on. Nothing to update.', 'good'); return; }
     if (!fixArmed) {
@@ -1706,10 +1706,10 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var it = todo[i], pv = S.priv[it.id] || {}, ids = pv.stripeIds || null, sku = pv.sku || '';
       say('Updating Stripe link ' + (i + 1) + ' of ' + todo.length + ': ' + (sku || it.name) + '...');
       if (!sku) { bad.push((it.name || it.id) + ' (no SC number)'); continue; }
-      var sr = await stripeApi('/stripe/publish', { itemId: it.id, sku: sku, name: it.name, price: it.price, minOffer: Number(pv.minOffer) > 0 ? Number(pv.minOffer) : null, floorCents: floorFor(it.id) * 100, description: it.description || '', image: null, existing: ids ? { productId: ids.productId, priceId: ids.priceId, linkId: ids.linkId, priceCents: ids.priceCents } : null });
+      var sr = await stripeApi('/stripe/publish', { itemId: it.id, sku: sku, name: it.name, price: it.price, minOffer: Number(pv.minOffer) > 0 ? Number(pv.minOffer) : null, floorCents: floorFor(it.id) * 100, shipOz: Number(pv.wt) > 0 ? Number(pv.wt) : null, description: it.description || '', image: null, existing: ids ? { productId: ids.productId, priceId: ids.priceId, linkId: ids.linkId, priceCents: ids.priceCents } : null });
       if (!sr.ok) { bad.push(sku + ': ' + sr.error); continue; }
       try {
-        var nids = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode };
+        var nids = { productId: sr.productId, priceId: sr.priceId, linkId: sr.linkId, priceCents: sr.priceCents, url: sr.url, mode: sr.mode, shipV: sr.shipRate ? 1 : 0 };
         await F.setDoc(F.doc(db, 'shop_items', it.id), { stripe: sr.url }, { merge: true });
         await F.setDoc(F.doc(db, 'shop_private', it.id), { stripeIds: nids, offerReady: true }, { merge: true });
         it.stripe = sr.url; pv.stripeIds = nids; pv.offerReady = true; S.priv[it.id] = pv; okN++;
