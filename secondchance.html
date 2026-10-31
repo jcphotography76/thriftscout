@@ -582,7 +582,7 @@ body{background:var(--white);color:var(--ink)}
       '<div class="d-price">'+money(p.price)+(p.was?'<span class="m-was">'+money(p.was)+'</span>':'')+'</div><button class="d-share" id="dShare" type="button">Share this item</button>'+
       '<p class="d-note">One of a kind. Once it sells, it is gone.</p>'+(p.consigned?'<p class="d-cons"><b>Consignment item.</b> Sold and shipped by an independent seller, not by Second Chance or Thrift Scout. The seller is responsible for the item&rsquo;s description, condition, shipping and returns.</p>':'')+
       '<dl class="d-spec">'+spec.map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd></div>'}).join('')+'</dl>'+
-      '<p class="d-desc">'+esc(p.description)+'</p><div class="d-buy">'+buy+'</div><p class="d-terms"><b>All sales are final.</b> We do not accept returns for fit or change of mind. If your item never arrives, arrives damaged, or is not as described, contact us within 3 days of delivery with photos. Refunds for damage or loss are made after the item is returned or the carrier approves a claim.</p></div></div>';
+      '<p class="d-desc">'+esc(p.description)+'</p>'+(p.flawsDescribed?'<p class="d-desc" style="margin-top:8px;font-size:.92rem;color:var(--soft)"><b>Condition notes:</b> flaws are described above and visible in the photos.</p>':'')+'<div class="d-buy">'+buy+'</div><p class="d-terms"><b>All sales are final.</b> We do not accept returns for fit or change of mind. If your item never arrives, arrives damaged, or is not as described, contact us within 3 days of delivery with photos. Refunds for damage or loss are made after the item is returned or the carrier approves a claim.</p></div></div>';
     var ack=$('ack'),bb=$('buyBtn');if(ack&&bb){ack.onchange=function(){if(ack.checked){bb.setAttribute('href',bb.getAttribute('data-href'));bb.setAttribute('aria-disabled','false')}else{bb.removeAttribute('href');bb.setAttribute('aria-disabled','true')}}}
     gallery(im,p);
     if(canBuy&&p.remote)offerSetup(p);
@@ -1007,7 +1007,7 @@ body{background:var(--white);color:var(--ink)}
   window.SC_CLEAR_CACHE = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} };
   function mapDoc(d) {
     var v = d.data();
-    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', color: v.color || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
+    return { id: d.id, remote: true, name: v.name, brand: v.brand, audience: v.audience || '', flawsDescribed: !!v.flawsDescribed, color: v.color || '', category: v.category, price: v.price, was: v.was, condition: v.condition, size: v.size, measurements: v.measurements, material: v.material, description: v.description, stripe: v.stripe, status: v.status === 'sold' ? 'sold' : 'available', added: v.added, images: v.thumbs || [], photoCount: v.photoCount || 0, consigned: !!v.consigned };
   }
   function apply(items) { if (window.SC_SHOP) window.SC_SHOP.set(items); }
   window.SC_LOAD_LIVE = function (force) {
@@ -1252,7 +1252,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var map = {}; r[0].docs.forEach(function (d) { map[d.id] = d.data().data; });
       var ids = order.filter(function (k) { return map[k]; }).concat(Object.keys(map).filter(function (k) { return order.indexOf(k) < 0 && k.indexOf('df_') !== 0; }));
       var pv = r[1] && r[1].exists() ? r[1].data() : {}; E.cost = pv.cost != null ? String(pv.cost) : ''; E.minOffer = pv.minOffer != null ? String(pv.minOffer) : ''; E.sellerName = pv.sellerName || ''; E.sellerEmail = pv.sellerEmail || ''; E.loc = pv.loc || ''; E.sku = pv.sku || nextSku(); E.stripeIds = pv.stripeIds || null;
-      E.photosSaved = pv.photosSaved || 0; E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf;
+      E.photosSaved = pv.photosSaved || 0; E.intake = pv.intake || {}; E.wt = pv.wt != null ? String(pv.wt) : ''; E.dL = pv.dL != null ? String(pv.dL) : ''; E.dW = pv.dW != null ? String(pv.dW) : ''; E.dH = pv.dH != null ? String(pv.dH) : ''; E.res = pv.res || ''; E.noDf = !!pv.noDf; E.dfDesc = !!pv.dfDesc;
       E.defects = (pv.defects || []).map(function (x) { return { id: x.id, text: x.text || '' }; }); E.defects.forEach(function (x) { if (map['df_' + x.id]) E.dfImg[x.id] = map['df_' + x.id]; });
       return Promise.all(ids.map(function (k) { return SC.fromUrl(map[k]).then(function (c) { return { id: k, canvas: c, saved: true }; }); }));
     }).then(function (list) { E.raw = list; viewEditor(); }).catch(function () { frame('<div class="own-empty">Could not load that item. <a href="#" id="oBack">Back</a></div>'); $('oBack').onclick = function (e) { e.preventDefault(); viewList(); }; });
@@ -1310,7 +1310,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     add('Item number', E.sku); add('Name', d.name); add('For', d.audience); add('Section', d.category); add('Brand', d.brand); add('Color', d.color); add('Size', d.size); add('Condition', d.condition); add('Material', d.material);
     if (d.measurements) { L.push('Measurements:'); String(d.measurements).split(/,\s*(?=[A-Z])/).forEach(function (m) { if (m.trim()) L.push('  ' + m.trim()); }); }
     if (w > 0) add('Weight', Math.floor(w / 16) + ' lb ' + (Math.round((w % 16) * 10) / 10) + ' oz');
-    L.push('Flaws: ' + (flaws.length ? flaws.join('; ') : (E.noDf ? 'None noted' : 'Not recorded')));
+    L.push('Flaws: ' + (flaws.length ? flaws.join('; ') : (E.noDf ? 'None noted' : (E.dfDesc ? 'Described in the description and shown in the photos' : 'Not recorded'))));
     add('Asking price', isNaN(d.price) ? '' : '$' + d.price); add('Research notes', (E.res || '').trim());
     return L.join('\n');
   }
@@ -1394,7 +1394,8 @@ if(typeof module!=='undefined')module.exports=TSQR;
       '<div><label for="fL">Length, inches</label><small style="display:block;color:#6b675f;margin:-2px 0 4px">Longest side, handle included</small><input class="field" id="fL" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.dL) + '"></div><div><label for="fW">Width, inches</label><small style="display:block;color:#6b675f;margin:-2px 0 4px">Across the body, side to side</small><input class="field" id="fW" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.dW) + '"></div><div><label for="fH">Height, inches</label><small style="display:block;color:#6b675f;margin:-2px 0 4px">Standing up, bottom to top</small><input class="field" id="fH" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(E.dH) + '"></div></div>' +
       '<small id="boxHint"></small><label for="fRes" style="margin-top:10px">Research notes (private)</label><textarea class="field" id="fRes" style="height:90px;padding:10px 14px" placeholder="Brand history, comparable sales, what to mention in the description">' + esc(E.res) + '</textarea></div>' +
       '<div class="full priv"><b>Flaws</b> <small>Every flaw needs a close-up photo. These photos are private. They are how you check the item again before it ships.</small><div id="dfList"></div>' +
-      '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label></div>' +
+      '<button type="button" class="btn btn-line" id="dfAdd" style="min-height:40px;padding:0 14px">+ Add a flaw</button><label class="int-step" style="margin-top:8px"><input type="checkbox" id="fNoDf"' + (E.noDf ? ' checked' : '') + '> I inspected it all over and found no flaws</label>' +
+      '<label class="int-step"><input type="checkbox" id="fDfDesc"' + (E.dfDesc ? ' checked' : '') + '> Flaws are clearly described in the description and shown in the photos (no separate flaw photos needed)</label></div>' +
       '<div class="full priv"><b>Item label</b><div id="qrBox"></div></div>' +
       '<div class="full priv"><b>Item tools</b><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn btn-line" id="oShare">Save photos to phone</button><button type="button" class="btn btn-line" id="oCopy">Copy item details</button><button type="button" class="btn btn-line" id="oZip">Download zip</button><button type="button" class="btn btn-line" id="oRe">Re-process photos</button><button type="button" class="btn btn-line" id="oGuide">Add a tag photo to the Brand Guide</button></div><small>Re-process photos rebuilds the shop pictures of a live item from your originals right away. Messages show at the top of the screen.</small><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="fPhSaved"> Photos saved (ticks itself when you save or download them)</label><small>Save photos to phone opens the share menu on your phone: choose Save Images to put them in your Photos, or send them straight to another app. Copy item details copies everything you entered to paste into your description chat. Download zip saves one zip named with the item number and name.</small></div>' +
       '<div class="full priv"><label for="fLoc">Where it is stored (private)</label><input class="field" id="fLoc" list="locList" value="' + esc(E.loc) + '" placeholder="Shelf A, Bin 3"><datalist id="locList">' + Object.keys(S.priv).map(function (k) { return (S.priv[k] || {}).loc; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).sort().map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist><small>Item number: <b>' + esc(E.sku || 'assigned when you first save') + '</b>. Write it on the item or its bag so you can find it fast. Only you can see this.</small></div>' +
@@ -1472,6 +1473,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       var syncWt = function () { var a = $('fLb').value, b = $('fOz').value; $('fWt').value = (a === '' && b === '') ? '' : String(Math.round(((num(a) || 0) * 16 + (num(b) || 0)) * 10) / 10); intakeUi(); };
       $('fLb').oninput = syncWt; $('fOz').oninput = syncWt;
     $('fNoDf').onchange = function () { E.noDf = this.checked; };
+    $('fDfDesc').onchange = function () { E.dfDesc = this.checked; };
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
     intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oGuide').onclick = guideAdd; $('oShare').onclick = sharePhotos; $('oRe').onclick = function () { var st = S.E.data.status; if (st === 'available') { S.E.dirty = true; say('Rebuilding the shop photos from your originals...'); save('available'); } else say('This item is not live yet. Its shop photos are built when you publish.'); }; $('fPhSaved').checked = !!E.photosSaved; $('fPhSaved').onchange = function () { markSaved(this.checked); };
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
@@ -1512,7 +1514,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var E = S.E, g = function (k) { return $(k).value.trim(); }, d = {};
     d.name = g('fName'); d.category = $('fCat').value; d.condition = $('fCond').value; d.brand = g('fBrand'); d.size = g('fSize'); d.measurements = g('fMeas'); d.audience = $('fFor').value; d.color = $('fColor').value; d.material = g('fMat');
     d.description = g('fDesc'); d.stripe = g('fStripe'); d.price = parseFloat($('fPrice').value); d.was = parseFloat($('fWas').value);
-    E.loc = g('fLoc'); E.wt = g('fWt'); E.dL = g('fL'); E.dW = g('fW'); E.dH = g('fH'); E.res = g('fRes'); E.noDf = $('fNoDf').checked; intakeUi(); E.cost = $('fCost').value; E.minOffer = $('fMin').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
+    E.loc = g('fLoc'); E.wt = g('fWt'); E.dL = g('fL'); E.dW = g('fW'); E.dH = g('fH'); E.res = g('fRes'); E.noDf = $('fNoDf').checked; E.dfDesc = $('fDfDesc').checked; intakeUi(); E.cost = $('fCost').value; E.minOffer = $('fMin').value; E.sellerName = g('fSellerName'); E.sellerEmail = g('fSellerEmail'); d.consigned = $('fCons').checked; return d;
   }
   function check(d, nPhotos) {
     var m = [];
@@ -1525,11 +1527,11 @@ if(typeof module!=='undefined')module.exports=TSQR;
     if (d.was > 0 && d.was <= d.price) m.push('Old price must be higher than the price');
     if (d.stripe && !/^https:\/\//.test(d.stripe)) m.push('Stripe link must start with https://');
     var E = S.E; if (E) {
-      E.defects.forEach(function (x) { if (!x.text.trim()) m.push('Describe the flaw you added'); if (!E.dfImg[x.id]) m.push('Photo of flaw: ' + (x.text || 'untitled')); });
+      E.defects.forEach(function (x) { if (!x.text.trim()) m.push('Describe the flaw you added'); if (!E.dfImg[x.id] && !E.dfDesc) m.push('Photo of flaw: ' + (x.text || 'untitled')); });
       if (!(E.data.status === 'available' || E.data.status === 'sold')) {
         INTAKE.forEach(function (k) { if (!E.intake[k[0]]) m.push('Intake: ' + k[1]); });
         if (!(num(E.wt) > 0)) m.push('Weight'); if (!(num(E.dL) > 0 && num(E.dW) > 0 && num(E.dH) > 0)) m.push('Length, width and height');
-        if (!E.defects.length && !E.noDf) m.push('Add the flaws, or tick that you found none');
+        if (!E.defects.length && !E.noDf && !E.dfDesc) m.push('Add the flaws, or tick that you found none or that they are described in the description');
       }
     }
     return m;
@@ -1569,7 +1571,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       for (var i = 0; i < E.raw.length; i++) { var r = E.raw[i]; if (!r.saved) { if (SC.blank(r.canvas)) throw new Error('Photo ' + (i + 1) + ' is blank. The phone may be low on memory. Remove it and take it again, or reload the page and retry.'); await F.setDoc(F.doc(db, 'shop_items', E.id, 'raw', r.id), { data: SC.jpeg(r.canvas, 230000, 0.82), at: Date.now() }); r.saved = true; } }
       for (i = 0; i < E.removed.length; i++) await F.deleteDoc(F.doc(db, 'shop_items', E.id, 'raw', E.removed[i]));
       E.removed = [];
-      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, color: d.color || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
+      var up = { name: d.name, category: d.category || null, condition: d.condition || null, brand: d.brand, audience: d.audience || null, flawsDescribed: !!E.dfDesc, color: d.color || null, size: d.size, measurements: d.measurements, material: d.material, description: d.description, stripe: d.stripe, consigned: !!d.consigned, status: status,
         photoOpt: { clean: !!E.clean, cutout: !!E.cutout, strength: E.strength || 40 }, rawOrder: E.raw.map(function (r) { return r.id; }), rawCount: E.raw.length, updatedAt: Date.now(), ownerUid: FB.auth.currentUser.uid };
       if (pub) up.aiDraft = false;
       up.price = d.price > 0 ? d.price : F.deleteField(); up.was = d.was > 0 ? d.was : F.deleteField();
@@ -1618,7 +1620,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       await F.setDoc(ref, up, { merge: true });
       var cost = parseFloat(E.cost);
       var priv = { cost: cost >= 0 ? cost : null, sellerName: E.sellerName || '', sellerEmail: E.sellerEmail || '', loc: E.loc || '', sku: E.sku, minOffer: parseFloat(E.minOffer) > 0 ? parseFloat(E.minOffer) : null, photosSaved: E.photosSaved || null, stripeIds: E.stripeIds || null,
-        intake: E.intake, wt: num(E.wt), dL: num(E.dL), dW: num(E.dW), dH: num(E.dH), res: E.res || '', noDf: !!E.noDf, defects: E.defects.map(function (x) { return { id: x.id, text: x.text.trim() }; }) };
+        intake: E.intake, wt: num(E.wt), dL: num(E.dL), dW: num(E.dW), dH: num(E.dH), res: E.res || '', noDf: !!E.noDf, dfDesc: !!E.dfDesc, defects: E.defects.map(function (x) { return { id: x.id, text: x.text.trim() }; }) };
       await F.setDoc(F.doc(db, 'shop_private', E.id), priv);
       S.priv[E.id] = priv;
       window.SC_CLEAR_CACHE && window.SC_CLEAR_CACHE();
