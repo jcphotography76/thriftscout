@@ -1367,6 +1367,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
 
   function viewEditor() {
     var E = S.E, d = E.data, live = d.status === 'available' || d.status === 'sold';
+    var COLORS = ['Black','White','Gray','Silver','Gold','Brown','Tan or beige','Cream','Red','Pink','Orange','Yellow','Green','Blue','Purple','Teal','Multicolor','Clear'];
     var opt = function (arr, v, ph) { return '<option value="">' + ph + '</option>' + arr.map(function (x) { return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); };
     frame('<div class="own-ed"><div><div class="own-acts"><button class="btn btn-line" id="oAddCam">📷 Camera</button><button class="btn btn-line" id="oAddFile">Add from this device</button></div>' +
       '<div class="own-photos" id="oPhotos"></div>' +
@@ -1407,7 +1408,6 @@ if(typeof module!=='undefined')module.exports=TSQR;
         : '<button class="btn btn-solid" id="oPub">Publish to shop</button><button class="btn btn-line" id="oSave">Save draft</button>') +
       '<span class="grow"></span><button class="btn btn-line" id="oBack">Back</button>' + (E.isNew && !E.raw.length ? '' : '<button class="btn btn-line" id="oDel" style="color:var(--sale);border-color:var(--sale)">Delete</button>') +
       '</div><div class="own-msg" id="ownMsg"></div></div></div>');
-    var COLORS = ['Black','White','Gray','Silver','Gold','Brown','Tan or beige','Cream','Red','Pink','Orange','Yellow','Green','Blue','Purple','Teal','Multicolor','Clear'];
     var CATHINT = {
       Footwear: 'Say if they are worn or new in the box. Photograph the soles and the inside.',
       Electronics: 'Say what you tested: powers on, screen, buttons, battery, charger or cables included. Reset or wipe it first. Give the model number.',
