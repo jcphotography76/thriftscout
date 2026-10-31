@@ -439,7 +439,8 @@ body{background:var(--white);color:var(--ink)}
 <script src="secondchance-products.js"></script>
 <script>
 (function(){
-  ['Handbags','Eyewear','Laser Engraving'].forEach(function(c){var L=window.SHOP_CONFIG.categories;if(L.indexOf(c)<0)L.push(c)});
+  ['Footwear','Handbags','Eyewear','Laser Engraving'].forEach(function(c){var L=window.SHOP_CONFIG.categories;if(L.indexOf(c)<0)L.push(c)});
+  (function(){var N=window.SHOP_CONFIG.needsSize;if(N&&N.indexOf('Footwear')<0)N.push('Footwear')})();
   var CFG=window.SHOP_CONFIG, ALL=window.SHOP_PRODUCTS||[];
   var $=function(id){return document.getElementById(id)};
   var state={cat:'All',q:'',cond:'',aud:'',brand:'',sort:'new',sale:false,sold:false};
@@ -1400,6 +1401,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
       Tops: [['Chest (pit to pit)', 'Lay it flat. Straight across from one armpit seam to the other.'], ['Length', 'Top of the shoulder seam by the collar, straight down to the bottom hem.'], ['Shoulder width', 'Across the back, from one shoulder seam to the other.'], ['Sleeve length', 'From the shoulder seam to the end of the sleeve.'], ['Hem width', 'Lay it flat. Across the bottom hem, edge to edge.']],
       Bottoms: [['Waist', 'Fasten it, lay it flat, and measure across the top of the waistband.'], ['Inseam', 'From the crotch seam down the inside of the leg to the hem.'], ['Rise', 'From the crotch seam up to the top of the waistband, in front.'], ['Leg opening', 'Lay it flat. Across the bottom of one leg.']],
       Hats: [['Circumference', 'All the way around the inside of the band.']],
+      Footwear: [['Insole length', 'Inside the shoe, from the back of the heel to the tip of the toe, along the insole.'], ['Width', 'Across the widest part of the insole, at the ball of the foot.'], ['Heel height', 'Outside the shoe, from the floor to the top of the heel at the back. Leave empty for flat shoes.']],
       Handbags: [['Width', 'Across the widest part of the bag, laid flat.'], ['Height', 'Bottom to the top edge, not counting the strap.'], ['Depth', 'Across the bottom, front to back.'], ['Strap drop', 'From the top edge of the bag to the highest point of the strap, pulled straight.']],
       Eyewear: [['Lens width', 'Across one lens at its widest point.'], ['Bridge', 'The gap between the two lenses, over the nose.'], ['Temple length', 'One arm, from the hinge to the tip.'], ['Lens height', 'Top to bottom of one lens at its tallest point.'], ['Frame width', 'Outside edge to outside edge across the front.']]
     };
