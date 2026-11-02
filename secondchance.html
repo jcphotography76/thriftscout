@@ -878,7 +878,7 @@ body.has-bundle{padding-bottom:170px}
   SC.OUT_W = 880; SC.OUT_H = 1100;
   function med(a) { a.sort(function (x, y) { return x - y; }); return a[a.length >> 1]; }
   SC.clean = function (src, strength, cutout) {
-    strength = strength == null ? 40 : strength; cutout = !!cutout;
+    strength = strength == null ? 40 : strength; cutout = false;
     var k = Math.min(1, 900 / Math.max(src.width, src.height));
     var w = Math.max(2, Math.round(src.width * k)), h = Math.max(2, Math.round(src.height * k));
     var wc = document.createElement('canvas'); wc.width = w; wc.height = h;
@@ -896,7 +896,7 @@ body.has-bundle{padding-bottom:170px}
 
     /* 2. white balance, so a grey or cream backdrop becomes white */
     var gain = [1, 1, 1];
-    if (Math.min(bg[0], bg[1], bg[2]) > 90) for (i = 0; i < 3; i++) gain[i] = Math.min(1.35, 255 / Math.max(1, bg[i]));
+    var bgMean = (bg[0] + bg[1] + bg[2]) / 3; if (bgMean > 90) { for (i = 0; i < 3; i++) gain[i] = Math.min(1.7, 255 / Math.max(1, bg[i])); }
     for (i = 0; i < N * 4; i += 4) { d[i] = Math.min(255, d[i] * gain[0]); d[i + 1] = Math.min(255, d[i + 1] * gain[1]); d[i + 2] = Math.min(255, d[i + 2] * gain[2]); }
     var bgw = [Math.min(255, bg[0] * gain[0]), Math.min(255, bg[1] * gain[1]), Math.min(255, bg[2] * gain[2])];
 
@@ -956,7 +956,7 @@ body.has-bundle{padding-bottom:170px}
       var acc = 0, lo = 0; for (k2 = 0; k2 < 256; k2++) { acc += hist[k2]; if (acc >= n * 0.005) { lo = k2; break; } }
       lo = Math.min(lo, 28);
       var lut = new Uint8Array(256);
-      for (k2 = 0; k2 < 256; k2++) { var v = Math.max(0, (k2 - lo) / (255 - lo)); lut[k2] = Math.min(255, Math.round(255 * Math.pow(v, 0.93))); }
+      for (k2 = 0; k2 < 256; k2++) { var v = Math.max(0, (k2 - lo) / (255 - lo)); lut[k2] = Math.min(255, Math.round(255 * v)); }
       for (k2 = 0; k2 < N * 4; k2 += 4) { d[k2] = lut[d[k2]]; d[k2 + 1] = lut[d[k2 + 1]]; d[k2 + 2] = lut[d[k2 + 2]]; }
       var cp = new Uint8ClampedArray(d), amt = 0.55, yy2, xx2, c3, o2;
       for (yy2 = 1; yy2 < h - 1; yy2++) for (xx2 = 1; xx2 < w - 1; xx2++) {
@@ -1304,8 +1304,8 @@ if(typeof module!=='undefined')module.exports=TSQR;
   /* ---------- editor ---------- */
   function openEditor(id, auto) {
     var F = FB.F, item = id ? S.items.filter(function (x) { return x.id === id; })[0] : null;
-    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: true, cutout: false, strength: 40, gen: 0, cost: '', loc: '', sku: '', intake: {}, wt: '', dL: '', dW: '', dH: '', res: '', defects: [], dfImg: {}, dfNew: {}, dfGone: [], noDf: false };
-    if (item && item.photoOpt) { E.clean = item.photoOpt.clean !== false; E.cutout = !!item.photoOpt.cutout; E.strength = item.photoOpt.strength || 40; }
+    var E = S.E = { id: id || newId(), isNew: !id, data: item ? JSON.parse(JSON.stringify(item)) : { status: 'draft' }, raw: [], removed: [], dirty: false, clean: false, cutout: false, strength: 40, gen: 0, cost: '', loc: '', sku: '', intake: {}, wt: '', dL: '', dW: '', dH: '', res: '', defects: [], dfImg: {}, dfNew: {}, dfGone: [], noDf: false };
+    if (item && item.photoOpt) { E.clean = !!item.photoOpt.clean; E.cutout = false; E.strength = 40; }
     frame('<div class="own-empty">Loading...</div>');
     if (!id) { E.sku = nextSku(); viewEditor(); if (auto === 'cam') cam(); return; }
     var order = E.data.rawOrder || [];
@@ -1435,9 +1435,8 @@ if(typeof module!=='undefined')module.exports=TSQR;
     var opt = function (arr, v, ph) { return '<option value="">' + ph + '</option>' + arr.map(function (x) { return '<option' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join(''); };
     frame('<div class="own-ed"><div><div class="own-acts"><button class="btn btn-line" id="oAddCam">📷 Camera</button><button class="btn btn-line" id="oAddFile">Add from this device</button></div>' +
       '<div class="own-photos" id="oPhotos"></div>' +
-      '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Tidy photos (same color, brightness and sharpness)</label>' +
-      '<label><input type="checkbox" id="oCut"' + (E.cutout ? ' checked' : '') + '> Also cut out the background</label>' +
-      '<label' + (E.cutout ? '' : ' style="display:none"') + ' id="oStrL">Strength <input type="range" id="oStr" min="5" max="100" value="' + E.strength + '"></label></div>' +
+      '<div class="own-ctl"><label><input type="checkbox" id="oClean"' + (E.clean ? ' checked' : '') + '> Brighten photos (off by default; lifts the backdrop toward white, keeps item colors)</label>' +
+      '</div>' +
       '<div class="own-msg" id="oNote">Photo rules: clean the camera lens (no smudges or streaks), shoot in good light, and keep the photo sharp. Blurry or dark photos are not allowed. Every photo is centered and placed on the shop backdrop. Raise Strength if a shadow or edge is left behind. A plain, light surface works best.</div></div>' +
       '<div><div class="own-form">' +
       '<div class="full"><label for="fName">Item name <i>*</i></label><input class="field" id="fName" value="' + esc(d.name) + '" placeholder="Levi’s straight-leg jeans, vintage wash"></div>' +
@@ -1542,8 +1541,6 @@ if(typeof module!=='undefined')module.exports=TSQR;
     $('dfAdd').onclick = function () { E.defects.push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text: '' }); renderDefects(); };
     intakeUi(); renderDefects(); renderQr(); $('oCopy').onclick = copyDetails; $('oZip').onclick = downloadZip; $('oGuide').onclick = guideAdd; $('oShare').onclick = sharePhotos; $('oRe').onclick = function () { var st = S.E.data.status; if (st === 'available') { S.E.dirty = true; say('Rebuilding the shop photos from your originals...'); save('available'); } else say('This item is not live yet. Its shop photos are built when you publish.'); }; $('fPhSaved').checked = !!E.photosSaved; $('fPhSaved').onchange = function () { markSaved(this.checked); };
     $('oClean').onchange = function () { E.clean = this.checked; E.dirty = true; renderPhotos(); };
-    $('oCut').onchange = function () { E.cutout = this.checked; $('oStrL').style.display = this.checked ? '' : 'none'; E.dirty = true; renderPhotos(); };
-    $('oStr').onchange = function () { E.strength = +this.value; E.dirty = true; renderPhotos(); };
     $('oBack').onclick = function () { viewList(); };
     $('oPub').onclick = function () { save(live ? d.status : 'available'); };
     if ($('oSave')) $('oSave').onclick = function () { save('draft'); };
