@@ -278,6 +278,11 @@
 
         <input type="file" id="mobileGalleryInput" accept="image/*" multiple style="display:none;">
 
+        <div id="modeRow" style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
+          <button type="button" class="btn btn-accent mode-btn" data-mode="general" style="padding:11px 6px; font-size:.82rem;">📦 General</button>
+          <button type="button" class="btn btn-outline mode-btn" data-mode="mtg" style="padding:11px 6px; font-size:.82rem;">🃏 Magic card</button>
+          <button type="button" class="btn btn-outline mode-btn" data-mode="coins" style="padding:11px 6px; font-size:.82rem;">🪙 Coin / bill</button>
+        </div>
         <label id="batchRow" style="display:flex; align-items:center; gap:10px; font-size:.85rem; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); cursor:pointer;"><input type="checkbox" id="batchToggle" style="width:20px; height:20px; accent-color:var(--accent);"><span><b>Batch mode</b><br><span style="color:var(--text-muted); font-size:.76rem;">Snap item after item. The AI works through them in the background and saves each to Inventory.</span></span></label>
         <div class="camera-row">
           <button class="btn btn-accent" id="openWebcamBtn">📸 SNAP PHOTO</button>
@@ -414,12 +419,11 @@
     <section id="tab-vault" class="tab-view">
       <div id="vaultInsights" class="card" style="display:none; font-size:.82rem; line-height:1.45;"></div>
       <div class="card">
-        <div class="vault-subtoggle" style="grid-template-columns:1fr; display:none;">
+        <div class="vault-subtoggle" style="grid-template-columns:repeat(3,1fr); display:grid; gap:6px;">
           <button id="vTabGeneral" class="vault-subbtn active">📦 General</button>
+          <button id="vTabMtg" class="vault-subbtn">🃏 Magic</button>
+          <button id="vTabCoins" class="vault-subbtn">🪙 Coins</button>
         </div>
-        <!-- Coins/Cash and MTG Cards vault tabs hidden for v1; logic preserved for later -->
-        <button id="vTabCoins" style="display:none;"></button>
-        <button id="vTabMtg" style="display:none;"></button>
         <div class="vault-toolbar">
           <span id="vaultModeLabel">Inventory: Items You Plan to Sell</span>
           <span>Tap item for full details & comps</span>
@@ -3452,6 +3456,18 @@ This is a plain-language starting document, not legal advice.</div>
       queueBarUpdate();
     })();
 
+    // Scan type: General, Magic card, or Coin/currency (drives the original hidden toggles)
+    (function () {
+      const btns = document.querySelectorAll('.mode-btn'); if (!btns.length) return;
+      const set = m => {
+        coinToggle.checked = m === 'coins'; mtgToggle.checked = m === 'mtg';
+        btns.forEach(b => { const on = b.dataset.mode === m; b.classList.toggle('btn-accent', on); b.classList.toggle('btn-outline', !on); });
+        const br = document.getElementById('batchRow'); if (br) br.style.display = m === 'general' ? 'flex' : 'none';
+        try { localStorage.setItem('ts_mode', m); } catch (e) {}
+      };
+      btns.forEach(b => b.onclick = () => set(b.dataset.mode));
+      set('general');
+    })();
     // Batch mode: each item goes straight to the saved list, and the list is scanned one by one in the background
     window.batchOn = () => { const t = document.getElementById('batchToggle'); return !!(t && t.checked); };
     window.batchAdd = () => {
