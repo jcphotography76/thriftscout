@@ -541,6 +541,11 @@
           <div id="hEstMsg" style="font-size:.78rem; color:var(--text-muted); display:none;"></div>
           <input class="input-field" id="hLoc" placeholder="Where it's kept (Studio, hall closet)">
           <input class="input-field" id="hSerial" placeholder="Serial number (optional)">
+          <div style="display:flex; gap:8px; align-items:center;">
+            <div id="homePrev2" style="width:56px; height:56px; flex:0 0 56px; border-radius:10px; background:var(--surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.62rem; overflow:hidden; text-align:center;">No photo</div>
+            <button type="button" class="btn btn-outline" id="homeSnap2" style="padding:10px; font-size:.8rem; flex:1;">🔢 Photo of serial plate or receipt</button>
+          </div>
+          <input type="file" id="homeCam2" accept="image/*" capture="environment" style="display:none;">
           <input class="input-field" id="hNotes" placeholder="Notes (optional)">
           <button type="button" class="btn btn-accent" id="hSave">SAVE TO HOME INVENTORY</button>
         </div>
@@ -867,6 +872,15 @@ This is a plain-language starting document, not legal advice.</div>
       </div>
       <input class="input-field" id="hmLoc" placeholder="Where it's kept">
       <input class="input-field" id="hmSerial" placeholder="Serial number">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <img id="hmImg2" alt="" style="display:none; width:64px; height:64px; object-fit:cover; border-radius:10px; background:var(--surface);">
+        <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+          <button type="button" class="btn btn-outline" id="hmSnap2" style="padding:10px; font-size:.78rem;">🔢 Serial plate / receipt photo</button>
+          <button type="button" class="btn btn-outline" id="hmView2" style="display:none; padding:8px; font-size:.74rem;">View full size</button>
+          <button type="button" class="btn btn-outline" id="hmDel2" style="display:none; padding:8px; font-size:.74rem;">Remove photo</button>
+        </div>
+      </div>
+      <input type="file" id="hmCam2" accept="image/*" capture="environment" style="display:none;">
       <input class="input-field" id="hmNotes" placeholder="Notes">
       <div id="hmMeta" style="font-size:.74rem; color:var(--text-muted);"></div>
       <button type="button" class="btn btn-accent" id="hmSave">SAVE CHANGES</button>
@@ -4092,7 +4106,7 @@ var TSQR=(function(){
     const hUrl = id => (/^https?:/.test(location.href) ? location.origin + location.pathname : 'https://thriftscout.shop/app.html') + '?home=' + id;
     async function hLoad() {
       if (!CURRENT_UID) return;
-      try { const snap = await getDocs(hCol()); HOME = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); } catch (e) { triggerAlert('Could not load your home items. Check your connection.', true, true); }
+      try { const snap = await getDocs(hCol()); HOME = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); } catch (e) { const perm = e && (e.code === 'permission-denied' || /permission/i.test(e.message || '')); triggerAlert(perm ? 'Home needs one Firebase rule added (users/{uid}/home_items). See the rule Claude gave you.' : 'Could not load your home items. Check your connection.', true, true); }
       hRender();
     }
     function hRender() {
@@ -4116,6 +4130,7 @@ var TSQR=(function(){
       $a('hmLoc').value = i.loc || ''; $a('hmSerial').value = i.serial || ''; $a('hmNotes').value = i.notes || '';
       $a('hmMeta').textContent = 'Item ' + id + (i.valueAt ? ' · value updated ' + new Date(i.valueAt).toLocaleDateString() : '') + (i.valueNote ? ' · ' + i.valueNote : '') + ((i.hist && i.hist.length > 1) ? ' · history: ' + i.hist.slice(-4).map(h => hMoney(h.v) + ' (' + new Date(h.t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ')').join(' → ') : '');
       $a('hmShop').style.display = isOwnerUser(auth.currentUser) ? 'flex' : 'none';
+      hSp2(i);
       $a('homeModal').classList.add('active');
     }
     async function hAiValue(thumbOrScan, name) {
@@ -4143,12 +4158,22 @@ var TSQR=(function(){
       window.__lastLabels = items.length;
       setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) {} setTimeout(() => f.remove(), 60000); }, 300);
     }
+    function hSp2(i) {
+      const has = !!i.serialPhoto;
+      $a('hmImg2').src = has ? i.serialPhoto : ''; $a('hmImg2').style.display = has ? 'block' : 'none';
+      $a('hmView2').style.display = has ? 'block' : 'none'; $a('hmDel2').style.display = has ? 'block' : 'none';
+      $a('hmSnap2').textContent = has ? '🔢 Replace serial / receipt photo' : '🔢 Serial plate / receipt photo';
+    }
+    function hSerialPhoto(file, cb) {
+      if (!file) return;
+      compressImageFile(file, 1100).then(r => cb(r.scan)).catch(e => triggerAlert('That photo could not be read.', true, true));
+    }
     function hPhoto(file) {
       if (!file) return;
       compressImageFile(file).then(r => { homeDraft.thumb = r.thumb; homeDraft.scan = r.scan; $a('homePrev').innerHTML = '<img src="' + r.thumb + '" alt="" style="width:100%;height:100%;object-fit:cover;">'; })
         .catch(e => triggerAlert('That photo could not be read.', true, true));
     }
-    function hFormClear() { homeDraft = { thumb: '', scan: '' }; ['hName', 'hValue', 'hPaid', 'hLoc', 'hSerial', 'hNotes'].forEach(k => $a(k).value = ''); $a('homePrev').textContent = 'No photo'; $a('hEstMsg').style.display = 'none'; }
+    function hFormClear() { homeDraft = { thumb: '', scan: '', serialPhoto: '' }; $a('homePrev2').textContent = 'No photo'; ['hName', 'hValue', 'hPaid', 'hLoc', 'hSerial', 'hNotes'].forEach(k => $a(k).value = ''); $a('homePrev').textContent = 'No photo'; $a('hEstMsg').style.display = 'none'; }
     (function () {
       if (!$a('tab-home')) return;
       $a('homeAddToggle').onclick = () => { const f = $a('homeForm'); f.style.display = f.style.display === 'flex' ? 'none' : 'flex'; };
@@ -4165,9 +4190,15 @@ var TSQR=(function(){
         const name = $a('hName').value.trim(); if (!name) { triggerAlert('Give the item a name.', true, true); return; }
         if (!CURRENT_UID) { triggerAlert('Sign in first.', true, true); return; }
         const id = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), now = Date.now();
-        const rec = { name, value: parseFloat($a('hValue').value) || 0, paid: parseFloat($a('hPaid').value) || 0, loc: $a('hLoc').value.trim(), serial: $a('hSerial').value.trim(), notes: $a('hNotes').value.trim(), valueNote: homeDraft.note || '', thumb: homeDraft.thumb || '', createdAt: now, updatedAt: now, valueAt: now };
+        const rec = { name, value: parseFloat($a('hValue').value) || 0, paid: parseFloat($a('hPaid').value) || 0, loc: $a('hLoc').value.trim(), serial: $a('hSerial').value.trim(), notes: $a('hNotes').value.trim(), valueNote: homeDraft.note || '', thumb: homeDraft.thumb || '', serialPhoto: homeDraft.serialPhoto || '', createdAt: now, updatedAt: now, valueAt: now };
         try { await setDoc(hDoc(id), rec); HOME.unshift(Object.assign({ id }, rec)); hFormClear(); $a('homeForm').style.display = 'none'; hRender(); } catch (e) { triggerAlert('Could not save. Check your connection.', true, true); }
       };
+      $a('homeSnap2').onclick = () => $a('homeCam2').click();
+      $a('homeCam2').onchange = e => { hSerialPhoto(e.target.files[0], d => { homeDraft.serialPhoto = d; $a('homePrev2').innerHTML = '<img src="' + d + '" alt="" style="width:100%;height:100%;object-fit:cover;">'; }); e.target.value = ''; };
+      $a('hmSnap2').onclick = () => $a('hmCam2').click();
+      $a('hmCam2').onchange = e => { const i = HOME.find(x => x.id === homeOpenId); hSerialPhoto(e.target.files[0], async d => { if (!i) return; try { await updateDoc(hDoc(i.id), { serialPhoto: d, updatedAt: Date.now() }); i.serialPhoto = d; hSp2(i); triggerAlert('Serial photo saved.', false, true); } catch (er) { triggerAlert('Could not save the photo.', true, true); } }); e.target.value = ''; };
+      $a('hmDel2').onclick = async () => { const i = HOME.find(x => x.id === homeOpenId); if (!i || !confirm('Remove the serial photo?')) return; try { await updateDoc(hDoc(i.id), { serialPhoto: '', updatedAt: Date.now() }); i.serialPhoto = ''; hSp2(i); } catch (er) { triggerAlert('Could not remove it.', true, true); } };
+      $a('hmView2').onclick = () => { const i = HOME.find(x => x.id === homeOpenId); if (!i || !i.serialPhoto) return; const w = window.open(); if (w) { w.document.write('<title>Serial photo</title><body style="margin:0;background:#000"><img src="' + i.serialPhoto + '" style="width:100%">'); w.document.close(); } };
       $a('homeSelAll').onclick = () => { if (homeSel.size === HOME.length) homeSel.clear(); else HOME.forEach(i => homeSel.add(i.id)); hRender(); };
       $a('homePrint').onclick = () => hPrint(HOME.filter(i => homeSel.has(i.id)));
       $a('hmClose').onclick = () => $a('homeModal').classList.remove('active');
