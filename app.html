@@ -326,12 +326,14 @@
 
         <input type="file" id="mobileGalleryInput" accept="image/*" multiple style="display:none;">
 
-        <div id="modeRow" style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
+        <div id="modeRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
           <button type="button" class="btn btn-accent mode-btn" data-mode="general" style="padding:11px 6px; font-size:.82rem;">📦 General</button>
-          <button type="button" class="btn btn-outline mode-btn" data-mode="mtg" style="padding:11px 6px; font-size:.82rem;">🃏 Magic card</button>
-          <button type="button" class="btn btn-outline mode-btn" data-mode="coins" style="padding:11px 6px; font-size:.82rem;">🪙 Coin / bill</button>
+          <button type="button" class="btn btn-outline mode-btn" data-mode="mtg" style="padding:11px 6px; font-size:.82rem;">🃏 Magic</button>
+          <button type="button" class="btn btn-outline mode-btn" data-mode="coins" style="padding:11px 6px; font-size:.82rem;">🪙 Coin</button>
+          <button type="button" class="btn btn-outline mode-btn" data-mode="home" style="padding:11px 6px; font-size:.82rem;">🏠 Home</button>
         </div>
         <label id="batchRow" style="display:flex; align-items:center; gap:10px; font-size:.85rem; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); cursor:pointer;"><input type="checkbox" id="batchToggle" style="width:20px; height:20px; accent-color:var(--accent);"><span><b>Batch mode</b><br><span style="color:var(--text-muted); font-size:.76rem;">Snap item after item. The AI works through them in the background and saves each to Inventory.</span></span></label>
+        <div id="homeModeNote" style="display:none; font-size:.8rem; color:var(--text-muted); padding:0 4px;">Home mode: snap it and it saves straight to your Home list with an estimated value. Nothing goes to Inventory.</div>
         <button type="button" class="btn btn-accent" id="fastScanBtn" style="display:none;">⚡ FAST SCAN: camera stays open, snaps each card</button>
         <div id="batchCostRow" style="display:none; flex-direction:column; gap:4px;"><label class="metric-label" for="batchTotalInput">Total paid for this whole batch ($, optional)</label><input class="input-field" id="batchTotalInput" type="number" inputmode="decimal" placeholder="Split evenly across the items"></div>
         <div class="camera-row">
@@ -400,7 +402,7 @@
         <button id="deepBtn" class="btn btn-outline" style="display:none; font-size:.8rem; padding:10px;">🔬 DEEP RESEARCH (check real sold prices)</button>
         <div id="deepOut"></div>
 
-        <div>
+        <div style="display:none;">
           <label class="metric-label" style="margin-bottom:4px; display:block;">Inventory Disposition Strategy</label>
           <select id="assetStrategySelect" class="input-field">
             <option value="selling">🛒 Inventory (planning to sell)</option>
@@ -3426,6 +3428,7 @@ var TSQR=(function(){
     async function runScanWorkflow() {
       if (isBusy) return; // stops double-taps from burning extra scans
       if (!selectedImagesBase64 || selectedImagesBase64.length === 0) return;
+      if (window.__mode === 'home') { window.homeScanAdd(); return; }
       if (window.batchOn && window.batchOn() && !coinToggle.checked && !mtgToggle.checked) { window.batchAdd(); return; }
       if (!hasKey()) {
         if (IS_GUEST && GUEST_KEY) { showGuestWall(); return; }
@@ -3701,9 +3704,9 @@ var TSQR=(function(){
     (function () {
       const btns = document.querySelectorAll('.mode-btn'); if (!btns.length) return;
       const set = m => {
-        coinToggle.checked = m === 'coins'; mtgToggle.checked = m === 'mtg';
+        window.__mode = m; coinToggle.checked = m === 'coins'; mtgToggle.checked = m === 'mtg';
         btns.forEach(b => { const on = b.dataset.mode === m; b.classList.toggle('btn-accent', on); b.classList.toggle('btn-outline', !on); });
-        const br = document.getElementById('batchRow'); if (br) br.style.display = m === 'general' ? 'flex' : 'none'; const bc = document.getElementById('batchCostRow'); if (bc) bc.style.display = ((m === 'general' && window.batchOn && window.batchOn()) || m === 'mtg') ? 'flex' : 'none'; const fb = document.getElementById('fastScanBtn'); if (fb) fb.style.display = m === 'mtg' ? 'flex' : 'none';
+        const br = document.getElementById('batchRow'); if (br) br.style.display = m === 'general' ? 'flex' : 'none'; const bc = document.getElementById('batchCostRow'); if (bc) bc.style.display = ((m === 'general' && window.batchOn && window.batchOn()) || m === 'mtg') ? 'flex' : 'none'; const fb = document.getElementById('fastScanBtn'); if (fb) fb.style.display = m === 'mtg' ? 'flex' : 'none'; const hn = document.getElementById('homeModeNote'); if (hn) hn.style.display = m === 'home' ? 'block' : 'none';
         try { localStorage.setItem('ts_mode', m); } catch (e) {}
       };
       btns.forEach(b => b.onclick = () => set(b.dataset.mode));
@@ -4314,6 +4317,24 @@ var TSQR=(function(){
       document.querySelectorAll('.ui-btn').forEach(b => b.onclick = () => { try { localStorage.setItem('ts_ui', b.dataset.ui); } catch (e) {} applyUiMode(); });
       applyUiMode();
     })();
+    // Home mode on the Scout screen: scan straight into the private Home list
+    window.homeScanAdd = async () => {
+      if (!selectedImagesBase64 || !selectedImagesBase64.length) return;
+      if (isBusy) return;
+      if (!CURRENT_UID) { triggerAlert('Sign in first.', true, true); return; }
+      if (!hasKey()) { triggerAlert('Set up your AI key or sign in to use the shared AI.', true, true); return; }
+      isBusy = true; setProgress('Looking it up for your Home list...', 40);
+      const b64 = selectedImagesBase64[0], thumb = compressedThumbDataUrl || ('data:image/jpeg;base64,' + b64), paid = parseFloat(document.getElementById('itemCostInput').value) || 0;
+      try {
+        const r = await hAiValue('data:image/jpeg;base64,' + b64, '');
+        const id = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), now = Date.now();
+        const rec = { name: r.item || 'Home item', value: r.value, paid, loc: '', serial: '', notes: '', valueNote: r.note, thumb, createdAt: now, updatedAt: now, valueAt: now, hist: [{ t: now, v: r.value }] };
+        await setDoc(hDoc(id), rec); HOME.unshift(Object.assign({ id }, rec)); hRender();
+        resetScanInputs(); document.getElementById('evalProgressContainer').style.display = 'none';
+        triggerAlert('Saved to Home: ' + rec.name + ' (about ' + hMoney(r.value) + '). Add where it is kept and the serial in the Home tab.', false, true);
+      } catch (e) { document.getElementById('evalProgressContainer').style.display = 'none'; triggerAlert('Could not save to Home: ' + (e.message || 'try again'), true, true); }
+      isBusy = false;
+    };
     async function shLoadPile() {
       try {
         const snap = await getDocs(query(collection(db, 'shop_items'), where('status', '==', 'draft')));
