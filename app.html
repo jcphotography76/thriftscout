@@ -259,6 +259,11 @@
     .card-title { color:var(--text); }
     .settings-section-title { color:var(--accent); }
     ::selection { background:var(--accent-glow); }
+
+/* MONEY FIELDS: dollar sign inside the box */
+.money-wrap{position:relative;display:block;width:100%}
+.money-wrap::before{content:'$';position:absolute;left:16px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--text-muted);pointer-events:none;z-index:1}
+.money-wrap>input{padding-left:30px !important}
 </style>
 <script>
     // Auto-update: if a newer copy of this page is on the server, reload once to get it.
@@ -4737,5 +4742,16 @@ var TSQR=(function(){
     };
 
   </script>
+<script>
+(function(){
+  ['itemCostInput','batchTotalInput','hValue','hPaid','shCost','hmValue','hmPaid','manualCostInput','manualResaleInput'].forEach(function(id){
+    var el=document.getElementById(id); if(!el||el.parentNode.classList.contains('money-wrap'))return;
+    var w=document.createElement('span'); w.className='money-wrap';
+    if(el.style.marginBottom){w.style.marginBottom=el.style.marginBottom;el.style.marginBottom='0';}
+    el.parentNode.insertBefore(w,el); w.appendChild(el);
+    el.placeholder=el.placeholder.replace(/\s*\(\$[^)]*\)|\s*\(\$\)/,function(m){return /optional/.test(m)?' (optional)':'';});
+  });
+})();
+</script>
 </body>
 </html>
