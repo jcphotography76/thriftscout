@@ -4368,7 +4368,7 @@ var TSQR=(function(){
         await setDoc(hDoc(id), rec); HOME.unshift(Object.assign({ id }, rec)); hRender();
         resetScanInputs(); document.getElementById('evalProgressContainer').style.display = 'none';
         triggerAlert('Saved to Home: ' + rec.name + ' (about ' + hMoney(r.value) + '). Add where it is kept and the serial in the Home tab.', false, true);
-      } catch (e) { document.getElementById('evalProgressContainer').style.display = 'none'; triggerAlert('Could not save to Home: ' + (e.message || 'try again'), true, true); }
+      } catch (e) { document.getElementById('evalProgressContainer').style.display = 'none'; triggerAlert('Could not save to Home: ' + (e.message || 'try again'), true, true); document.getElementById('smartRetryBtn').style.display = 'block'; }
       isBusy = false;
     };
     async function shLoadPile() {
