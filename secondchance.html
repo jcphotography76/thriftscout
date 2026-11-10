@@ -9,6 +9,8 @@
 <meta property="og:title" content="Second Chance">
 <meta property="og:description" content="Beautiful things, second owners. Curated secondhand finds, one of a kind.">
 <meta property="og:type" content="website">
+<link rel="canonical" href="https://thriftscout.shop/secondchance.html">
+<meta property="og:url" content="https://thriftscout.shop/secondchance.html">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317352C'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='34' text-anchor='middle' fill='%23D9C28F'%3ESC%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
@@ -517,7 +519,7 @@ h1,h2,h3,.hero-h,.shop-h,.how-h,.d-name,.foot-name,.empty h3{font-family:var(--s
   <div class="wrap">
     <div class="foot-in">
       <div><div class="foot-name">Second Chance</div><p>Curated secondhand finds, one of a kind. Part of the Thrift Scout family.</p></div>
-      <div class="foot-links"><a href="home.html">About Thrift Scout</a><a href="app.html">Open the Thrift Scout app</a><a href="mailto:thriftscout.official@gmail.com">Contact us: thriftscout.official@gmail.com</a><a href="https://www.tiktok.com/@thrift.scout.official" target="_blank" rel="noopener">Follow on TikTok</a></div>
+      <div class="foot-links"><a href="finds.html">See every find on one page</a><a href="home.html">About Thrift Scout</a><a href="app.html">Open the Thrift Scout app</a><a href="mailto:thriftscout.official@gmail.com">Contact us: thriftscout.official@gmail.com</a><a href="https://www.tiktok.com/@thrift.scout.official" target="_blank" rel="noopener">Follow on TikTok</a></div>
     </div>
     <div class="foot-fine">Independent, woman owned and operated. Adults 18 and older.</div>
     <div class="foot-fine foot-owner"><a href="#owner" id="ownLink">Owner</a></div>
@@ -1366,7 +1368,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     frame((toShip().length && S.tab !== 'toship' ? '<button class="own-row" id="oTsBan" style="border-color:var(--sale)"><span class="t"><b style="color:var(--sale)">' + toShip().length + ' sold item' + (toShip().length > 1 ? 's' : '') + ' to pull and ship</b><span>Tap to see which</span></span></button>' : '') + '<div class="own-acts"><button class="btn btn-solid" id="oNew">+ New item</button><button class="btn btn-line" id="oCam">Take photos with camera</button></div>' +
       '<div class="own-tabs" role="tablist">' + tabs.map(function (t) { return '<button class="own-tab" data-t="' + t[0] + '" aria-current="' + (S.tab === t[0]) + '">' + t[1] + ' (' + cnt(t[0]) + ')</button>'; }).join('') + '<button class="own-tab" id="oHoldTab" type="button" style="margin-left:auto">Hold</button></div>' +
       (S.tab === 'ledger' ? '' : '<div class="own-find"><input class="field" id="oFind" type="search" placeholder="Search name, SKU, shelf or bin" value="' + esc(S.find) + '"><select class="field" id="oSortSel" aria-label="Sort"><option value="new">Newest</option><option value="name">Name A to Z</option><option value="loc">Location</option><option value="price">Price, high to low</option></select></div>') +
-      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links and turn on offers</button><button class="btn btn-line" id="oBundle">Turn on the 3 for $7.99 jewelry deal</button>' : '') + '</div>'));
+      '<div id="oRows">' + rowsHtml + '</div><div class="own-msg" id="ownMsg"></div>' + (S.tab === 'ledger' ? '' : '<div class="own-bar" style="margin-top:14px"><button class="btn btn-line" id="oInvCsv">Download full inventory (CSV)</button><button class="btn btn-line" id="oGoogle">Make Google pages</button>' + (S.tab === 'available' ? '<button class="btn btn-line" id="oBulk">Bulk price change</button><button class="btn btn-line" id="oFixLinks">Update Stripe links and turn on offers</button><button class="btn btn-line" id="oBundle">Turn on the 3 for $7.99 jewelry deal</button>' : '') + '</div>'));
     if ($('oFind')) {
       $('oSortSel').value = S.sort;
       var applyFind = function () {
@@ -1391,6 +1393,7 @@ if(typeof module!=='undefined')module.exports=TSQR;
     body.querySelectorAll('.own-row').forEach(function (b) { b.onclick = function () { if (b.dataset.oid) openOrder(b.dataset.oid); else openEditor(b.dataset.id); }; });
     if ($('oCsv')) $('oCsv').onclick = downloadCsv;
     if ($('oInvCsv')) $('oInvCsv').onclick = downloadInventoryCsv;
+    if ($('oGoogle')) $('oGoogle').onclick = downloadGooglePages;
     if ($('oFixLinks')) $('oFixLinks').onclick = fixStripeLinks;
     if ($('oBundle')) $('oBundle').onclick = bundleTag;
     if ($('oBulk')) $('oBulk').onclick = viewBulk;
@@ -2245,6 +2248,57 @@ if(typeof module!=='undefined')module.exports=TSQR;
     });
     var lines = [cols.map(q).join(',')].concat(rows.map(function (r) { return r.map(q).join(','); }));
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv' })); a.download = 'second-chance-inventory-' + today() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  /* ---------- Google pages: finds.html + sitemap.xml (upload both to GitHub) ---------- */
+  function downloadGooglePages() {
+    var SITE = 'https://thriftscout.shop/', IMG = 'https://aged-mountain-ea7b.thriftscout-official.workers.dev/img/';
+    var cond = { 'Like new': 'NewCondition' };
+    var live = S.items.filter(function (it) { return it.status === 'available' && it.name; })
+      .sort(function (a, b) { return (b.added || b.createdAt || 0) - (a.added || a.createdAt || 0); });
+    if (!live.length) { alert('There are no live items yet.'); return; }
+    var shopUrl = function (it) { return SITE + 'secondchance.html#item=' + encodeURIComponent(it.id); };
+    var money = function (v) { var n = parseFloat(v); return isNaN(n) ? '' : '$' + n.toFixed(2); };
+    var cats = []; live.forEach(function (it) { if (it.category && cats.indexOf(it.category) < 0) cats.push(it.category); });
+    var cards = live.map(function (it) {
+      var th = (it.thumbs || [])[0] || '', spec = [['Brand', it.brand], ['Size', it.size], ['Measurements', it.measurements], ['Condition', it.condition], ['Color', it.color], ['Material', it.material], ['Category', it.category]].filter(function (r) { return r[1]; });
+      return '<article class="it" id="item-' + esc(it.id) + '">' +
+        (th ? '<a href="' + esc(shopUrl(it)) + '"><img src="' + esc(th) + '" alt="' + esc(it.name) + '" loading="lazy"></a>' : '') +
+        '<div class="tx"><h2><a href="' + esc(shopUrl(it)) + '">' + esc(it.name) + '</a></h2>' +
+        '<p class="pr">' + esc(money(it.price)) + (it.was && parseFloat(it.was) > parseFloat(it.price) ? ' <s>' + esc(money(it.was)) + '</s>' : '') + '</p>' +
+        (it.description ? '<p>' + esc(it.description) + '</p>' : '') +
+        (spec.length ? '<dl>' + spec.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') + '</dl>' : '') +
+        '<a class="go" href="' + esc(shopUrl(it)) + '">See photos and buy</a></div></article>';
+    }).join('\n');
+    var ld = { '@context': 'https://schema.org', '@type': 'ItemList', name: 'Second Chance finds', itemListElement: live.map(function (it, i) {
+      var p = { '@type': 'Product', name: it.name, description: it.description || it.name, category: it.category || undefined, sku: (S.priv[it.id] || {}).sku || undefined, url: shopUrl(it),
+        offers: { '@type': 'Offer', priceCurrency: 'USD', price: String(parseFloat(it.price) || 0), availability: 'https://schema.org/InStock', itemCondition: 'https://schema.org/' + (cond[it.condition] || 'UsedCondition'), url: shopUrl(it) } };
+      if (it.brand) p.brand = { '@type': 'Brand', name: it.brand };
+      if (it.stripe) p.image = IMG + encodeURIComponent(it.id) + '.jpg';
+      return { '@type': 'ListItem', position: i + 1, item: p };
+    }) };
+    var title = 'Second Chance Finds: ' + live.length + ' One of a Kind Secondhand Items';
+    var desc = 'Shop ' + live.length + ' curated secondhand and vintage finds' + (cats.length ? ': ' + cats.slice(0, 6).join(', ') : '') + '. Every item is one of a kind, measured and photographed by hand. Ships within the US.';
+    var html = '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n' +
+      '<title>' + esc(title) + '</title>\n<meta name="description" content="' + esc(desc) + '">\n<link rel="canonical" href="' + SITE + 'finds.html">\n' +
+      '<meta property="og:title" content="' + esc(title) + '"><meta property="og:description" content="' + esc(desc) + '"><meta property="og:url" content="' + SITE + 'finds.html"><meta property="og:type" content="website">\n' +
+      '<script type="application/ld+json">' + JSON.stringify(ld).replace(/</g, '\\u003c') + '<\/script>\n' +
+      '<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#fff;color:#171717;font-family:system-ui,sans-serif;line-height:1.55}' +
+      'header{text-align:center;padding:34px 18px 18px}h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(2rem,5vw,3rem)}header p{color:#5D5A55;max-width:640px;margin:10px auto 0}' +
+      'header a.shop{display:inline-block;margin-top:16px;padding:12px 28px;border-radius:999px;background:#17352C;color:#fff;text-decoration:none;font-weight:600}' +
+      'main{max-width:1100px;margin:0 auto;padding:10px 18px 40px;display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}' +
+      '.it{border:1px solid #E4E0DA;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}.it img{width:100%;aspect-ratio:4/5;object-fit:contain;background:#ECE8E2;mix-blend-mode:multiply}' +
+      '.tx{padding:14px 16px 18px;display:flex;flex-direction:column;gap:8px;flex:1}h2{font-family:Georgia,serif;font-weight:400;font-size:1.25rem;line-height:1.25}h2 a{color:inherit;text-decoration:none}' +
+      '.pr{font-weight:700;font-size:1.1rem}.pr s{color:#8A1F2B;font-weight:400;margin-left:6px}dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:.92rem}dt{color:#5D5A55}' +
+      '.go{margin-top:auto;align-self:flex-start;color:#8C6D2F;font-weight:600}footer{text-align:center;color:#5D5A55;padding:0 18px 40px}footer a{color:#8C6D2F}</style>\n</head><body>\n' +
+      '<header><h1>Second Chance Finds</h1><p>' + live.length + ' curated secondhand and vintage pieces, each one of a kind. Found once. Loved twice.</p><a class="shop" href="' + SITE + 'secondchance.html">Open the shop</a></header>\n' +
+      '<main>\n' + cards + '\n</main>\n<footer><p><a href="' + SITE + '">Second Chance home</a> · <a href="mailto:thriftscout.official@gmail.com">thriftscout.official@gmail.com</a></p><p>Updated ' + today() + '</p></footer>\n</body></html>\n';
+    var d = today(), sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+      ['', 'secondchance.html', 'finds.html', 'home.html'].map(function (p) { return '  <url><loc>' + SITE + p + '</loc><lastmod>' + d + '</lastmod></url>'; }).join('\n') + '\n</urlset>\n';
+    var save = function (name, text, type) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+    save('finds.html', html, 'text/html');
+    setTimeout(function () { save('sitemap.xml', sm, 'application/xml'); }, 800);
+    var m = $('ownMsg'); if (m) { m.className = 'own-msg good'; m.textContent = 'Made finds.html and sitemap.xml with ' + live.length + ' live items. Upload both to GitHub.'; }
   }
 
   /* ---------- open ---------- */
