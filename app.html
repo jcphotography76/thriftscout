@@ -304,7 +304,7 @@
     <section id="tab-scout" class="tab-view active">
       <div id="whatsNew" class="card" style="display:none; border-color:var(--accent);">
         <div class="card-title">What's new <button type="button" id="whatsNewX" class="btn btn-outline" style="width:auto; padding:4px 12px; font-size:.78rem;">Got it</button></div>
-        <div style="font-size:.86rem; line-height:1.45;">Thrift Scout is now your <b>AI inventory assistant</b>. Photograph what you own or find, track what it paid and what it's worth. New: a <b>Home</b> tab for personal items with printable QR labels, Batch mode, and Magic card and coin modes with a condition estimate.</div>
+        <div style="font-size:.86rem; line-height:1.45;">Thrift Scout is now your <b>AI inventory assistant</b>. Photograph what you own or find, track what it paid and what it's worth. New: a <b>Home</b> tab for personal items with printable QR labels, Batch mode, and a coin mode with a condition estimate.</div>
       </div>
       <div class="card" style="padding:10px;"><button type="button" class="btn btn-outline" id="guideOpenBtn" style="width:100%;">📖 Brand &amp; Tag Guide: what to look for</button></div>
       <div class="card" id="valuationCardContainer">
@@ -331,9 +331,9 @@
 
         <input type="file" id="mobileGalleryInput" accept="image/*" multiple style="display:none;">
 
-        <div id="modeRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+        <div id="modeRow" style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
           <button type="button" class="btn btn-accent mode-btn" data-mode="general" style="padding:11px 6px; font-size:.82rem;">📦 General</button>
-          <button type="button" class="btn btn-outline mode-btn" data-mode="mtg" style="padding:11px 6px; font-size:.82rem;">🃏 Magic</button>
+          <button type="button" class="btn btn-outline mode-btn" data-mode="mtg" style="display:none; padding:11px 6px; font-size:.82rem;">🃏 Magic</button>
           <button type="button" class="btn btn-outline mode-btn" data-mode="coins" style="padding:11px 6px; font-size:.82rem;">🪙 Coin</button>
           <button type="button" class="btn btn-outline mode-btn" data-mode="home" style="padding:11px 6px; font-size:.82rem;">🏠 Home</button>
         </div>
@@ -476,9 +476,9 @@
     <section id="tab-vault" class="tab-view">
       <div id="vaultInsights" class="card" style="display:none; font-size:.82rem; line-height:1.45;"></div>
       <div class="card">
-        <div class="vault-subtoggle" style="grid-template-columns:repeat(3,1fr); display:grid; gap:6px;">
+        <div class="vault-subtoggle" id="vaultSubToggle" style="grid-template-columns:repeat(2,1fr); display:grid; gap:6px;">
           <button id="vTabGeneral" class="vault-subbtn active">📦 General</button>
-          <button id="vTabMtg" class="vault-subbtn">🃏 Magic</button>
+          <button id="vTabMtg" class="vault-subbtn" style="display:none;">🃏 Magic</button>
           <button id="vTabCoins" class="vault-subbtn">🪙 Coins</button>
         </div>
         <div class="vault-toolbar">
@@ -952,7 +952,6 @@ This is a plain-language starting document, not legal advice.</div>
         <select id="manualCategorySelect" class="input-field">
           <option value="general">📦 General Thrift / Media</option>
           <option value="coins">🪙 Numismatic Coins / Currency</option>
-          <option value="mtg">🪄 Magic: The Gathering</option>
         </select>
       </div>
       <div>
@@ -3725,7 +3724,7 @@ var TSQR=(function(){
       const set = m => {
         window.__mode = m; coinToggle.checked = m === 'coins'; mtgToggle.checked = m === 'mtg';
         btns.forEach(b => { const on = b.dataset.mode === m; b.classList.toggle('btn-accent', on); b.classList.toggle('btn-outline', !on); });
-        const br = document.getElementById('batchRow'); if (br) br.style.display = m === 'general' ? 'flex' : 'none'; const bc = document.getElementById('batchCostRow'); if (bc) bc.style.display = ((m === 'general' && window.batchOn && window.batchOn()) || m === 'mtg') ? 'flex' : 'none'; const fb = document.getElementById('fastScanBtn'); if (fb) fb.style.display = m === 'mtg' ? 'flex' : 'none'; const hn = document.getElementById('homeModeNote'); if (hn) hn.style.display = m === 'home' ? 'block' : 'none';
+        const br = document.getElementById('batchRow'); if (br) br.style.display = m === 'general' ? 'flex' : 'none'; const bc = document.getElementById('batchCostRow'); if (bc) bc.style.display = ((m === 'general' && window.batchOn && window.batchOn()) || m === 'mtg') ? 'flex' : 'none'; const fb = document.getElementById('fastScanBtn'); if (fb) fb.style.display = 'none'; const hn = document.getElementById('homeModeNote'); if (hn) hn.style.display = m === 'home' ? 'block' : 'none';
         try { localStorage.setItem('ts_mode', m); } catch (e) {}
       };
       btns.forEach(b => b.onclick = () => set(b.dataset.mode));
@@ -4552,6 +4551,9 @@ var TSQR=(function(){
     function renderVault() {
       const scrollPos = window.scrollY;
       renderInsights(); refreshStoreUi();
+      { const hasMtg = STATE.vaultItems.some(i => i.category === 'mtg'), vb = document.getElementById('vTabMtg'), vt = document.getElementById('vaultSubToggle');
+        if (vb) vb.style.display = hasMtg ? '' : 'none'; if (vt) vt.style.gridTemplateColumns = hasMtg ? 'repeat(3,1fr)' : 'repeat(2,1fr)';
+        if (!hasMtg && STATE.vaultCategory === 'mtg') { STATE.vaultCategory = 'general'; document.getElementById('vTabGeneral').classList.add('active'); vb && vb.classList.remove('active'); } }
       const all = STATE.vaultItems.filter(item => (item.category || 'general') === STATE.vaultCategory);
       const sellItems = all.filter(i => !isKeeping(i)), keepItems = all.filter(isKeeping);
       const fill = (container, items, inColl) => {
