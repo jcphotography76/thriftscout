@@ -123,12 +123,13 @@ jobs:
               return '<div class="top"><a class="brand" href="%s">Thrift Scout</a><nav><a href="%sfinds.html">All finds</a><a href="%spolicies.html">Shipping &amp; returns</a></nav></div>' % (SITE, SITE, SITE)
           def foot(extra=''):
               return '<footer>%s<p><a href="%s">Thrift Scout shop</a> &middot; <a href="%spolicies.html">Shipping &amp; returns</a> &middot; <a href="mailto:%s">%s</a></p></footer>' % (extra, SITE, SITE, EMAIL, EMAIL)
-          def head(title, desc, url, img=None, extra='', robots=None):
+          def head(title, desc, url, img=None, extra='', robots=None, css=''):
               return ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
-                      '<title>%s</title>\n<meta name="description" content="%s">\n<link rel="canonical" href="%s">\n%s'
-                      '<meta property="og:title" content="%s"><meta property="og:description" content="%s"><meta property="og:url" content="%s"><meta property="og:type" content="website">%s\n'
-                      '%s\n%s\n<style>%s%%s</style>\n</head><body>\n' % (e(title), e(desc), url, ('<meta name="robots" content="%s">\n' % robots) if robots else '',
-                      e(title), e(desc), url, ('<meta property="og:image" content="%s">' % img) if img else '', extra, GOAT, CSS))
+                      + '<title>' + e(title) + '</title>\n<meta name="description" content="' + e(desc) + '">\n<link rel="canonical" href="' + url + '">\n'
+                      + (('<meta name="robots" content="' + robots + '">\n') if robots else '')
+                      + '<meta property="og:title" content="' + e(title) + '"><meta property="og:description" content="' + e(desc) + '"><meta property="og:url" content="' + url + '"><meta property="og:type" content="website">'
+                      + (('<meta property="og:image" content="' + img + '">') if img else '') + '\n'
+                      + extra + '\n' + GOAT + '\n<style>' + CSS + css + '</style>\n</head><body>\n')
 
           RETURN_POLICY = {'@type': 'MerchantReturnPolicy', 'applicableCountry': 'US', 'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted'}
 
@@ -203,7 +204,7 @@ jobs:
                       ('<p>This one found its new home. <a href="%s">See what is in the shop now</a>.</p>' % SITE) if is_sold else
                       ('<p><a class="btn" href="%s">Buy now</a></p>' % e(it['shop'])),
                       'One of a kind. Ships within the US with tracking. Shipping is added at checkout. <a href="%spolicies.html">Shipping &amp; returns</a>' % SITE))
-                  page = head(title, meta, it['url'], it['imgs'][0] if it['imgs'] else None, ld, 'noindex' if is_sold else None) % css + top() + '\n' + body + '\n' + foot() + '\n</body></html>\n'
+                  page = head(title, meta, it['url'], it['imgs'][0] if it['imgs'] else None, ld, 'noindex' if is_sold else None, css) + top() + '\n' + body + '\n' + foot() + '\n</body></html>\n'
                   write_if_changed(it['path'], page); keep_files.add(it['path'])
 
               # finds page
@@ -224,14 +225,14 @@ jobs:
                      '.it{border:1px solid #E4E0DA;border-radius:10px;overflow:hidden}.it img{width:100%;aspect-ratio:4/5;object-fit:contain;background:#ECE8E2;mix-blend-mode:multiply;display:block}'
                      '.tx{padding:12px 14px 16px}.tx h2{font-size:1.1rem}.tx h2 a{color:inherit;text-decoration:none}.pr{font-weight:700;margin-top:4px}.c{color:#5D5A55;font-size:.9rem}')
               page = (head(title, desc, SITE + 'finds.html', live[0]['imgs'][0] if live and live[0]['imgs'] else None,
-                           '<script type="application/ld+json">%s</script>' % json.dumps(ld)) % css + top() +
+                           '<script type="application/ld+json">%s</script>' % json.dumps(ld), None, css) + top() +
                       '\n<div class="hd"><h1>Thrift Scout Finds</h1><p>%d curated secondhand and vintage pieces, each one of a kind. Found once. Loved twice.</p></div>\n<main>\n%s\n</main>\n' % (len(live), cards) +
                       foot(('<p>Updated %s</p>' % latest) if latest else '') + '\n</body></html>\n')
               write_if_changed('finds.html', page)
 
               # shipping and returns page
-              pol = (head('Shipping and Returns | Thrift Scout', 'How Thrift Scout ships secondhand finds within the US, and our returns policy.', SITE + 'policies.html') %
-                     '.pol{max-width:760px;margin:0 auto;padding:30px 18px}.pol h1{font-size:2.2rem;margin-bottom:18px}.pol h2{font-size:1.4rem;margin:24px 0 8px}.pol p,.pol li{margin-bottom:8px}.pol ul{padding-left:22px}'
+              pol = (head('Shipping and Returns | Thrift Scout', 'How Thrift Scout ships secondhand finds within the US, and our returns policy.', SITE + 'policies.html', css=
+                     '.pol{max-width:760px;margin:0 auto;padding:30px 18px}.pol h1{font-size:2.2rem;margin-bottom:18px}.pol h2{font-size:1.4rem;margin:24px 0 8px}.pol p,.pol li{margin-bottom:8px}.pol ul{padding-left:22px}')
                      + top() + '\n<main class="pol"><h1>Shipping and Returns</h1>'
                      '<h2>Shipping</h2><ul><li>We ship within the United States only.</li><li>Every order is shipped with tracking and insurance.</li>'
                      '<li>Shipping is added at checkout, based on the size and weight of the package. Want a quote before you buy? Email <a href="mailto:%s">%s</a>.</li></ul>'
