@@ -1,6 +1,8 @@
-# Thrift Scout nightly Google pages robot.
-# Every night it reads the live shop, rebuilds finds.html and sitemap.xml,
-# and publishes them only if something changed. Run it by hand from the Actions tab.
+# Thrift Scout nightly robot.
+# Every night it reads the live shop and rebuilds: one page per item (item/),
+# real photo files (img/), finds.html, policies.html, the Google Shopping list
+# (products.xml) and sitemap.xml. It only publishes when something changed.
+# Run it by hand from the Actions tab: Update Google pages > Run workflow.
 name: Update Google pages
 
 on:
@@ -22,15 +24,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild finds.html and sitemap.xml from the live shop
+      - name: Rebuild item pages, photos and Google files from the live shop
         run: |
-          cat > /tmp/build_pages.py <<'PYEOF'
-          import json, os, sys, html, hashlib, datetime, urllib.request
+          cat > /tmp/build_site.py <<'PYEOF'
+          # Thrift Scout nightly robot: item pages, photos, finds page, Google Shopping list, sitemap.
+          import json, os, sys, re, html, base64, datetime, urllib.request, urllib.parse, glob
 
           SITE = 'https://thriftscout.shop/'
-          IMG = 'https://aged-mountain-ea7b.thriftscout-official.workers.dev/img/'
           PROJECT = 'thrift-scout-1b937'
           KEY = 'AIzaSyAtDQnJuWvJOp__hVHO5fdNhjiRjZZkskI'
+          BASE = 'https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents' % PROJECT
+          EMAIL = 'thriftscout.official@gmail.com'
+          MAX_PHOTOS = 8
+          TEST = os.environ.get('TEST_JSON')
 
           def val(v):
               if 'stringValue' in v: return v['stringValue']
@@ -42,15 +48,17 @@ jobs:
               if 'timestampValue' in v: return v['timestampValue']
               return None
 
+          def get_json(url, body=None):
+              req = urllib.request.Request(url, json.dumps(body).encode() if body else None, {'Content-Type': 'application/json'})
+              return json.load(urllib.request.urlopen(req, timeout=120))
+
           def load_items():
-              if os.environ.get('TEST_JSON'):
-                  rows = json.load(open(os.environ['TEST_JSON']))
+              if TEST:
+                  rows = json.load(open(TEST))['items']
               else:
-                  url = 'https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:runQuery?key=%s' % (PROJECT, KEY)
                   body = {'structuredQuery': {'from': [{'collectionId': 'shop_items'}], 'where': {'fieldFilter': {'field': {'fieldPath': 'status'}, 'op': 'IN',
                           'value': {'arrayValue': {'values': [{'stringValue': 'available'}, {'stringValue': 'sold'}]}}}}}}
-                  req = urllib.request.Request(url, json.dumps(body).encode(), {'Content-Type': 'application/json'})
-                  rows = json.load(urllib.request.urlopen(req, timeout=120))
+                  rows = get_json(BASE + ':runQuery?key=' + KEY, body)
               items = []
               for r in rows:
                   d = r.get('document')
@@ -60,100 +68,227 @@ jobs:
                   items.append(it)
               return items
 
+          def load_photos(item_id):
+              if TEST:
+                  docs = json.load(open(TEST)).get('photos', {}).get(item_id, [])
+              else:
+                  docs, tok = [], None
+                  while True:
+                      u = BASE + '/shop_items/%s/photos?pageSize=50&key=%s' % (urllib.parse.quote(item_id), KEY) + ('&pageToken=' + tok if tok else '')
+                      j = get_json(u); docs += j.get('documents', []); tok = j.get('nextPageToken')
+                      if not tok: break
+              ph = [{k: val(x) for k, x in d.get('fields', {}).items()} for d in docs]
+              ph.sort(key=lambda p: p.get('i') or 0)
+              return [p.get('data') for p in ph if p.get('data')]
+
+          def decode(data_uri):
+              m = re.match(r'data:image/(jpeg|jpg|png|webp);base64,(.+)$', data_uri or '', re.S)
+              if not m: return None, None
+              return ('jpg' if m.group(1) in ('jpeg', 'jpg') else m.group(1)), base64.b64decode(m.group(2))
+
+          def write_if_changed(path, data):
+              if isinstance(data, str): data = data.encode('utf-8')
+              try:
+                  if open(path, 'rb').read() == data: return
+              except FileNotFoundError:
+                  os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+              open(path, 'wb').write(data)
+
           def num(v):
               try: return float(v)
               except (TypeError, ValueError): return None
 
           def money(v):
-              n = num(v)
-              return '' if n is None else '$%.2f' % n
+              n = num(v); return '' if n is None else '$%.2f' % n
+
+          def day(ms):
+              n = num(ms)
+              if not n or n < 1e11: return None
+              return datetime.datetime.fromtimestamp(n / 1000, datetime.timezone.utc).date().isoformat()
+
+          def slug(s):
+              s = re.sub(r'[^a-z0-9]+', '-', (s or '').lower()).strip('-')
+              return s[:60].rstrip('-') or 'item'
 
           e = lambda s: html.escape('' if s is None else str(s), quote=True)
+          x = lambda s: html.escape('' if s is None else str(s), quote=False)
+
+          GOAT = '<script data-goatcounter="https://thrift-scout.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'
+          CSS = ('*{box-sizing:border-box;margin:0;padding:0}body{background:#fff;color:#171717;font-family:system-ui,sans-serif;line-height:1.55}'
+                 'a{color:#8C6D2F}.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;max-width:1100px;margin:0 auto;padding:16px 18px;border-bottom:1px solid #E4E0DA}'
+                 '.top .brand{font-family:Georgia,serif;font-size:1.5rem;color:#171717;text-decoration:none;white-space:nowrap}.top nav{display:flex;gap:16px}.top nav a{text-decoration:none;font-weight:600;white-space:nowrap}'
+                 'h1,h2{font-family:Georgia,serif;font-weight:400;line-height:1.2}footer{text-align:center;color:#5D5A55;padding:30px 18px 40px;font-size:.95rem}'
+                 '.btn{display:inline-block;padding:13px 30px;border-radius:999px;background:#17352C;color:#fff;text-decoration:none;font-weight:600}')
+          def top():
+              return '<div class="top"><a class="brand" href="%s">Thrift Scout</a><nav><a href="%sfinds.html">All finds</a><a href="%spolicies.html">Shipping &amp; returns</a></nav></div>' % (SITE, SITE, SITE)
+          def foot(extra=''):
+              return '<footer>%s<p><a href="%s">Thrift Scout shop</a> &middot; <a href="%spolicies.html">Shipping &amp; returns</a> &middot; <a href="mailto:%s">%s</a></p></footer>' % (extra, SITE, SITE, EMAIL, EMAIL)
+          def head(title, desc, url, img=None, extra='', robots=None):
+              return ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+                      '<title>%s</title>\n<meta name="description" content="%s">\n<link rel="canonical" href="%s">\n%s'
+                      '<meta property="og:title" content="%s"><meta property="og:description" content="%s"><meta property="og:url" content="%s"><meta property="og:type" content="website">%s\n'
+                      '%s\n%s\n<style>%s%%s</style>\n</head><body>\n' % (e(title), e(desc), url, ('<meta name="robots" content="%s">\n' % robots) if robots else '',
+                      e(title), e(desc), url, ('<meta property="og:image" content="%s">' % img) if img else '', extra, GOAT, CSS))
+
+          RETURN_POLICY = {'@type': 'MerchantReturnPolicy', 'applicableCountry': 'US', 'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted'}
 
           def main():
               items = load_items()
               print('Items read from the shop:', len(items))
               if not items:
                   sys.exit('The shop returned no items, so nothing was changed (safety check).')
-              live = [it for it in items if it.get('status') == 'available' and it.get('name')]
-              live.sort(key=lambda it: -(num(it.get('added')) or num(it.get('createdAt')) or 0))
-              print('Live items:', len(live))
-              url_of = lambda it: SITE + '#item=' + urllib.parse.quote(it['id'], safe='')
-              cats = []
-              for it in live:
-                  if it.get('category') and it['category'] not in cats: cats.append(it['category'])
-              cards = []
-              for it in live:
-                  th = (it.get('thumbs') or [''])[0] or ''
+              items = [it for it in items if it.get('name')]
+              live = [it for it in items if it.get('status') == 'available']
+              sold = [it for it in items if it.get('status') == 'sold']
+              order = lambda it: -(num(it.get('added')) or num(it.get('createdAt')) or 0)
+              live.sort(key=order); sold.sort(key=order)
+              print('Live items:', len(live), ' Sold items:', len(sold))
+
+              keep_files, keep_img_prefix = set(), set()
+              for it in live + sold:
+                  it['path'] = 'item/%s-%s.html' % (slug(it['name']), it['id'])
+                  it['url'] = SITE + it['path']
+                  it['shop'] = SITE + '#item=' + urllib.parse.quote(it['id'], safe='')
+                  it['date'] = day(it.get('updatedAt')) or day(it.get('added')) or day(it.get('createdAt'))
+                  sources = []
+                  try:
+                      sources = load_photos(it['id'])
+                  except Exception as ex:
+                      print('  Could not read photos for %s (%s); keeping its old photo files.' % (it['id'], ex))
+                      keep_img_prefix.add('img/%s-' % it['id'])
+                  if not sources: sources = list(it.get('thumbs') or [])
+                  it['imgs'] = []
+                  for n, src in enumerate(sources[:MAX_PHOTOS]):
+                      ext, data = decode(src)
+                      if not data: continue
+                      p = 'img/%s-%d.%s' % (it['id'], n + 1, ext)
+                      write_if_changed(p, data); keep_files.add(p)
+                      it['imgs'].append(SITE + p)
+                  if it['imgs']: keep_img_prefix.discard('img/%s-' % it['id'])
+
+              # item pages
+              for it in live + sold:
+                  is_sold = it['status'] == 'sold'
                   spec = [(k, it.get(f)) for k, f in [('Brand', 'brand'), ('Size', 'size'), ('Measurements', 'measurements'), ('Condition', 'condition'),
                           ('Color', 'color'), ('Material', 'material'), ('Category', 'category')] if it.get(f)]
                   p, w = num(it.get('price')), num(it.get('was'))
-                  u = e(url_of(it))
-                  cards.append('<article class="it" id="item-%s">' % e(it['id']) +
-                      ('<a href="%s"><img src="%s" alt="%s" loading="lazy"></a>' % (u, e(th), e(it['name'])) if th else '') +
-                      '<div class="tx"><h2><a href="%s">%s</a></h2>' % (u, e(it['name'])) +
-                      '<p class="pr">%s%s</p>' % (e(money(p)), (' <s>%s</s>' % e(money(w))) if (w and p is not None and w > p) else '') +
-                      ('<p>%s</p>' % e(it['description']) if it.get('description') else '') +
-                      ('<dl>' + ''.join('<dt>%s</dt><dd>%s</dd>' % (k, e(v)) for k, v in spec) + '</dl>' if spec else '') +
-                      '<a class="go" href="%s">See photos and buy</a></div></article>' % u)
-              ld_items = []
-              for i, it in enumerate(live):
-                  prod = {'@type': 'Product', 'name': it['name'], 'description': it.get('description') or it['name'], 'url': url_of(it),
-                          'offers': {'@type': 'Offer', 'priceCurrency': 'USD', 'price': str(num(it.get('price')) or 0), 'availability': 'https://schema.org/InStock',
-                                     'itemCondition': 'https://schema.org/' + ('NewCondition' if it.get('condition') == 'Like new' else 'UsedCondition'), 'url': url_of(it)}}
-                  if it.get('category'): prod['category'] = it['category']
+                  bits = [it['name']] + [b for b in [it.get('brand'), it.get('size') and 'size ' + str(it['size']), it.get('condition') and str(it['condition']).lower() + ' condition'] if b]
+                  desc = (it.get('description') or '').strip()
+                  meta = ('Sold. ' if is_sold else '') + ('%s, %s. ' % (', '.join(bits), money(p))) + desc
+                  meta = (meta[:155].rsplit(' ', 1)[0] + '...') if len(meta) > 158 else meta
+                  title = '%s%s | Thrift Scout' % ('Sold: ' if is_sold else '', it['name'])
+                  prod = {'@context': 'https://schema.org', '@type': 'Product', 'name': it['name'], 'description': desc or it['name'], 'url': it['url'],
+                          'offers': {'@type': 'Offer', 'priceCurrency': 'USD', 'price': '%.2f' % (p or 0), 'url': it['url'],
+                                     'availability': 'https://schema.org/' + ('SoldOut' if is_sold else 'InStock'),
+                                     'itemCondition': 'https://schema.org/UsedCondition', 'hasMerchantReturnPolicy': RETURN_POLICY,
+                                     'seller': {'@type': 'Organization', 'name': 'Thrift Scout'}}}
+                  if it['imgs']: prod['image'] = it['imgs']
                   if it.get('brand'): prod['brand'] = {'@type': 'Brand', 'name': it['brand']}
-                  if it.get('stripe'): prod['image'] = IMG + urllib.parse.quote(it['id'], safe='') + '.jpg'
-                  ld_items.append({'@type': 'ListItem', 'position': i + 1, 'item': prod})
-              ld = json.dumps({'@context': 'https://schema.org', '@type': 'ItemList', 'name': 'Thrift Scout finds', 'itemListElement': ld_items}).replace('<', '\\u003c')
-              stamp = hashlib.sha256(('\n'.join(cards) + ld).encode()).hexdigest()[:16]
-              try:
-                  if ('<!-- items:%s -->' % stamp) in open('finds.html', encoding='utf-8').read():
-                      print('Nothing changed in the shop. Done.'); return
-              except FileNotFoundError:
-                  pass
-              today = datetime.date.today().isoformat()
+                  if it.get('category'): prod['category'] = it['category']
+                  if it.get('color'): prod['color'] = it['color']
+                  if it.get('material'): prod['material'] = it['material']
+                  ld = '<script type="application/ld+json">%s</script>' % json.dumps(prod).replace('<', '\\u003c')
+                  gal = ''.join('<img src="%s" alt="%s%s" %s>' % (e(u), e(it['name']), (' photo %d' % (i + 1)) if i else '', 'loading="lazy"' if i else 'fetchpriority="high"')
+                                for i, u in enumerate(it['imgs']))
+                  css = ('.wrap{max-width:1100px;margin:0 auto;padding:24px 18px;display:grid;gap:28px;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}'
+                         '@media(max-width:760px){.wrap{grid-template-columns:1fr}}.gal{display:grid;gap:10px;grid-template-columns:1fr 1fr}.gal img:first-child{grid-column:1/-1}.gal img{width:100%;background:#ECE8E2;border-radius:8px;aspect-ratio:4/5;object-fit:contain;mix-blend-mode:multiply}'
+                         '.info{display:flex;flex-direction:column;gap:14px}.info h1{font-size:clamp(1.7rem,4vw,2.4rem)}.pr{font-size:1.5rem;font-weight:700}.pr s{color:#8A1F2B;font-weight:400;font-size:1.1rem;margin-left:8px}'
+                         'dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px}dt{color:#5D5A55}.sold{background:#8A1F2B;color:#fff;padding:4px 12px;border-radius:999px;align-self:flex-start;font-weight:600}'
+                         '.note{color:#5D5A55;font-size:.95rem}.desc{white-space:pre-line}')
+                  body = ('<main class="wrap"><div class="gal">%s</div><div class="info">%s<h1>%s</h1><p class="pr">%s%s</p>%s%s%s<p class="note">%s</p></div></main>' % (
+                      gal, '<span class="sold">Sold</span>' if is_sold else '', x(it['name']),
+                      x(money(p)), (' <s>%s</s>' % x(money(w))) if (w and p is not None and w > p and not is_sold) else '',
+                      ('<p class="desc">%s</p>' % x(desc)) if desc else '',
+                      ('<dl>' + ''.join('<dt>%s</dt><dd>%s</dd>' % (k, x(v)) for k, v in spec) + '</dl>') if spec else '',
+                      ('<p>This one found its new home. <a href="%s">See what is in the shop now</a>.</p>' % SITE) if is_sold else
+                      ('<p><a class="btn" href="%s">Buy now</a></p>' % e(it['shop'])),
+                      'One of a kind. Ships within the US with tracking. Shipping is added at checkout. <a href="%spolicies.html">Shipping &amp; returns</a>' % SITE))
+                  page = head(title, meta, it['url'], it['imgs'][0] if it['imgs'] else None, ld, 'noindex' if is_sold else None) % css + top() + '\n' + body + '\n' + foot() + '\n</body></html>\n'
+                  write_if_changed(it['path'], page); keep_files.add(it['path'])
+
+              # finds page
+              cats = []
+              for it in live:
+                  if it.get('category') and it['category'] not in cats: cats.append(it['category'])
+              cards = '\n'.join('<article class="it"><a href="%s">%s</a><div class="tx"><h2><a href="%s">%s</a></h2><p class="pr">%s</p>%s</div></article>' % (
+                  e(it['url']), ('<img src="%s" alt="%s" loading="lazy">' % (e(it['imgs'][0]), e(it['name']))) if it['imgs'] else '', e(it['url']), x(it['name']),
+                  x(money(it.get('price'))), ('<p class="c">%s</p>' % x(it['condition'])) if it.get('condition') else '') for it in live)
+              latest = max([it['date'] for it in live if it['date']] or [None]) if live else None
               title = 'Thrift Scout Finds: %d One of a Kind Secondhand Items' % len(live)
               desc = 'Shop %d curated secondhand and vintage finds%s. Every item is one of a kind, measured and photographed by hand. Ships within the US.' % (
                   len(live), (': ' + ', '.join(cats[:6])) if cats else '')
-              page = ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
-                  '<!-- items:%s -->\n<title>%s</title>\n<meta name="description" content="%s">\n<link rel="canonical" href="%sfinds.html">\n'
-                  '<meta property="og:title" content="%s"><meta property="og:description" content="%s"><meta property="og:url" content="%sfinds.html"><meta property="og:type" content="website">\n'
-                  '<script type="application/ld+json">%s</script>\n'
-                  '<script data-goatcounter="https://thrift-scout.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>\n'
-                  '<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#fff;color:#171717;font-family:system-ui,sans-serif;line-height:1.55}'
-                  'header{text-align:center;padding:34px 18px 18px}h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(2rem,5vw,3rem)}header p{color:#5D5A55;max-width:640px;margin:10px auto 0}'
-                  'header a.shop{display:inline-block;margin-top:16px;padding:12px 28px;border-radius:999px;background:#17352C;color:#fff;text-decoration:none;font-weight:600}'
-                  'main{max-width:1100px;margin:0 auto;padding:10px 18px 40px;display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}'
-                  '.it{border:1px solid #E4E0DA;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}.it img{width:100%%;aspect-ratio:4/5;object-fit:contain;background:#ECE8E2;mix-blend-mode:multiply}'
-                  '.tx{padding:14px 16px 18px;display:flex;flex-direction:column;gap:8px;flex:1}h2{font-family:Georgia,serif;font-weight:400;font-size:1.25rem;line-height:1.25}h2 a{color:inherit;text-decoration:none}'
-                  '.pr{font-weight:700;font-size:1.1rem}.pr s{color:#8A1F2B;font-weight:400;margin-left:6px}dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:.92rem}dt{color:#5D5A55}'
-                  '.go{margin-top:auto;align-self:flex-start;color:#8C6D2F;font-weight:600}footer{text-align:center;color:#5D5A55;padding:0 18px 40px}footer a{color:#8C6D2F}</style>\n</head><body>\n'
-                  '<header><h1>Thrift Scout Finds</h1><p>%d curated secondhand and vintage pieces, each one of a kind. Found once. Loved twice.</p><a class="shop" href="%s">Open the shop</a></header>\n'
-                  '<main>\n%s\n</main>\n<footer><p><a href="%s">Thrift Scout shop</a> &middot; <a href="mailto:thriftscout.official@gmail.com">thriftscout.official@gmail.com</a></p><p>Updated %s</p></footer>\n</body></html>\n'
-                  ) % (stamp, e(title), e(desc), SITE, e(title), e(desc), SITE, ld, len(live), SITE, '\n'.join(cards), SITE, today)
-              sm = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-                    '\n'.join('  <url><loc>%s%s</loc><lastmod>%s</lastmod></url>' % (SITE, p, today) for p in ['', 'finds.html', 'home.html']) + '\n</urlset>\n')
-              open('finds.html', 'w', encoding='utf-8').write(page)
-              open('sitemap.xml', 'w', encoding='utf-8').write(sm)
-              print('Wrote finds.html (%d live items) and sitemap.xml.' % len(live))
+              ld = {'@context': 'https://schema.org', '@type': 'ItemList', 'name': 'Thrift Scout finds',
+                    'itemListElement': [{'@type': 'ListItem', 'position': i + 1, 'url': it['url']} for i, it in enumerate(live)]}
+              css = ('.hd{text-align:center;padding:30px 18px 10px}.hd h1{font-size:clamp(2rem,5vw,3rem)}.hd p{color:#5D5A55;max-width:640px;margin:10px auto 0}'
+                     'main{max-width:1100px;margin:0 auto;padding:20px 18px 20px;display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}'
+                     '.it{border:1px solid #E4E0DA;border-radius:10px;overflow:hidden}.it img{width:100%;aspect-ratio:4/5;object-fit:contain;background:#ECE8E2;mix-blend-mode:multiply;display:block}'
+                     '.tx{padding:12px 14px 16px}.tx h2{font-size:1.1rem}.tx h2 a{color:inherit;text-decoration:none}.pr{font-weight:700;margin-top:4px}.c{color:#5D5A55;font-size:.9rem}')
+              page = (head(title, desc, SITE + 'finds.html', live[0]['imgs'][0] if live and live[0]['imgs'] else None,
+                           '<script type="application/ld+json">%s</script>' % json.dumps(ld)) % css + top() +
+                      '\n<div class="hd"><h1>Thrift Scout Finds</h1><p>%d curated secondhand and vintage pieces, each one of a kind. Found once. Loved twice.</p></div>\n<main>\n%s\n</main>\n' % (len(live), cards) +
+                      foot(('<p>Updated %s</p>' % latest) if latest else '') + '\n</body></html>\n')
+              write_if_changed('finds.html', page)
 
-          import urllib.parse
+              # shipping and returns page
+              pol = (head('Shipping and Returns | Thrift Scout', 'How Thrift Scout ships secondhand finds within the US, and our returns policy.', SITE + 'policies.html') %
+                     '.pol{max-width:760px;margin:0 auto;padding:30px 18px}.pol h1{font-size:2.2rem;margin-bottom:18px}.pol h2{font-size:1.4rem;margin:24px 0 8px}.pol p,.pol li{margin-bottom:8px}.pol ul{padding-left:22px}'
+                     + top() + '\n<main class="pol"><h1>Shipping and Returns</h1>'
+                     '<h2>Shipping</h2><ul><li>We ship within the United States only.</li><li>Every order is shipped with tracking and insurance.</li>'
+                     '<li>Shipping is added at checkout, based on the size and weight of the package. Want a quote before you buy? Email <a href="mailto:%s">%s</a>.</li></ul>'
+                     '<h2>Returns</h2><p>We do not accept returns for fit or change of mind. Every item is secondhand and one of a kind, so please check the photos, measurements and condition notes before you buy.</p>'
+                     '<p>If your item never arrives, arrives damaged, or is not as described, contact us within 3 days of delivery with photos. Refunds for damage or loss are made after the item is returned or the carrier approves a claim.</p>'
+                     '<h2>Contact</h2><p>Questions about an order? Email <a href="mailto:%s">%s</a>.</p><p>Buyers must be 18 or older.</p></main>\n' % (EMAIL, EMAIL, EMAIL, EMAIL)
+                     + foot() + '\n</body></html>\n')
+              write_if_changed('policies.html', pol)
+
+              # Google Shopping product list
+              rows = []
+              for it in live:
+                  p = num(it.get('price'))
+                  if not it['imgs'] or not p: continue
+                  d = re.sub(r'\s+', ' ', (it.get('description') or it['name'])).strip()
+                  f = ['<g:id>%s</g:id>' % x(it['id']), '<title>%s</title>' % x(it['name'][:150]), '<description>%s</description>' % x(d[:5000]),
+                       '<link>%s</link>' % x(it['url']), '<g:image_link>%s</g:image_link>' % x(it['imgs'][0])]
+                  f += ['<g:additional_image_link>%s</g:additional_image_link>' % x(u) for u in it['imgs'][1:10]]
+                  f += ['<g:availability>in_stock</g:availability>', '<g:price>%.2f USD</g:price>' % p, '<g:condition>used</g:condition>', '<g:identifier_exists>no</g:identifier_exists>']
+                  if it.get('brand'): f.append('<g:brand>%s</g:brand>' % x(it['brand']))
+                  if it.get('category'): f.append('<g:product_type>%s</g:product_type>' % x(it['category']))
+                  if it.get('color'): f.append('<g:color>%s</g:color>' % x(it['color']))
+                  if it.get('material'): f.append('<g:material>%s</g:material>' % x(it['material']))
+                  if it.get('size'): f.append('<g:size>%s</g:size>' % x(str(it['size'])[:100]))
+                  rows.append('<item>' + ''.join(f) + '</item>')
+              feed = ('<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>\n'
+                      '<title>Thrift Scout</title><link>%s</link><description>Curated secondhand and vintage finds</description>\n%s\n</channel></rss>\n' % (SITE, '\n'.join(rows)))
+              write_if_changed('products.xml', feed)
+
+              # sitemap (with photos)
+              urls = [('', latest, []), ('finds.html', latest, []), ('policies.html', None, []), ('home.html', None, [])] + [(it['path'], it['date'], it['imgs']) for it in live]
+              sm = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n' +
+                    '\n'.join('  <url><loc>%s%s</loc>%s%s</url>' % (SITE, x(pth), ('<lastmod>%s</lastmod>' % d) if d else '',
+                              ''.join('<image:image><image:loc>%s</image:loc></image:image>' % x(u) for u in ims)) for pth, d, ims in urls) + '\n</urlset>\n')
+              write_if_changed('sitemap.xml', sm)
+
+              # tidy up pages and photos for items that are gone
+              for f in glob.glob('item/*.html') + glob.glob('img/*'):
+                  if f not in keep_files and not any(f.startswith(k) for k in keep_img_prefix):
+                      os.remove(f); print('  Removed old file', f)
+              print('Done: %d item pages, %d in the Google Shopping list.' % (len(live) + len(sold), len(rows)))
+
           main()
           PYEOF
-          python3 /tmp/build_pages.py
+          python3 /tmp/build_site.py
 
       - name: Publish if anything changed
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet -- finds.html sitemap.xml; then
+          git add -A finds.html sitemap.xml products.xml policies.html item img
+          if git diff --cached --quiet; then
             echo "Nothing new to publish."
             exit 0
           fi
           git config user.name "Thrift Scout robot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add finds.html sitemap.xml
-          git commit -m "Robot: update Google pages"
+          git commit -m "Robot: update item pages and Google files"
           git push
           gh api -X POST "repos/${{ github.repository }}/pages/builds" >/dev/null 2>&1 || true
