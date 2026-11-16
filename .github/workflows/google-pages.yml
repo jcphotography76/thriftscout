@@ -1,0 +1,159 @@
+# Thrift Scout nightly Google pages robot.
+# Every night it reads the live shop, rebuilds finds.html and sitemap.xml,
+# and publishes them only if something changed. Run it by hand from the Actions tab.
+name: Update Google pages
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # every night around 2:17 AM Denver time
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: google-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild finds.html and sitemap.xml from the live shop
+        run: |
+          cat > /tmp/build_pages.py <<'PYEOF'
+          import json, os, sys, html, hashlib, datetime, urllib.request
+
+          SITE = 'https://thriftscout.shop/'
+          IMG = 'https://aged-mountain-ea7b.thriftscout-official.workers.dev/img/'
+          PROJECT = 'thrift-scout-1b937'
+          KEY = 'AIzaSyAtDQnJuWvJOp__hVHO5fdNhjiRjZZkskI'
+
+          def val(v):
+              if 'stringValue' in v: return v['stringValue']
+              if 'integerValue' in v: return int(v['integerValue'])
+              if 'doubleValue' in v: return float(v['doubleValue'])
+              if 'booleanValue' in v: return v['booleanValue']
+              if 'arrayValue' in v: return [val(x) for x in v['arrayValue'].get('values', [])]
+              if 'mapValue' in v: return {k: val(x) for k, x in v['mapValue'].get('fields', {}).items()}
+              if 'timestampValue' in v: return v['timestampValue']
+              return None
+
+          def load_items():
+              if os.environ.get('TEST_JSON'):
+                  rows = json.load(open(os.environ['TEST_JSON']))
+              else:
+                  url = 'https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:runQuery?key=%s' % (PROJECT, KEY)
+                  body = {'structuredQuery': {'from': [{'collectionId': 'shop_items'}], 'where': {'fieldFilter': {'field': {'fieldPath': 'status'}, 'op': 'IN',
+                          'value': {'arrayValue': {'values': [{'stringValue': 'available'}, {'stringValue': 'sold'}]}}}}}}
+                  req = urllib.request.Request(url, json.dumps(body).encode(), {'Content-Type': 'application/json'})
+                  rows = json.load(urllib.request.urlopen(req, timeout=120))
+              items = []
+              for r in rows:
+                  d = r.get('document')
+                  if not d: continue
+                  it = {k: val(x) for k, x in d.get('fields', {}).items()}
+                  it['id'] = d['name'].rsplit('/', 1)[1]
+                  items.append(it)
+              return items
+
+          def num(v):
+              try: return float(v)
+              except (TypeError, ValueError): return None
+
+          def money(v):
+              n = num(v)
+              return '' if n is None else '$%.2f' % n
+
+          e = lambda s: html.escape('' if s is None else str(s), quote=True)
+
+          def main():
+              items = load_items()
+              print('Items read from the shop:', len(items))
+              if not items:
+                  sys.exit('The shop returned no items, so nothing was changed (safety check).')
+              live = [it for it in items if it.get('status') == 'available' and it.get('name')]
+              live.sort(key=lambda it: -(num(it.get('added')) or num(it.get('createdAt')) or 0))
+              print('Live items:', len(live))
+              url_of = lambda it: SITE + '#item=' + urllib.parse.quote(it['id'], safe='')
+              cats = []
+              for it in live:
+                  if it.get('category') and it['category'] not in cats: cats.append(it['category'])
+              cards = []
+              for it in live:
+                  th = (it.get('thumbs') or [''])[0] or ''
+                  spec = [(k, it.get(f)) for k, f in [('Brand', 'brand'), ('Size', 'size'), ('Measurements', 'measurements'), ('Condition', 'condition'),
+                          ('Color', 'color'), ('Material', 'material'), ('Category', 'category')] if it.get(f)]
+                  p, w = num(it.get('price')), num(it.get('was'))
+                  u = e(url_of(it))
+                  cards.append('<article class="it" id="item-%s">' % e(it['id']) +
+                      ('<a href="%s"><img src="%s" alt="%s" loading="lazy"></a>' % (u, e(th), e(it['name'])) if th else '') +
+                      '<div class="tx"><h2><a href="%s">%s</a></h2>' % (u, e(it['name'])) +
+                      '<p class="pr">%s%s</p>' % (e(money(p)), (' <s>%s</s>' % e(money(w))) if (w and p is not None and w > p) else '') +
+                      ('<p>%s</p>' % e(it['description']) if it.get('description') else '') +
+                      ('<dl>' + ''.join('<dt>%s</dt><dd>%s</dd>' % (k, e(v)) for k, v in spec) + '</dl>' if spec else '') +
+                      '<a class="go" href="%s">See photos and buy</a></div></article>' % u)
+              ld_items = []
+              for i, it in enumerate(live):
+                  prod = {'@type': 'Product', 'name': it['name'], 'description': it.get('description') or it['name'], 'url': url_of(it),
+                          'offers': {'@type': 'Offer', 'priceCurrency': 'USD', 'price': str(num(it.get('price')) or 0), 'availability': 'https://schema.org/InStock',
+                                     'itemCondition': 'https://schema.org/' + ('NewCondition' if it.get('condition') == 'Like new' else 'UsedCondition'), 'url': url_of(it)}}
+                  if it.get('category'): prod['category'] = it['category']
+                  if it.get('brand'): prod['brand'] = {'@type': 'Brand', 'name': it['brand']}
+                  if it.get('stripe'): prod['image'] = IMG + urllib.parse.quote(it['id'], safe='') + '.jpg'
+                  ld_items.append({'@type': 'ListItem', 'position': i + 1, 'item': prod})
+              ld = json.dumps({'@context': 'https://schema.org', '@type': 'ItemList', 'name': 'Thrift Scout finds', 'itemListElement': ld_items}).replace('<', '\\u003c')
+              stamp = hashlib.sha256(('\n'.join(cards) + ld).encode()).hexdigest()[:16]
+              try:
+                  if ('<!-- items:%s -->' % stamp) in open('finds.html', encoding='utf-8').read():
+                      print('Nothing changed in the shop. Done.'); return
+              except FileNotFoundError:
+                  pass
+              today = datetime.date.today().isoformat()
+              title = 'Thrift Scout Finds: %d One of a Kind Secondhand Items' % len(live)
+              desc = 'Shop %d curated secondhand and vintage finds%s. Every item is one of a kind, measured and photographed by hand. Ships within the US.' % (
+                  len(live), (': ' + ', '.join(cats[:6])) if cats else '')
+              page = ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+                  '<!-- items:%s -->\n<title>%s</title>\n<meta name="description" content="%s">\n<link rel="canonical" href="%sfinds.html">\n'
+                  '<meta property="og:title" content="%s"><meta property="og:description" content="%s"><meta property="og:url" content="%sfinds.html"><meta property="og:type" content="website">\n'
+                  '<script type="application/ld+json">%s</script>\n'
+                  '<script data-goatcounter="https://thrift-scout.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>\n'
+                  '<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#fff;color:#171717;font-family:system-ui,sans-serif;line-height:1.55}'
+                  'header{text-align:center;padding:34px 18px 18px}h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(2rem,5vw,3rem)}header p{color:#5D5A55;max-width:640px;margin:10px auto 0}'
+                  'header a.shop{display:inline-block;margin-top:16px;padding:12px 28px;border-radius:999px;background:#17352C;color:#fff;text-decoration:none;font-weight:600}'
+                  'main{max-width:1100px;margin:0 auto;padding:10px 18px 40px;display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}'
+                  '.it{border:1px solid #E4E0DA;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}.it img{width:100%%;aspect-ratio:4/5;object-fit:contain;background:#ECE8E2;mix-blend-mode:multiply}'
+                  '.tx{padding:14px 16px 18px;display:flex;flex-direction:column;gap:8px;flex:1}h2{font-family:Georgia,serif;font-weight:400;font-size:1.25rem;line-height:1.25}h2 a{color:inherit;text-decoration:none}'
+                  '.pr{font-weight:700;font-size:1.1rem}.pr s{color:#8A1F2B;font-weight:400;margin-left:6px}dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:.92rem}dt{color:#5D5A55}'
+                  '.go{margin-top:auto;align-self:flex-start;color:#8C6D2F;font-weight:600}footer{text-align:center;color:#5D5A55;padding:0 18px 40px}footer a{color:#8C6D2F}</style>\n</head><body>\n'
+                  '<header><h1>Thrift Scout Finds</h1><p>%d curated secondhand and vintage pieces, each one of a kind. Found once. Loved twice.</p><a class="shop" href="%s">Open the shop</a></header>\n'
+                  '<main>\n%s\n</main>\n<footer><p><a href="%s">Thrift Scout shop</a> &middot; <a href="mailto:thriftscout.official@gmail.com">thriftscout.official@gmail.com</a></p><p>Updated %s</p></footer>\n</body></html>\n'
+                  ) % (stamp, e(title), e(desc), SITE, e(title), e(desc), SITE, ld, len(live), SITE, '\n'.join(cards), SITE, today)
+              sm = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+                    '\n'.join('  <url><loc>%s%s</loc><lastmod>%s</lastmod></url>' % (SITE, p, today) for p in ['', 'finds.html', 'home.html']) + '\n</urlset>\n')
+              open('finds.html', 'w', encoding='utf-8').write(page)
+              open('sitemap.xml', 'w', encoding='utf-8').write(sm)
+              print('Wrote finds.html (%d live items) and sitemap.xml.' % len(live))
+
+          import urllib.parse
+          main()
+          PYEOF
+          python3 /tmp/build_pages.py
+
+      - name: Publish if anything changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- finds.html sitemap.xml; then
+            echo "Nothing new to publish."
+            exit 0
+          fi
+          git config user.name "Thrift Scout robot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add finds.html sitemap.xml
+          git commit -m "Robot: update Google pages"
+          git push
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" >/dev/null 2>&1 || true
