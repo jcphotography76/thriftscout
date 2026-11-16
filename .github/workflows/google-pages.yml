@@ -18,6 +18,9 @@ concurrency:
   group: google-pages
   cancel-in-progress: false
 
+env:
+  INDEXNOW_KEY: 40ed972bf0fefc0ba043bd33927ce257
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -269,6 +272,10 @@ jobs:
                               ''.join('<image:image><image:loc>%s</image:loc></image:image>' % x(u) for u in ims)) for pth, d, ims in urls) + '\n</urlset>\n')
               write_if_changed('sitemap.xml', sm)
 
+              # IndexNow key file (lets Bing trust our update pings)
+              ik = os.environ.get('INDEXNOW_KEY')
+              if ik: write_if_changed(ik + '.txt', ik)
+
               # tidy up pages and photos for items that are gone
               for f in glob.glob('item/*.html') + glob.glob('img/*'):
                   if f not in keep_files and not any(f.startswith(k) for k in keep_img_prefix):
@@ -283,7 +290,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git add -A finds.html sitemap.xml products.xml policies.html item img
+          git add -A finds.html sitemap.xml products.xml policies.html item img "$INDEXNOW_KEY.txt"
           if git diff --cached --quiet; then
             echo "Nothing new to publish."
             exit 0
@@ -293,3 +300,26 @@ jobs:
           git commit -m "Robot: update item pages and Google files"
           git push
           gh api -X POST "repos/${{ github.repository }}/pages/builds" >/dev/null 2>&1 || true
+          git diff --name-only HEAD~1 HEAD -- item finds.html policies.html > /tmp/changed.txt || true
+          echo "changed=$(wc -l < /tmp/changed.txt)" >> "$GITHUB_OUTPUT"
+        id: publish
+
+      - name: Tell Bing which pages changed (IndexNow)
+        if: steps.publish.outputs.changed != '' && steps.publish.outputs.changed != '0'
+        continue-on-error: true
+        run: |
+          sleep 90   # give the website a moment to publish first
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
+          site = 'https://thriftscout.shop/'
+          key = os.environ['INDEXNOW_KEY']
+          paths = [p.strip() for p in open('/tmp/changed.txt') if p.strip()]
+          urls = [site + p for p in paths][:10000]
+          body = {'host': 'thriftscout.shop', 'key': key, 'keyLocation': site + key + '.txt', 'urlList': urls}
+          req = urllib.request.Request('https://api.indexnow.org/indexnow', json.dumps(body).encode(), {'Content-Type': 'application/json; charset=utf-8'})
+          try:
+              r = urllib.request.urlopen(req, timeout=60)
+              print('Told Bing about %d changed pages (status %s).' % (len(urls), r.status))
+          except urllib.error.HTTPError as e:
+              print('Bing answered %s: %s' % (e.code, e.read()[:300]))
+          PYEOF
