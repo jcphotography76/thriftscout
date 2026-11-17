@@ -134,6 +134,29 @@ jobs:
                       + (('<meta property="og:image" content="' + img + '">') if img else '') + '\n'
                       + extra + '\n' + GOAT + '\n<style>' + CSS + css + '</style>\n</head><body>\n')
 
+
+          GPC = [  # shop category words -> Google product category (used by Google, Microsoft and Pinterest)
+              (('hat', 'cap'), 'Apparel & Accessories > Clothing Accessories > Hats'),
+              (('jewel', 'earring', 'necklace', 'bracelet', 'ring'), 'Apparel & Accessories > Jewelry'),
+              (('handbag', 'purse', 'bag'), 'Apparel & Accessories > Handbags, Wallets & Cases > Handbags'),
+              (('footwear', 'shoe', 'boot', 'sneaker'), 'Apparel & Accessories > Shoes'),
+              (('top', 'shirt', 'tee', 'blouse'), 'Apparel & Accessories > Clothing > Shirts & Tops'),
+              (('clothing', 'apparel', 'dress', 'pant', 'jacket', 'coat', 'outerwear'), 'Apparel & Accessories > Clothing'),
+              (('electronic',), 'Electronics'),
+              (('kitchen', 'dining'), 'Home & Garden > Kitchen & Dining'),
+              (('collect',), 'Arts & Entertainment > Hobbies & Creative Arts > Collectibles'),
+              (('book',), 'Media > Books'),
+              (('media',), 'Media'),
+              (('toy', 'game'), 'Toys & Games'),
+              (('baby',), 'Baby & Toddler'),
+              (('home', 'decor'), 'Home & Garden'),
+          ]
+          def gpc_for(cat):
+              c = (cat or '').lower()
+              for words, name in GPC:
+                  if any(w in c for w in words): return name
+              return None
+
           RETURN_POLICY = {'@type': 'MerchantReturnPolicy', 'applicableCountry': 'US', 'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted'}
 
           def main():
@@ -257,6 +280,8 @@ jobs:
                   f += ['<g:availability>in_stock</g:availability>', '<g:price>%.2f USD</g:price>' % p, '<g:condition>used</g:condition>', '<g:identifier_exists>no</g:identifier_exists>']
                   if it.get('brand'): f.append('<g:brand>%s</g:brand>' % x(it['brand']))
                   if it.get('category'): f.append('<g:product_type>%s</g:product_type>' % x(it['category']))
+                  g = gpc_for(it.get('category'))
+                  if g: f.append('<g:google_product_category>%s</g:google_product_category>' % x(g))
                   if it.get('color'): f.append('<g:color>%s</g:color>' % x(it['color']))
                   if it.get('material'): f.append('<g:material>%s</g:material>' % x(it['material']))
                   if it.get('size'): f.append('<g:size>%s</g:size>' % x(str(it['size'])[:100]))
