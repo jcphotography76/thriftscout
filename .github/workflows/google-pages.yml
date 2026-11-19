@@ -135,27 +135,61 @@ jobs:
                       + extra + '\n' + GOAT + '\n<style>' + CSS + css + '</style>\n</head><body>\n')
 
 
-          GPC = [  # shop category words -> Google product category (used by Google, Microsoft and Pinterest)
+          # Google product categories (used by Google, Microsoft and Pinterest).
+          # 1) item NAME keywords give a detailed category; 2) the shop category is the fallback; 3) never blank.
+          GPC_NAME = [
+              (('jewelry set', 'earrings set', 'necklace & ', 'earring set'), 'Apparel & Accessories > Jewelry > Jewelry Sets'),
+              (('earring',), 'Apparel & Accessories > Jewelry > Earrings'),
+              (('necklace', 'pendant'), 'Apparel & Accessories > Jewelry > Necklaces'),
+              (('bracelet',), 'Apparel & Accessories > Jewelry > Bracelets'),
+              ((' ring ', ' ring,', ' rings '), 'Apparel & Accessories > Jewelry > Rings'),
+              (('trap',), 'Home & Garden > Decor'),
+              (('baseball glove', 'softball glove', 'glove, ', 'fieldmaster', 'renegade'), 'Sporting Goods > Athletics > Baseball & Softball > Baseball & Softball Gloves & Mitts'),
+              (('hydration', 'camelbak'), 'Sporting Goods > Outdoor Recreation > Camping & Hiking > Hydration Systems'),
+              (('film camera', '35mm'), 'Cameras & Optics > Cameras > Film Cameras'),
+              (('cassette',), 'Electronics > Audio > Audio Players & Recorders > Cassette Players & Recorders'),
+              (('calculator',), 'Office Supplies > Office Equipment > Calculators'),
+              (('keyboard',), 'Electronics > Electronics Accessories > Computer Components > Input Devices > Keyboards'),
+              (('clock',), 'Home & Garden > Decor > Clocks > Alarm Clocks'),
+              (('tumbler', 'cold cup'), 'Home & Garden > Kitchen & Dining > Tableware > Drinkware > Tumblers'),
+              (('mug',), 'Home & Garden > Kitchen & Dining > Tableware > Drinkware > Mugs'),
+              (('casserole', 'pyrex', 'bakeware'), 'Home & Garden > Kitchen & Dining > Cookware & Bakeware > Bakeware'),
+              (('vase',), 'Home & Garden > Decor > Vases'),
+              (('print', 'drawing', 'painting', 'artwork', 'poster', 'lithograph', 'etching'), 'Home & Garden > Decor > Artwork > Posters, Prints, & Visual Artwork'),
+              (('sculpture', 'figurine', 'statue'), 'Home & Garden > Decor > Figurines'),
+              (('plush', 'stuffed animal'), 'Toys & Games > Toys > Dolls, Playsets & Toy Figures > Stuffed Animals'),
+              (('mask',), 'Apparel & Accessories > Costumes & Accessories > Masks'),
+              (('jacket', 'coat'), 'Apparel & Accessories > Clothing > Outerwear > Coats & Jackets'),
+              (('hat', ' cap'), 'Apparel & Accessories > Clothing Accessories > Hats'),
+              (('t-shirt', 'tee', 'shirt', 'henley', 'blouse'), 'Apparel & Accessories > Clothing > Shirts & Tops'),
+              (('satchel', 'handbag', 'purse', 'crossbody', 'tote'), 'Apparel & Accessories > Handbags, Wallets & Cases > Handbags'),
+              (('sneaker', 'boot', 'shoe', 'moccasin', 'sandal'), 'Apparel & Accessories > Shoes'),
+          ]
+          GPC_CAT = [
+              (('jewel',), 'Apparel & Accessories > Jewelry'),
               (('hat', 'cap'), 'Apparel & Accessories > Clothing Accessories > Hats'),
-              (('jewel', 'earring', 'necklace', 'bracelet', 'ring'), 'Apparel & Accessories > Jewelry'),
               (('handbag', 'purse', 'bag'), 'Apparel & Accessories > Handbags, Wallets & Cases > Handbags'),
               (('footwear', 'shoe', 'boot', 'sneaker'), 'Apparel & Accessories > Shoes'),
               (('top', 'shirt', 'tee', 'blouse'), 'Apparel & Accessories > Clothing > Shirts & Tops'),
               (('clothing', 'apparel', 'dress', 'pant', 'jacket', 'coat', 'outerwear'), 'Apparel & Accessories > Clothing'),
               (('electronic',), 'Electronics'),
-              (('kitchen', 'dining'), 'Home & Garden > Kitchen & Dining'),
+              (('kitchen', 'dining'), 'Home & Garden > Kitchen & Dining > Tableware'),
               (('collect',), 'Arts & Entertainment > Hobbies & Creative Arts > Collectibles'),
               (('book',), 'Media > Books'),
               (('media',), 'Media'),
-              (('toy', 'game'), 'Toys & Games'),
+              (('toy', 'game'), 'Toys & Games > Toys'),
               (('baby',), 'Baby & Toddler'),
-              (('home', 'decor'), 'Home & Garden'),
+              (('sport',), 'Sporting Goods'),
+              (('home', 'decor'), 'Home & Garden > Decor'),
           ]
-          def gpc_for(cat):
+          def gpc_for(cat, name=''):
+              n = ' ' + (name or '').lower() + ' '
+              for words, g in GPC_NAME:
+                  if any(w in n for w in words): return g
               c = (cat or '').lower()
-              for words, name in GPC:
-                  if any(w in c for w in words): return name
-              return None
+              for words, g in GPC_CAT:
+                  if any(w in c for w in words): return g
+              return 'Home & Garden > Decor'
 
           RETURN_POLICY = {'@type': 'MerchantReturnPolicy', 'applicableCountry': 'US', 'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted'}
 
@@ -280,7 +314,7 @@ jobs:
                   f += ['<g:availability>in_stock</g:availability>', '<g:price>%.2f USD</g:price>' % p, '<g:condition>used</g:condition>', '<g:identifier_exists>no</g:identifier_exists>']
                   if it.get('brand'): f.append('<g:brand>%s</g:brand>' % x(it['brand']))
                   if it.get('category'): f.append('<g:product_type>%s</g:product_type>' % x(it['category']))
-                  g = gpc_for(it.get('category'))
+                  g = gpc_for(it.get('category'), it.get('name'))
                   if g: f.append('<g:google_product_category>%s</g:google_product_category>' % x(g))
                   if it.get('color'): f.append('<g:color>%s</g:color>' % x(it['color']))
                   if it.get('material'): f.append('<g:material>%s</g:material>' % x(it['material']))
